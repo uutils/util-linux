@@ -3,9 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use libc::{c_char, c_int, execvp, PRIO_PROCESS};
+use libc::PRIO_PROCESS;
 use std::env;
-use std::io::{Error, Write};
+use std::io::Error;
 use std::process;
 use std::str::FromStr;
 
