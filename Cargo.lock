@@ -1311,6 +1311,7 @@ dependencies = [
  "time",
  "unindent",
  "uu_lscpu",
+ "uu_mountpoint",
  "uu_pwdx",
  "uu_renice",
  "walkdir",
@@ -1324,6 +1325,10 @@ dependencies = [
  "regex",
  "sysinfo",
 ]
+
+[[package]]
+name = "uu_mountpoint"
+version = "0.0.1"
 
 [[package]]
 name = "uu_pwdx"
