@@ -1312,6 +1312,7 @@ dependencies = [
  "unindent",
  "uu_lscpu",
  "uu_pwdx",
+ "uu_renice",
  "walkdir",
  "zip",
 ]
@@ -1327,6 +1328,13 @@ dependencies = [
 [[package]]
 name = "uu_pwdx"
 version = "0.0.1"
+
+[[package]]
+name = "uu_renice"
+version = "0.0.1"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "version_check"
