@@ -1,0 +1,12 @@
+[package]
+name = "uu_lscpu"
+version = "0.0.1"
+edition = "2021"
+
+[[bin]]
+name = "lscpu"
+path = "src/lscpu.rs"
+
+[dependencies]
+regex = { workspace = true }
+sysinfo = { workspace = true }
