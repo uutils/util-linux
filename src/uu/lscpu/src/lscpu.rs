@@ -1,6 +1,6 @@
-use sysinfo::{System};
 use regex::Regex;
 use std::fs;
+use sysinfo::System;
 
 fn main() {
     let system = System::new_all();
