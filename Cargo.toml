@@ -25,7 +25,6 @@ build = "build.rs"
 default = ["feat_common_core"]
 
 feat_common_core = [
-  "renice",
   "mountpoint",
   "lscpu",
 ]
@@ -56,7 +55,6 @@ textwrap = { workspace = true }
 
 #
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
-renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 
 [dev-dependencies]

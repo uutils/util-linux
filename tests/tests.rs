@@ -12,7 +12,3 @@ mod test_lscpu;
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
-
-#[cfg(feature = "renice")]
-#[path = "by-util/test_renice.rs"]
-mod test_renice;
