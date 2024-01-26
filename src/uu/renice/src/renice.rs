@@ -17,23 +17,17 @@ use clap::{crate_version, Arg, Command};
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
 
-    let nice_value = match matches.get_one::<i32>("nice_value") {
-        Some(number) => number,
-        _ => {
-            eprintln!("Invalid nice value");
-            process::exit(1);
-        }
-    };
+    let nice_value = *matches.get_one::<i32>("nice_value").unwrap_or_else(|| {
+        eprintln!("Invalid nice value");
+        process::exit(1);
+    });
 
-    let pid = match matches.get_one::<i32>("pid") {
-        Some(number) => number,
-        _ => {
-            eprintln!("Invalid PID");
-            process::exit(1);
-        }
-    };
+    let pid = *matches.get_one::<i32>("pid").unwrap_or_else(|| {
+        eprintln!("Invalid PID");
+        process::exit(1);
+    });
 
-    if unsafe { libc::setpriority(PRIO_PROCESS, (*pid).try_into().unwrap(), *nice_value) } == -1 {
+    if unsafe { libc::setpriority(PRIO_PROCESS, pid.try_into().unwrap(), nice_value) } == -1 {
         eprintln!("Failed to set nice value: {}", Error::last_os_error());
         process::exit(1);
     }
