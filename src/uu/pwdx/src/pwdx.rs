@@ -3,6 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::Arg;
 use clap::{crate_version, Command};
 use std::env;
 use std::fs;
@@ -16,14 +17,15 @@ const USAGE: &str = help_usage!("pwdx.md");
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let args: Vec<String> = env::args().collect();
 
-    if args.len() != 2 {
-        eprintln!("Usage: pwdx <pid>");
+    let matches = uu_app().try_get_matches_from(args)?;
+
+    let pid_str = matches.get_one::<String>("pid").unwrap();
+    let pid = pid_str.parse::<i32>().unwrap_or_else(|_| {
+        eprintln!("Invalid PID");
         process::exit(1);
-    }
+    });
 
-    let pid = &args[1];
     let cwd_link = format!("/proc/{}/cwd", pid);
 
     match fs::read_link(Path::new(&cwd_link)) {
@@ -42,4 +44,9 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+        .arg(Arg::new("pid")
+             .value_name("PID")
+             .help("Process ID")
+             .required(true)
+             .index(1))
 }

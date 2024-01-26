@@ -7,7 +7,6 @@ use libc::PRIO_PROCESS;
 use std::env;
 use std::io::Error;
 use std::process;
-use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 const ABOUT: &str = help_about!("renice.md");
 const USAGE: &str = help_usage!("renice.md");
