@@ -1,15 +1,21 @@
 # util-linux
 
+This projects aims at doing the same as https://github.com/uutils/coreutils for util-linux.
+We are rewriting these tools in Rust as dropped-in replacements.
+
+Currently, we have skeletons for:
+* /usr/bin/lscpu: Displays information about the CPU architecture.
+* /bin/mountpoint: Checks if a directory is a mountpoint.
+
+
 First, reimplement the most important tools from util-linux
 
-* /bin/mountpoint: Checks if a directory is a mountpoint.
 * /bin/su: Switches to another user account.
 * /sbin/blkid: Locates or prints block device attributes.
 * /sbin/fsck: Checks and repairs a Linux file system.
 * /sbin/mkfs: Builds a Linux file system on a device, usually used for formatting.
 * /sbin/mkswap: Sets up a Linux swap area.
 * /usr/bin/getopt: Parses command options, essential for scripting.
-* /usr/bin/lscpu: Displays information about the CPU architecture.
 * /usr/bin/lsblk: Lists information about all available or specified block devices.
 * /bin/dmesg: Displays or controls the kernel ring buffer, used for viewing system message logs.
 
