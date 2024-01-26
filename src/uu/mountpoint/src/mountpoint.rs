@@ -3,6 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::Arg;
 use clap::{crate_version, Command};
 use std::env;
 use std::fs;
@@ -15,20 +16,21 @@ const USAGE: &str = help_usage!("mountpoint.md");
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let args: Vec<String> = env::args().collect();
+    let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+    let path = matches.get_one::<String>("path");
 
-    if args.len() != 2 {
-        eprintln!("Usage: mountpoint <path>");
+    if let Some(path) = path {
+        if is_mountpoint(path) {
+            println!("{} is a mountpoint", path);
+        } else {
+            println!("{} is not a mountpoint", path);
+        }
+    } else {
+        // Handle the case where path is not provided
+        eprintln!("Error: Path argument is required");
         process::exit(1);
     }
-
-    let path = &args[1];
-    if is_mountpoint(path) {
-        println!("{} is a mountpoint", path);
-    } else {
-        println!("{} is not a mountpoint", path);
-    }
-    Ok(())
+        Ok(())
 }
 
 fn is_mountpoint(path: &str) -> bool {
@@ -54,4 +56,10 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+
+        .arg(Arg::new("path")
+             .value_name("PATH")
+             .help("Path to check for mountpoint")
+             .required(true)
+             .index(1))
 }
