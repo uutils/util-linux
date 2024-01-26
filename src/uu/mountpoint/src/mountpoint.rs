@@ -30,7 +30,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         eprintln!("Error: Path argument is required");
         process::exit(1);
     }
-        Ok(())
+    Ok(())
 }
 
 fn is_mountpoint(path: &str) -> bool {
@@ -56,10 +56,11 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
-
-        .arg(Arg::new("path")
-             .value_name("PATH")
-             .help("Path to check for mountpoint")
-             .required(true)
-             .index(1))
+        .arg(
+            Arg::new("path")
+                .value_name("PATH")
+                .help("Path to check for mountpoint")
+                .required(true)
+                .index(1),
+        )
 }
