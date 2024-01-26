@@ -6,7 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+
+[lib]
+path = "src/pwdx.rs"
 
 [[bin]]
 name = "pwdx"
-path = "src/pwdx.rs"
+path = "src/main.rs"

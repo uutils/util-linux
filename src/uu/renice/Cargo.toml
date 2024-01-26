@@ -7,7 +7,12 @@ edition = "2021"
 
 [dependencies]
 libc = { workspace = true }
+uucore = { workspace = true }
+clap = { workspace = true }
+
+[lib]
+path = "src/renice.rs"
 
 [[bin]]
 name = "renice"
-path = "src/renice.rs"
+path = "src/main.rs"

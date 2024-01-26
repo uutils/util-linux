@@ -4,10 +4,16 @@
 // file that was distributed with this source code.
 
 use regex::Regex;
-use std::fs;
+use uucore::{error::UResult, format_usage, help_about, help_usage};
+use clap::{crate_version, Command};
+use std::{fs};
 use sysinfo::System;
 
-fn main() {
+const ABOUT: &str = help_about!("lscpu.md");
+const USAGE: &str = help_usage!("lscpu.md");
+
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let system = System::new_all();
     let cpu = system.global_cpu_info();
 
@@ -15,7 +21,6 @@ fn main() {
     println!("CPU(s): {}", system.cpus().len());
     // Add more CPU information here...
 
-    // Example: Parsing /proc/cpuinfo for additional details
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
         let re = Regex::new(r"^model name\s+:\s+(.*)$").unwrap();
         for cap in re.captures_iter(&contents) {
@@ -23,6 +28,7 @@ fn main() {
             break; // Assuming all CPUs have the same model name
         }
     }
+    Ok(())
 }
 
 fn get_architecture() -> String {
@@ -33,4 +39,13 @@ fn get_architecture() -> String {
     } else {
         "Unknown".to_string()
     }
+}
+
+
+pub fn uu_app() -> Command {
+    Command::new(uucore::util_name())
+        .version(crate_version!())
+        .about(ABOUT)
+        .override_usage(format_usage(USAGE))
+        .infer_long_args(true)
 }

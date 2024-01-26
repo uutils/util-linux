@@ -7,8 +7,15 @@ use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
+use clap::{crate_version, Command};
 
-fn main() {
+use uucore::{error::UResult, format_usage, help_about, help_usage};
+
+const ABOUT: &str = help_about!("pwdx.md");
+const USAGE: &str = help_usage!("pwdx.md");
+
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
@@ -26,4 +33,13 @@ fn main() {
             process::exit(1);
         }
     }
+    Ok(())
+}
+
+pub fn uu_app() -> Command {
+    Command::new(uucore::util_name())
+        .version(crate_version!())
+        .about(ABOUT)
+        .override_usage(format_usage(USAGE))
+        .infer_long_args(true)
 }

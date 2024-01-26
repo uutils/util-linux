@@ -3,10 +3,15 @@ name = "uu_lscpu"
 version = "0.0.1"
 edition = "2021"
 
-[[bin]]
-name = "lscpu"
+[lib]
 path = "src/lscpu.rs"
+
+[[bin]]
+name = "mountpoint"
+path = "src/main.rs"
 
 [dependencies]
 regex = { workspace = true }
 sysinfo = { workspace = true }
+uucore = { workspace = true }
+clap = { workspace = true }
