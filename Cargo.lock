@@ -640,7 +640,6 @@ dependencies = [
  "textwrap",
  "uu_lscpu",
  "uu_mountpoint",
- "uu_pwdx",
  "uu_renice",
  "uucore",
  "xattr",
@@ -658,14 +657,6 @@ dependencies = [
 
 [[package]]
 name = "uu_mountpoint"
-version = "0.0.1"
-dependencies = [
- "clap",
- "uucore",
-]
-
-[[package]]
-name = "uu_pwdx"
 version = "0.0.1"
 dependencies = [
  "clap",
