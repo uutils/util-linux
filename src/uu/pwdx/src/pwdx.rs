@@ -3,11 +3,11 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::{crate_version, Command};
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process;
-use clap::{crate_version, Command};
 
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 

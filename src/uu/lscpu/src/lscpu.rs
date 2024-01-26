@@ -3,11 +3,11 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use regex::Regex;
-use uucore::{error::UResult, format_usage, help_about, help_usage};
 use clap::{crate_version, Command};
-use std::{fs};
+use regex::Regex;
+use std::fs;
 use sysinfo::System;
+use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("lscpu.md");
 const USAGE: &str = help_usage!("lscpu.md");
@@ -40,7 +40,6 @@ fn get_architecture() -> String {
         "Unknown".to_string()
     }
 }
-
 
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())

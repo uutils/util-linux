@@ -3,19 +3,18 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::{crate_version, Command};
 use std::env;
 use std::fs;
 use std::os::unix::fs::MetadataExt;
 use std::process;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
-use clap::{crate_version, Command};
 
 const ABOUT: &str = help_about!("mountpoint.md");
 const USAGE: &str = help_usage!("mountpoint.md");
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
@@ -48,7 +47,6 @@ fn is_mountpoint(path: &str) -> bool {
             Err(_) => false,
         }
 }
-
 
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())
