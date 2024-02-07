@@ -876,6 +876,7 @@ dependencies = [
  "clap_mangen",
  "dns-lookup",
  "libc",
+ "nix",
  "phf",
  "phf_codegen",
  "pretty_assertions",
