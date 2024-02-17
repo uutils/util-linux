@@ -1,15 +1,15 @@
+[![Crates.io](https://img.shields.io/crates/v/util-linux.svg)](https://crates.io/crates/util-linux)
+[![Discord](https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat)](https://discord.gg/wQVJbvJ)
+[![License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/uutils/util-linux/blob/main/LICENSE)
+[![dependency status](https://deps.rs/repo/github/uutils/util-linux/status.svg)](https://deps.rs/repo/github/uutils/util-linux)
+
+[![CodeCov](https://codecov.io/gh/uutils/util-linux/branch/master/graph/badge.svg)](https://codecov.io/gh/uutils/util-linux)
+
 # util-linux
 
 This projects aims at doing the same as https://github.com/uutils/coreutils for util-linux.
 
 We are rewriting <a href="http://www.kernel.org/pub/linux/utils/util-linux/">these tools</a> in Rust as dropped-in replacements.
-
-
-
-
-Currently, we have skeletons for:
-
-* /bin/mountpoint: Checks if a directory is a mountpoint.
 
 
 First, reimplement the most important tools from util-linux
@@ -105,3 +105,20 @@ Note:
 
 Project:
 http://www.kernel.org/pub/linux/utils/util-linux/
+
+## Installation
+
+Ensure you have Rust installed on your system. You can install Rust through [rustup](https://rustup.rs/).
+
+Clone the repository and build the project using Cargo:
+
+```bash
+git clone https://github.com/uutils/util-linux.git
+cd util-linux
+cargo build --release
+cargo run --release
+```
+
+## License
+
+util-linux is licensed under the MIT License - see the `LICENSE` file for details
