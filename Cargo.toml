@@ -39,7 +39,7 @@ sysinfo = "0.30"
 libc = "0.2.152"
 phf = "0.11.2"
 phf_codegen = "0.11.2"
-textwrap = { version = "0.16.0", features = ["terminal_size"] }
+textwrap = { version = "0.16.1", features = ["terminal_size"] }
 xattr = "1.3.1"
 tempfile = "3.9.0"
 rand = { version = "0.8", features = ["small_rng"] }
