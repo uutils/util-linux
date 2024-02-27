@@ -41,7 +41,7 @@ phf = "0.11.2"
 phf_codegen = "0.11.2"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 xattr = "1.3.1"
-tempfile = "3.9.0"
+tempfile = "3.10.1"
 rand = { version = "0.8", features = ["small_rng"] }
 
 [dependencies]
