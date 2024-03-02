@@ -82,7 +82,6 @@ First, reimplement the most important tools from util-linux
 
 ## Utility Tools
 - `lsblk`: Lists block devices.
-- `more`: Pager for file viewing.
 - `fallocate`: Preallocates file space.
 - `flock`: Manages file locks.
 - `getopt`: Parses command options.
