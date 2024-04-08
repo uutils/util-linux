@@ -9,10 +9,10 @@
 
 This projects aims at doing the same as https://github.com/uutils/coreutils for util-linux.
 
-We are rewriting <a href="http://www.kernel.org/pub/linux/utils/util-linux/">these tools</a> in Rust as dropped-in replacements.
+We are rewriting [these tools](https://github.com/util-linux/util-linux) in Rust as drop-in replacements.
 
+First, reimplement the most important tools from util-linux:
 
-First, reimplement the most important tools from util-linux
 ## System Information
 - `dmesg`: Displays kernel messages.
 - `lscpu`: Shows CPU architecture information.
