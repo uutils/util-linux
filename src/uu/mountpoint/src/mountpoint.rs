@@ -7,6 +7,7 @@ use clap::Arg;
 use clap::{crate_version, Command};
 use std::env;
 use std::fs;
+#[cfg(not(windows))]
 use std::os::unix::fs::MetadataExt;
 use std::process;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
@@ -33,6 +34,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(not(windows))]
 fn is_mountpoint(path: &str) -> bool {
     let metadata = match fs::metadata(path) {
         Ok(metadata) => metadata,
@@ -48,6 +50,12 @@ fn is_mountpoint(path: &str) -> bool {
             Ok(parent_metadata) => parent_metadata.dev() != dev,
             Err(_) => false,
         }
+}
+
+// TODO: implement for windows
+#[cfg(windows)]
+fn is_mountpoint(path: &str) -> bool {
+    false
 }
 
 pub fn uu_app() -> Command {
