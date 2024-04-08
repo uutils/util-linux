@@ -23,10 +23,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
         let re = Regex::new(r"^model name\s+:\s+(.*)$").unwrap();
-        for cap in re.captures_iter(&contents) {
+        // Assuming all CPUs have the same model name
+        if let Some(cap) = re.captures_iter(&contents).next() {
             println!("Model name: {}", &cap[1]);
-            break; // Assuming all CPUs have the same model name
-        }
+        };
     }
     Ok(())
 }
