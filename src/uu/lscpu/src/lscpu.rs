@@ -13,9 +13,9 @@ const ABOUT: &str = help_about!("lscpu.md");
 const USAGE: &str = help_usage!("lscpu.md");
 
 #[uucore::main]
-pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+pub fn uumain(_args: impl uucore::Args) -> UResult<()> {
     let system = System::new_all();
-    let cpu = system.global_cpu_info();
+    let _cpu = system.global_cpu_info();
 
     println!("Architecture: {}", get_architecture());
     println!("CPU(s): {}", system.cpus().len());
