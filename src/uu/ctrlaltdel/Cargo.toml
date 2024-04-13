@@ -1,0 +1,15 @@
+[package]
+name = "uu_ctrlaltdel"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/ctrlaltdel.rs"
+
+[[bin]]
+name = "ctrlaltdel"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }

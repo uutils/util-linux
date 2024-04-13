@@ -645,10 +645,19 @@ dependencies = [
  "rlimit",
  "tempfile",
  "textwrap",
+ "uu_ctrlaltdel",
  "uu_lscpu",
  "uu_mountpoint",
  "uucore",
  "xattr",
+]
+
+[[package]]
+name = "uu_ctrlaltdel"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "uucore",
 ]
 
 [[package]]
