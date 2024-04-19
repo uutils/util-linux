@@ -6,6 +6,7 @@
 use clap::Arg;
 use clap::{crate_version, Command};
 use std::env;
+#[cfg(not(windows))]
 use std::fs;
 #[cfg(not(windows))]
 use std::os::unix::fs::MetadataExt;
@@ -54,7 +55,7 @@ fn is_mountpoint(path: &str) -> bool {
 
 // TODO: implement for windows
 #[cfg(windows)]
-fn is_mountpoint(path: &str) -> bool {
+fn is_mountpoint(_path: &str) -> bool {
     false
 }
 
