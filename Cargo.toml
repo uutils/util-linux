@@ -58,7 +58,7 @@ lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 
 [dev-dependencies]
-pretty_assertions = "1"
+pretty_assertions = "1.4.0"
 regex = { workspace = true }
 tempfile = { workspace = true }
 libc = { workspace = true }
