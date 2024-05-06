@@ -30,7 +30,7 @@ feat_common_core = [
 ]
 
 [workspace.dependencies]
-uucore = "0.0.25"
+uucore = "0.0.26"
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
 clap_complete = "4.4"
 clap_mangen = "0.2"
