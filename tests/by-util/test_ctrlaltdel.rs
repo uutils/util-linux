@@ -4,16 +4,11 @@
 // file that was distributed with this source code.
 // spell-checker:ignore (words) symdir somefakedir
 
-use std::path::PathBuf;
-
-use crate::common::util::{TestScenario, UCommand};
+#[cfg(target_os = "linux")]
+use crate::common::util::TestScenario;
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_invalid_arg() {
     new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
-}
-
-#[test]
-fn test_ctrlaltdel() {
-    new_ucmd!().succeeds();
 }

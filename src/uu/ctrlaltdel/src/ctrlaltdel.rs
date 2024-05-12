@@ -4,16 +4,15 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, Command};
-use std::fmt::Display;
-use uucore::{
-    error::{UError, UResult},
-    format_usage, help_about, help_usage,
-};
+use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("ctrlaltdel.md");
 const USAGE: &str = help_usage!("ctrlaltdel.md");
+
+#[cfg(target_os = "linux")]
 const CTRL_ALT_DEL_PATH: &str = "/proc/sys/kernel/ctrl-alt-del";
 
+#[cfg(target_os = "linux")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
@@ -36,6 +35,18 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(not(target_os = "linux"))]
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`ctrlaltdel` is unavailable on current platform.",
+    ))
+}
+
+#[cfg(target_os = "linux")]
 fn get_ctrlaltdel() -> UResult<CtrlAltDel> {
     let value: i32 = std::fs::read_to_string(CTRL_ALT_DEL_PATH)?
         .trim()
@@ -45,6 +56,7 @@ fn get_ctrlaltdel() -> UResult<CtrlAltDel> {
     Ok(CtrlAltDel::from_sysctl(value))
 }
 
+#[cfg(target_os = "linux")]
 fn set_ctrlaltdel(ctrlaltdel: CtrlAltDel) -> UResult<()> {
     std::fs::write(CTRL_ALT_DEL_PATH, format!("{}\n", ctrlaltdel.to_sysctl()))
         .map_err(|_| Error::NotRoot)?;
@@ -52,11 +64,13 @@ fn set_ctrlaltdel(ctrlaltdel: CtrlAltDel) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone, Copy)]
 enum CtrlAltDel {
     Soft,
     Hard,
 }
+#[cfg(target_os = "linux")]
 impl CtrlAltDel {
     /// # Panics
     /// Panics if value of the parameter `value` is neither `0` nor `1`.
@@ -75,7 +89,8 @@ impl CtrlAltDel {
         }
     }
 }
-impl Display for CtrlAltDel {
+#[cfg(target_os = "linux")]
+impl std::fmt::Display for CtrlAltDel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Soft => write!(f, "soft"),
@@ -84,13 +99,15 @@ impl Display for CtrlAltDel {
     }
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Debug)]
 enum Error {
     NotRoot,
     UnknownArgument(String),
     UnknownData,
 }
-impl Display for Error {
+#[cfg(target_os = "linux")]
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NotRoot => write!(f, "You must be root to set the Ctrl-Alt-Del behavior"),
@@ -99,8 +116,10 @@ impl Display for Error {
         }
     }
 }
+#[cfg(target_os = "linux")]
 impl std::error::Error for Error {}
-impl UError for Error {
+#[cfg(target_os = "linux")]
+impl uucore::error::UError for Error {
     fn code(&self) -> i32 {
         1
     }
