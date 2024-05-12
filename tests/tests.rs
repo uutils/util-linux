@@ -12,3 +12,7 @@ mod test_lscpu;
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
+
+#[cfg(feature = "ctrlaltdel")]
+#[path = "by-util/test_ctrlaltdel.rs"]
+mod test_ctrlaltdel;

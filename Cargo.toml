@@ -27,6 +27,7 @@ default = ["feat_common_core"]
 feat_common_core = [
   "mountpoint",
   "lscpu",
+  "ctrlaltdel",
 ]
 
 [workspace.dependencies]
@@ -56,6 +57,7 @@ textwrap = { workspace = true }
 #
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
+ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 
 [dev-dependencies]
 pretty_assertions = "1"
