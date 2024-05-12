@@ -13,9 +13,9 @@ const ABOUT: &str = help_about!("lscpu.md");
 const USAGE: &str = help_usage!("lscpu.md");
 
 #[uucore::main]
-pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+pub fn uumain(_args: impl uucore::Args) -> UResult<()> {
     let system = System::new_all();
-    let cpu = system.global_cpu_info();
+    let _cpu = system.global_cpu_info();
 
     println!("Architecture: {}", get_architecture());
     println!("CPU(s): {}", system.cpus().len());
@@ -23,10 +23,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
         let re = Regex::new(r"^model name\s+:\s+(.*)$").unwrap();
-        for cap in re.captures_iter(&contents) {
+        // Assuming all CPUs have the same model name
+        if let Some(cap) = re.captures_iter(&contents).next() {
             println!("Model name: {}", &cap[1]);
-            break; // Assuming all CPUs have the same model name
-        }
+        };
     }
     Ok(())
 }
