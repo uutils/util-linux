@@ -13,7 +13,8 @@ const ABOUT: &str = help_about!("lscpu.md");
 const USAGE: &str = help_usage!("lscpu.md");
 
 #[uucore::main]
-pub fn uumain(_args: impl uucore::Args) -> UResult<()> {
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     let system = System::new_all();
     let _cpu = system.global_cpu_info();
 
