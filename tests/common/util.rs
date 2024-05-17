@@ -5,7 +5,7 @@
 
 //spell-checker: ignore (linux) rlimit prlimit coreutil ggroups uchild uncaptured scmd SHLVL canonicalized
 
-#![allow(dead_code)]
+#![allow(dead_code, unexpected_cfgs)]
 
 use pretty_assertions::assert_eq;
 #[cfg(any(target_os = "linux", target_os = "android"))]
