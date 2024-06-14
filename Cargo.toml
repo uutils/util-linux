@@ -23,6 +23,7 @@ build = "build.rs"
 
 [features]
 default = ["feat_common_core"]
+uudoc = []
 
 feat_common_core = [
   "mountpoint",
