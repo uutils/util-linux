@@ -16,7 +16,6 @@ const USAGE: &str = help_usage!("rev.md");
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     let files = matches.get_many::<String>("file");
-    let mut has_error = false;
 
     match files {
         Some(files) => {
@@ -24,14 +23,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 let file = match std::fs::File::open(path) {
                     Ok(val) => val,
                     Err(err) => {
-                        has_error = true;
-                        eprintln!("rev: cannot open {}: {}", path, err);
+                        uucore::error::set_exit_code(1);
+                        uucore::show_error!("cannot open {}: {}", path, err);
                         continue;
                     }
                 };
                 if let Err(err) = rev_stream(file) {
-                    has_error = true;
-                    eprintln!("rev: cannot process {}: {}", path, err);
+                    uucore::error::set_exit_code(1);
+                    uucore::show_error!("cannot read {}: {}", path, err);
                 }
             }
         }
@@ -41,10 +40,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
     }
 
-    match has_error {
-        true => Err(uucore::error::USimpleError::new(1, "")),
-        false => Ok(()),
-    }
+    Ok(())
 }
 
 fn rev_stream(stream: impl Read) -> std::io::Result<()> {
