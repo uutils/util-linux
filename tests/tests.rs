@@ -16,3 +16,7 @@ mod test_mountpoint;
 #[cfg(feature = "ctrlaltdel")]
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
+
+#[cfg(feature = "rev")]
+#[path = "by-util/test_rev.rs"]
+mod test_rev;
