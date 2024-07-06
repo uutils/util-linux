@@ -24,3 +24,6 @@ mod test_ctrlaltdel;
 #[cfg(feature = "rev")]
 #[path = "by-util/test_rev.rs"]
 mod test_rev;
+#[cfg(feature = "last")]
+#[path = "by-util/test_last.rs"]
+mod test_last;
