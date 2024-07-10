@@ -1,5 +1,5 @@
-use crate::uu_app;
 use crate::options;
+use crate::uu_app;
 
 use uucore::error::UResult;
 
@@ -18,7 +18,7 @@ fn get_long_usage() -> String {
     format!(
         "If FILE is not specified, use {}.  /var/log/wtmp as FILE is common.\n\
          If ARG1 ARG2 given, -m presumed: 'am i' or 'mom likes' are usual.",
-         WTMP_PATH,
+        WTMP_PATH,
     )
 }
 
@@ -45,29 +45,35 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         if TIME_FORMAT_STR.contains(&format_str) {
             Ok(format.to_string())
         } else {
-            Err(USimpleError::new(0, format!("unknown time format: {format}")))
+            Err(USimpleError::new(
+                0,
+                format!("unknown time format: {format}"),
+            ))
         }
     } else {
         Ok("short".to_string())
     }?;
-    
+
     let file: String = if let Some(files) = matches.get_one::<String>(options::FILE) {
         files.to_string()
     } else {
         WTMP_PATH.to_string()
     };
 
-    let user: Option<Vec<String>> = if let Some(users) = matches.get_many::<String>(options::USER_TTY) {
-        users.map(|v| {
-            if is_numeric(&v) {
-                Some(format!("tty{v}"))
-            } else {
-                Some(v.to_owned())
-            }
-        }).collect()
-    } else {
-        None
-    };
+    let user: Option<Vec<String>> =
+        if let Some(users) = matches.get_many::<String>(options::USER_TTY) {
+            users
+                .map(|v| {
+                    if is_numeric(&v) {
+                        Some(format!("tty{v}"))
+                    } else {
+                        Some(v.to_owned())
+                    }
+                })
+                .collect()
+        } else {
+            None
+        };
 
     let mut last = Last {
         last_reboot_ut: None,
@@ -80,7 +86,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         limit,
         file: file.to_string(),
         users: user,
-        time_format
+        time_format,
     };
 
     last.exec()
@@ -101,7 +107,7 @@ struct Last {
     file: String,
     time_format: String,
     users: Option<Vec<String>>,
-    limit: i32
+    limit: i32,
 }
 
 fn is_numeric(s: &str) -> bool {
@@ -113,15 +119,18 @@ fn is_quoted(s: &str) -> bool {
 }
 
 #[inline]
-fn calculate_time_delta(curr_datetime: &OffsetDateTime, last_datetime: &OffsetDateTime) -> time::Duration {
+fn calculate_time_delta(
+    curr_datetime: &OffsetDateTime,
+    last_datetime: &OffsetDateTime,
+) -> time::Duration {
     let curr_duration = time::Duration::new(
-       curr_datetime.unix_timestamp(),
-       curr_datetime.nanosecond().try_into().unwrap() // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
+        curr_datetime.unix_timestamp(),
+        curr_datetime.nanosecond().try_into().unwrap(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
     );
 
     let last_duration = time::Duration::new(
         last_datetime.unix_timestamp(),
-        last_datetime.nanosecond().try_into().unwrap() // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
+        last_datetime.nanosecond().try_into().unwrap(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
     );
 
     last_duration - curr_duration
@@ -130,12 +139,12 @@ fn calculate_time_delta(curr_datetime: &OffsetDateTime, last_datetime: &OffsetDa
 #[inline]
 fn duration_string(duration: time::Duration) -> String {
     let mut seconds = duration.whole_seconds();
-    
+
     let days = seconds / 86400;
     seconds = seconds - (days * 86400);
     let hours = seconds / 3600;
     seconds = seconds - (hours * 3600);
-    let minutes =  seconds / 60;
+    let minutes = seconds / 60;
 
     if days > 0 {
         format!("({}+{:0>2}:{:0>2})", days, hours, minutes)
@@ -147,14 +156,13 @@ fn duration_string(duration: time::Duration) -> String {
 fn find_dns_name(ut: &Utmpx) -> String {
     let default = Ipv4Addr::new(0, 0, 0, 0);
     let ip = std::net::IpAddr::V4(Ipv4Addr::from_str(&ut.host()).unwrap_or(default));
-    
+
     if ip.to_string().trim() == "0.0.0.0" {
-        return ip.to_string()
+        return ip.to_string();
     } else {
         return dns_lookup::lookup_addr(&ip).unwrap();
     }
 }
-
 
 impl Last {
     #[allow(clippy::cognitive_complexity)]
@@ -169,12 +177,16 @@ impl Last {
         let mut counter = 0;
         while let Some(ut) = ut_stack.pop() {
             if counter >= self.limit && self.limit > 0 {
-                break
+                break;
             }
             // println!("|{}| |{}| |{}|", ut.user(), time_string(&ut), ut.tty_device());
             if ut.is_user_process() {
                 let mut dead_proc: Option<Utmpx> = None;
-                if let Some(pos) = self.last_dead_ut.iter().position(|dead_ut| { ut.tty_device() == dead_ut.tty_device() }) {
+                if let Some(pos) = self
+                    .last_dead_ut
+                    .iter()
+                    .position(|dead_ut| ut.tty_device() == dead_ut.tty_device())
+                {
                     dead_proc = Some(self.last_dead_ut.swap_remove(pos));
                 }
                 if self.print_user(&ut, dead_proc.as_ref()) {
@@ -194,37 +206,33 @@ impl Last {
                     counter += 1;
                 }
                 self.last_reboot_ut = Some(ut);
-            } else if ut.user() == "" { // Dead process end date
+            } else if ut.user() == "" {
+                // Dead process end date
                 self.last_dead_ut.push(ut);
             }
         }
-        
+
         Ok(())
     }
-    
+
     #[inline]
     fn time_string(&self, ut: &Utmpx) -> String {
         let description = match self.time_format.as_str() {
-            "short" | "full" => {"[month repr:short] [day padding:space] [hour]:[minute]"}
-            "iso" => {"[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]"}
-            _ => {return "".to_string()}
+            "short" | "full" => "[month repr:short] [day padding:space] [hour]:[minute]",
+            "iso" => "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]",
+            _ => return "".to_string(),
         };
 
         // "%b %e %H:%M"
         let time_format: Vec<time::format_description::FormatItem> =
-            time::format_description::parse(description)
-                .unwrap();
+            time::format_description::parse(description).unwrap();
         ut.login_time().format(&time_format).unwrap() // LC_ALL=C
     }
 
     #[inline]
-    fn end_time_string(
-        &self,
-        user_process_str: Option<&str>,
-        end_ut: &OffsetDateTime
-    ) -> String {
+    fn end_time_string(&self, user_process_str: Option<&str>, end_ut: &OffsetDateTime) -> String {
         match user_process_str {
-            Some(val) => { val.to_string() }
+            Some(val) => val.to_string(),
             _ => {
                 let description = match self.time_format.as_str() {
                     "short" => {"[hour]:[minute]"}
@@ -235,8 +243,7 @@ impl Last {
 
                 // "%H:%M"
                 let time_format: Vec<time::format_description::FormatItem> =
-                time::format_description::parse(description)
-                    .unwrap();
+                    time::format_description::parse(description).unwrap();
                 end_ut.format(&time_format).unwrap() // LC_ALL=C
             }
         }
@@ -254,9 +261,12 @@ impl Last {
         if let Some(dead) = dead_ut {
             let dead_datetime = dead.login_time();
             let time_delta = duration_string(calculate_time_delta(&curr_datetime, &dead_datetime));
-            return (self.end_time_string(proc_status, &dead_datetime), time_delta.to_string())
+            return (
+                self.end_time_string(proc_status, &dead_datetime),
+                time_delta.to_string(),
+            );
         }
-        
+
         let reboot_datetime: Option<OffsetDateTime>;
         let shutdown_datetime: Option<OffsetDateTime>;
         if let Some(reboot) = &self.last_reboot_ut {
@@ -276,20 +286,32 @@ impl Last {
         if reboot_datetime.is_none() && shutdown_datetime.is_none() {
             if ut.is_user_process() {
                 (" - still logged in".to_string(), "".to_string())
-            } else { 
-                (" - still running".to_string(), "".to_string()) 
+            } else {
+                (" - still running".to_string(), "".to_string())
             }
         } else {
-            let reboot = reboot_datetime.unwrap_or_else(|| { time::OffsetDateTime::from_unix_timestamp(0).unwrap() });
-            let shutdown = shutdown_datetime.unwrap_or_else(|| { time::OffsetDateTime::from_unix_timestamp(0).unwrap() });
+            let reboot = reboot_datetime
+                .unwrap_or_else(|| time::OffsetDateTime::from_unix_timestamp(0).unwrap());
+            let shutdown = shutdown_datetime
+                .unwrap_or_else(|| time::OffsetDateTime::from_unix_timestamp(0).unwrap());
             if reboot >= shutdown {
                 let time_delta = duration_string(calculate_time_delta(&curr_datetime, &shutdown));
-                if ut.is_user_process() { proc_status = Some("down"); }
-                (self.end_time_string(proc_status, &shutdown), time_delta.to_string())
+                if ut.is_user_process() {
+                    proc_status = Some("down");
+                }
+                (
+                    self.end_time_string(proc_status, &shutdown),
+                    time_delta.to_string(),
+                )
             } else {
                 let time_delta = duration_string(calculate_time_delta(&curr_datetime, &reboot));
-                if ut.is_user_process() { proc_status = Some("crash"); }
-                (self.end_time_string(proc_status, &reboot), time_delta.to_string())
+                if ut.is_user_process() {
+                    proc_status = Some("crash");
+                }
+                (
+                    self.end_time_string(proc_status, &reboot),
+                    time_delta.to_string(),
+                )
             }
         }
     }
@@ -297,8 +319,11 @@ impl Last {
     #[inline]
     fn print_runlevel(&self, ut: &Utmpx) -> bool {
         if let Some(users) = &self.users {
-            if !users.iter().any(|val| { val.as_str().trim() == ut.user().trim()}) {
-                return false
+            if !users
+                .iter()
+                .any(|val| val.as_str().trim() == ut.user().trim())
+            {
+                return false;
             }
         }
         if self.system {
@@ -316,7 +341,7 @@ impl Last {
                 &self.time_string(ut),
                 &host,
                 &end_date,
-                &delta
+                &delta,
             );
             true
         } else {
@@ -327,8 +352,10 @@ impl Last {
     #[inline]
     fn print_shutdown(&self, ut: &Utmpx) -> bool {
         if let Some(users) = &self.users {
-            if !users.iter().any(|val| {val.as_str().trim() == "system down" || val.as_str().trim() == ut.user().trim()}) {
-                return false
+            if !users.iter().any(|val| {
+                val.as_str().trim() == "system down" || val.as_str().trim() == ut.user().trim()
+            }) {
+                return false;
             }
         }
         let host = if self.dns {
@@ -344,7 +371,7 @@ impl Last {
                 &self.time_string(ut),
                 &host,
                 &end_date,
-                &delta
+                &delta,
             );
             true
         } else {
@@ -355,8 +382,10 @@ impl Last {
     #[inline]
     fn print_reboot(&self, ut: &Utmpx) -> bool {
         if let Some(users) = &self.users {
-            if !users.iter().any(|val| {val.as_str().trim() == ut.user().trim() || val.as_str().trim() == "system boot"}) {
-                return false
+            if !users.iter().any(|val| {
+                val.as_str().trim() == ut.user().trim() || val.as_str().trim() == "system boot"
+            }) {
+                return false;
             }
         }
         let (end_date, delta) = self.end_state_string(ut, None);
@@ -371,7 +400,7 @@ impl Last {
             &self.time_string(ut),
             &host,
             &end_date,
-            &delta
+            &delta,
         );
 
         true
@@ -380,8 +409,11 @@ impl Last {
     #[inline]
     fn print_user(&self, ut: &Utmpx, dead_ut: Option<&Utmpx>) -> bool {
         if let Some(users) = &self.users {
-            if !users.iter().any(|val| {val.as_str().trim() == ut.tty_device().as_str().trim() || val.as_str().trim() == ut.user().trim()}) {
-                return false
+            if !users.iter().any(|val| {
+                val.as_str().trim() == ut.tty_device().as_str().trim()
+                    || val.as_str().trim() == ut.user().trim()
+            }) {
+                return false;
             }
         }
         let mut p = PathBuf::from("/dev");
@@ -400,7 +432,7 @@ impl Last {
             self.time_string(ut).as_str(),
             &host,
             &end_date,
-            &delta
+            &delta,
         );
 
         true
@@ -415,7 +447,7 @@ impl Last {
         time: &str,
         host: &str,
         end_time: &str,
-        delta: &str
+        delta: &str,
     ) {
         let mut buf = String::with_capacity(64);
         let host_to_print = host.get(0..16).unwrap_or(host);
