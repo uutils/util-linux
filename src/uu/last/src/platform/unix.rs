@@ -218,7 +218,8 @@ impl Last {
     #[inline]
     fn time_string(&self, ut: &Utmpx) -> String {
         let description = match self.time_format.as_str() {
-            "short" | "full" => "[month repr:short] [day padding:space] [hour]:[minute]",
+            "short" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]"}
+            "full" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
             "iso" => "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]",
             _ => return "".to_string(),
         };
@@ -235,9 +236,9 @@ impl Last {
             Some(val) => val.to_string(),
             _ => {
                 let description = match self.time_format.as_str() {
-                    "short" => {"[hour]:[minute]"}
-                    "full" => {"[month repr:short] [day padding:space] [hour]:[minute]"}
-                    "iso" => {"[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]"}
+                    "short" => {"- [weekday repr:short] [hour]:[minute]"}
+                    "full" => {"- [weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
+                    "iso" => {"- [year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]"}
                     _ => {return "".to_string()}
                 };
 
@@ -285,9 +286,9 @@ impl Last {
 
         if reboot_datetime.is_none() && shutdown_datetime.is_none() {
             if ut.is_user_process() {
-                (" - still logged in".to_string(), "".to_string())
+                ("  still logged in".to_string(), "".to_string())
             } else {
-                (" - still running".to_string(), "".to_string())
+                ("  still running".to_string(), "".to_string())
             }
         } else {
             let reboot = reboot_datetime
@@ -297,7 +298,7 @@ impl Last {
             if reboot >= shutdown {
                 let time_delta = duration_string(calculate_time_delta(&curr_datetime, &shutdown));
                 if ut.is_user_process() {
-                    proc_status = Some("down");
+                    proc_status = Some("- down");
                 }
                 (
                     self.end_time_string(proc_status, &shutdown),
@@ -306,7 +307,7 @@ impl Last {
             } else {
                 let time_delta = duration_string(calculate_time_delta(&curr_datetime, &reboot));
                 if ut.is_user_process() {
-                    proc_status = Some("crash");
+                    proc_status = Some("- crash");
                 }
                 (
                     self.end_time_string(proc_status, &reboot),
@@ -461,11 +462,11 @@ impl Last {
         let time_size = 3 + 2 + 2 + 1 + 2;
         if self.host_last && !self.no_host && self.time_format != "notime" {
             write!(buf, " {time:<time_size$}").unwrap();
-            write!(buf, " - {end_time:<8}").unwrap();
+            write!(buf, " {end_time:<8}").unwrap();
             write!(buf, " {host_to_print}").unwrap();
         } else if self.time_format != "notime" {
             write!(buf, " {time:<time_size$}").unwrap();
-            write!(buf, " - {end_time:<8}").unwrap();
+            write!(buf, " {end_time:<8}").unwrap();
         }
         write!(buf, " {delta:^6}").unwrap();
         println!("{}", buf.trim_end());
