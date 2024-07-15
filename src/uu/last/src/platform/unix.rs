@@ -10,14 +10,12 @@ use uucore::utmpx::{time, Utmpx};
 use std::fmt::Write;
 use std::net::Ipv4Addr;
 
-use std::panic;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 fn get_long_usage() -> String {
     format!(
-        "If FILE is not specified, use {}.  /var/log/wtmp as FILE is common.\n\
-         If ARG1 ARG2 given, -m presumed: 'am i' or 'mom likes' are usual.",
+        "If FILE is not specified, use {}.  /var/log/wtmp as FILE is common.",
         WTMP_PATH,
     )
 }
