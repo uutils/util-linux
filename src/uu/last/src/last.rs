@@ -1,9 +1,5 @@
-use uucore::{error::{UError, UResult}, format_usage, help_about, help_usage, libc::utmpx, utmpx::{Utmpx, UtmpxIter}};
-use std::{cmp::Reverse, error::Error, fmt::{self, Display}, io::BufReader, iter::Rev, net::IpAddr, str::{FromStr, Utf8Error}};
-use std::io::Write;
-use std::fs::File;
-use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
-use dns_lookup::lookup_addr;
+use uucore::{format_usage, help_about, help_usage};
+use clap::{crate_version, Arg, ArgAction, Command};
 
 mod platform;
 
