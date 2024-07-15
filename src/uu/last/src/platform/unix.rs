@@ -168,10 +168,10 @@ impl Last {
     #[allow(clippy::cognitive_complexity)]
     fn exec(&mut self) -> UResult<()> {
         let mut ut_stack: Vec<Utmpx> = vec![];
-        Utmpx::iter_all_records_from(&self.file).for_each(|ut| {
-            ut_stack.push(ut) // For 'last' output, older output needs to be printed last (FILO), as UtmpxIter does not implement Rev trait
-                              // A better implementation might include implementing UtmpxIter as doubly linked
-        });
+        // For 'last' output, older output needs to be printed last (FILO), as
+        // UtmpxIter does not implement Rev trait. A better implementation
+        // might include implementing UtmpxIter as doubly linked
+        Utmpx::iter_all_records_from(&self.file).for_each(|ut| ut_stack.push(ut));
 
         // let mut last: Option<Utmpx> = None;
         let mut counter = 0;
@@ -282,38 +282,29 @@ impl Last {
             shutdown_datetime = None;
         }
 
-        // let last_datetimes_tuple = (reboot_datetime, shutdown_datetime);
-
-        if reboot_datetime.is_none() && shutdown_datetime.is_none() {
+        if shutdown_datetime.is_none() {
             if ut.is_user_process() {
-                ("  still logged in".to_string(), "".to_string())
+                // If a reboot has occurred since the user logged in, but not shutdown is recorded
+                // then a crash must have occurred.
+                if !reboot_datetime.is_none() && reboot_datetime.unwrap() > ut.login_time() {
+                    ("- crash".to_string(), "".to_string())
+                } else {
+                    ("  still logged in".to_string(), "".to_string())
+                }
             } else {
                 ("  still running".to_string(), "".to_string())
             }
         } else {
-            let reboot = reboot_datetime
-                .unwrap_or_else(|| time::OffsetDateTime::from_unix_timestamp(0).unwrap());
             let shutdown = shutdown_datetime
                 .unwrap_or_else(|| time::OffsetDateTime::from_unix_timestamp(0).unwrap());
-            if reboot >= shutdown {
-                let time_delta = duration_string(calculate_time_delta(&curr_datetime, &shutdown));
-                if ut.is_user_process() {
-                    proc_status = Some("- down");
-                }
-                (
-                    self.end_time_string(proc_status, &shutdown),
-                    time_delta.to_string(),
-                )
-            } else {
-                let time_delta = duration_string(calculate_time_delta(&curr_datetime, &reboot));
-                if ut.is_user_process() {
-                    proc_status = Some("- crash");
-                }
-                (
-                    self.end_time_string(proc_status, &reboot),
-                    time_delta.to_string(),
-                )
+            let time_delta = duration_string(calculate_time_delta(&curr_datetime, &shutdown));
+            if ut.is_user_process() {
+                proc_status = Some("- down");
             }
+            (
+                self.end_time_string(proc_status, &shutdown),
+                time_delta.to_string(),
+            )
         }
     }
 
