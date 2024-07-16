@@ -128,12 +128,12 @@ fn calculate_time_delta(
 ) -> time::Duration {
     let curr_duration = time::Duration::new(
         curr_datetime.unix_timestamp(),
-        curr_datetime.nanosecond().try_into().unwrap(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
+        curr_datetime.nanosecond().try_into().unwrap_or_default(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
     );
 
     let last_duration = time::Duration::new(
         last_datetime.unix_timestamp(),
-        last_datetime.nanosecond().try_into().unwrap(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
+        last_datetime.nanosecond().try_into().unwrap_or_default(), // nanosecond value is always a value between 0 and 1.000.000.000, shouldn't panic
     );
 
     last_duration - curr_duration
@@ -163,7 +163,7 @@ fn find_dns_name(ut: &Utmpx) -> String {
     if ip.to_string().trim() == "0.0.0.0" {
         return ip.to_string();
     } else {
-        return dns_lookup::lookup_addr(&ip).unwrap();
+        return dns_lookup::lookup_addr(&ip).unwrap_or_default();
     }
 }
 
@@ -176,13 +176,11 @@ impl Last {
         // might include implementing UtmpxIter as doubly linked
         Utmpx::iter_all_records_from(&self.file).for_each(|ut| ut_stack.push(ut));
 
-        // let mut last: Option<Utmpx> = None;
         let mut counter = 0;
         while let Some(ut) = ut_stack.pop() {
             if counter >= self.limit && self.limit > 0 {
                 break;
             }
-            // println!("|{}| |{}| |{}|", ut.user(), time_string(&ut), ut.tty_device());
             if ut.is_user_process() {
                 let mut dead_proc: Option<Utmpx> = None;
                 if let Some(pos) = self
@@ -229,8 +227,8 @@ impl Last {
 
         // "%b %e %H:%M"
         let time_format: Vec<time::format_description::FormatItem> =
-            time::format_description::parse(description).unwrap();
-        ut.login_time().format(&time_format).unwrap() // LC_ALL=C
+            time::format_description::parse(description).unwrap_or_default();
+        ut.login_time().format(&time_format).unwrap_or_default()
     }
 
     #[inline]
@@ -247,8 +245,8 @@ impl Last {
 
                 // "%H:%M"
                 let time_format: Vec<time::format_description::FormatItem> =
-                    time::format_description::parse(description).unwrap();
-                end_ut.format(&time_format).unwrap() // LC_ALL=C
+                    time::format_description::parse(description).unwrap_or_default();
+                end_ut.format(&time_format).unwrap_or_default()
             }
         }
     }
@@ -447,22 +445,22 @@ impl Last {
         let mut buf = String::with_capacity(64);
         let host_to_print = host.get(0..16).unwrap_or(host);
 
-        write!(buf, "{user:<8}").unwrap();
-        write!(buf, " {line:<12}").unwrap();
+        write!(buf, "{user:<8}").unwrap_or_default();
+        write!(buf, " {line:<12}").unwrap_or_default();
         if !self.host_last && !self.no_host {
-            write!(buf, " {host_to_print:<16}").unwrap();
+            write!(buf, " {host_to_print:<16}").unwrap_or_default();
         }
 
         let time_size = 3 + 2 + 2 + 1 + 2;
         if self.host_last && !self.no_host && self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap();
-            write!(buf, " {end_time:<8}").unwrap();
-            write!(buf, " {host_to_print}").unwrap();
+            write!(buf, " {time:<time_size$}").unwrap_or_default();
+            write!(buf, " {end_time:<8}").unwrap_or_default();
+            write!(buf, " {host_to_print}").unwrap_or_default();
         } else if self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap();
-            write!(buf, " {end_time:<8}").unwrap();
+            write!(buf, " {time:<time_size$}").unwrap_or_default();
+            write!(buf, " {end_time:<8}").unwrap_or_default();
         }
-        write!(buf, " {delta:^6}").unwrap();
+        write!(buf, " {delta:^6}").unwrap_or_default();
         println!("{}", buf.trim_end());
     }
 }
