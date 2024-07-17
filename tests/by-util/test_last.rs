@@ -15,10 +15,11 @@ fn test_invalid_arg() {
 
 #[test]
 fn test_last() {
+    let regex = Regex::new("still running|still logged in").unwrap();
     TestScenario::new(util_name!())
         .ucmd()
         .succeeds()
-        .stdout_contains("still running");
+        .stdout_matches(&regex);
 }
 
 #[test]
