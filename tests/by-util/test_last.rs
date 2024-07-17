@@ -35,7 +35,11 @@ fn test_limit_arg() {
 }
 
 #[test]
-#[cfg(unix)]
+// The -x flag generally adds two rows "shutdown" and "runlevel"
+// "shutdown" cannot be checked for since not every machine will have shutdown
+// "runlevel" only makes sense for Linux systems, so only Linux is included for
+// this test.
+#[cfg(linux)]
 fn test_system_arg() {
     new_ucmd!().arg("-x").succeeds().stdout_contains("runlevel");
 }
