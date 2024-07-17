@@ -117,10 +117,6 @@ fn is_numeric(s: &str) -> bool {
     s.chars().all(|c| c.is_numeric())
 }
 
-fn is_quoted(s: &str) -> bool {
-    s.chars().all(|c| c == '"' || c == '\'')
-}
-
 #[inline]
 fn calculate_time_delta(
     curr_datetime: &OffsetDateTime,
