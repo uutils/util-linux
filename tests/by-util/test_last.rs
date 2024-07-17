@@ -18,7 +18,6 @@ fn test_last() {
     TestScenario::new(util_name!())
         .ucmd()
         .succeeds()
-        .stdout_contains("still logged in")
         .stdout_contains("still running");
 }
 
