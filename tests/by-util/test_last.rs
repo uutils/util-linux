@@ -24,11 +24,6 @@ fn test_last() {
 
 #[test]
 fn test_limit_arg() {
-    // let line_check = |input: &str| {
-    //     let re = Regex::new(r"-r.*norm").unwrap();
-    //     re.replace_all(input, "norm").to_string()
-    // };
-
     let line_check = |input: &str| input.lines().count() == 1;
 
     new_ucmd!().arg("--limit=1").succeeds().stdout_str_check(line_check);
