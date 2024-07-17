@@ -3,9 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-#[cfg(not(target_os = "openbsd"))]
+#[cfg(unix)]
 mod unix;
-#[cfg(not(target_os = "openbsd"))]
+#[cfg(unix)]
 pub use self::unix::*;
 
 #[cfg(target_os = "openbsd")]
