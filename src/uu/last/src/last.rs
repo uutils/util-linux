@@ -3,8 +3,8 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use uucore::{format_usage, help_about, help_usage};
 use clap::{crate_version, Arg, ArgAction, Command};
+use uucore::{format_usage, help_about, help_usage};
 
 mod platform;
 
@@ -38,7 +38,7 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::Set)
                 .default_value("/var/log/wtmp")
                 .help("use a specific file instead of /var/log/wtmp")
-                .required(false)
+                .required(false),
         )
         .arg(
             Arg::new(options::SYSTEM)
@@ -46,7 +46,7 @@ pub fn uu_app() -> Command {
                 .long(options::SYSTEM)
                 .action(ArgAction::SetTrue)
                 .required(false)
-                .help("display system shutdown entries and run level changes")
+                .help("display system shutdown entries and run level changes"),
         )
         .arg(
             Arg::new(options::DNS)
@@ -54,7 +54,7 @@ pub fn uu_app() -> Command {
                 .long(options::DNS)
                 .action(ArgAction::SetTrue)
                 .required(false)
-                .help("translate the IP number back into a hostname")
+                .help("translate the IP number back into a hostname"),
         )
         .arg(
             Arg::new(options::HOSTLAST)
@@ -62,15 +62,15 @@ pub fn uu_app() -> Command {
                 .long(options::HOSTLAST)
                 .action(ArgAction::SetTrue)
                 .required(false)
-                .help("display hostnames in the last column")
-        ) 
+                .help("display hostnames in the last column"),
+        )
         .arg(
             Arg::new(options::NO_HOST)
                 .short('R')
                 .long(options::NO_HOST)
                 .action(ArgAction::SetTrue)
                 .required(false)
-                .help("don't display the hostname field")
+                .help("don't display the hostname field"),
         )
         .arg(
             Arg::new(options::LIMIT)
@@ -80,7 +80,7 @@ pub fn uu_app() -> Command {
                 .required(false)
                 .help("how many lines to show")
                 .value_parser(clap::value_parser!(i32))
-                .allow_negative_numbers(true)
+                .allow_negative_numbers(true),
         )
         .arg(
             Arg::new(options::TIME_FORMAT)
@@ -88,10 +88,7 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::Set)
                 .required(false)
                 .help("show timestamps in the specified <format>: notime|short|full|iso")
-                .default_value("short")
+                .default_value("short"),
         )
-        .arg(
-            Arg::new(options::USER_TTY)
-                .action(ArgAction::Append)
-        )
+        .arg(Arg::new(options::USER_TTY).action(ArgAction::Append))
 }
