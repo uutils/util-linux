@@ -25,11 +25,6 @@ const USAGE: &str = help_usage!("last.md");
 #[uucore::main]
 use platform::uumain;
 
-#[cfg(target_os = "linux")]
-static RUNLEVEL_HELP: &str = "print current runlevel";
-#[cfg(not(target_os = "linux"))]
-static RUNLEVEL_HELP: &str = "print current runlevel (This is meaningless on non Linux)";
-
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())
         .version(crate_version!())
