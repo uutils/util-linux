@@ -67,7 +67,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         if let Some(users) = matches.get_many::<String>(options::USER_TTY) {
             users
                 .map(|v| {
-                    if is_numeric(&v) {
+                    if is_numeric(v) {
                         Some(format!("tty{v}"))
                     } else {
                         Some(v.to_owned())
@@ -140,9 +140,9 @@ fn duration_string(duration: time::Duration) -> String {
     let mut seconds = duration.whole_seconds();
 
     let days = seconds / 86400;
-    seconds = seconds - (days * 86400);
+    seconds -= days * 86400;
     let hours = seconds / 3600;
-    seconds = seconds - (hours * 3600);
+    seconds -= hours * 3600;
     let minutes = seconds / 60;
 
     if days > 0 {
@@ -157,9 +157,9 @@ fn find_dns_name(ut: &Utmpx) -> String {
     let ip = std::net::IpAddr::V4(Ipv4Addr::from_str(&ut.host()).unwrap_or(default));
 
     if ip.to_string().trim() == "0.0.0.0" {
-        return ip.to_string();
+        ip.to_string()
     } else {
-        return dns_lookup::lookup_addr(&ip).unwrap_or_default();
+        dns_lookup::lookup_addr(&ip).unwrap_or_default()
     }
 }
 
@@ -283,7 +283,7 @@ impl Last {
             if ut.is_user_process() {
                 // If a reboot has occurred since the user logged in, but not shutdown is recorded
                 // then a crash must have occurred.
-                if !reboot_datetime.is_none() && reboot_datetime.unwrap() > ut.login_time() {
+                if reboot_datetime.is_some() && reboot_datetime.unwrap() > ut.login_time() {
                     ("- crash".to_string(), "".to_string())
                 } else {
                     ("  still logged in".to_string(), "".to_string())
@@ -320,7 +320,7 @@ impl Last {
             let runlvline = format!("(to lvl {curr})");
             let (end_date, delta) = self.end_state_string(ut, None);
             let host = if self.dns {
-                find_dns_name(&ut)
+                find_dns_name(ut)
             } else {
                 ut.host()
             };
@@ -348,7 +348,7 @@ impl Last {
             }
         }
         let host = if self.dns {
-            find_dns_name(&ut)
+            find_dns_name(ut)
         } else {
             ut.host()
         };
@@ -379,7 +379,7 @@ impl Last {
         }
         let (end_date, delta) = self.end_state_string(ut, None);
         let host = if self.dns {
-            find_dns_name(&ut)
+            find_dns_name(ut)
         } else {
             ut.host()
         };
@@ -408,7 +408,7 @@ impl Last {
         let mut p = PathBuf::from("/dev");
         p.push(ut.tty_device().as_str());
         let host = if self.dns {
-            find_dns_name(&ut)
+            find_dns_name(ut)
         } else {
             ut.host()
         };
