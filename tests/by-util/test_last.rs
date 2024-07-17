@@ -24,8 +24,10 @@ fn test_last() {
 #[test]
 fn test_limit_arg() {
     let line_check = |input: &str| input.lines().count() == 1;
-
-    new_ucmd!().arg("--limit=1").succeeds().stdout_str_check(line_check);
+    new_ucmd!()
+        .arg("--limit=1")
+        .succeeds()
+        .stdout_str_check(line_check);
 }
 
 #[test]
@@ -36,25 +38,38 @@ fn test_system_arg() {
 #[test]
 fn test_timestamp_format_no_time() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
-    new_ucmd!().arg("--time-format=notime").succeeds().stdout_does_not_match(&regex);
+    new_ucmd!()
+        .arg("--time-format=notime")
+        .succeeds()
+        .stdout_does_not_match(&regex);
 }
 
 #[test]
 fn test_timestamp_format_short() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
-    new_ucmd!().arg("--time-format=short").succeeds().stdout_matches(&regex);
+    new_ucmd!()
+        .arg("--time-format=short")
+        .succeeds()
+        .stdout_matches(&regex);
 }
 
 #[test]
 fn test_timestamp_format_full() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ").unwrap();
-    new_ucmd!().arg("--time-format=full").succeeds().stdout_matches(&regex);
+    new_ucmd!()
+        .arg("--time-format=full")
+        .succeeds()
+        .stdout_matches(&regex);
 }
 
 // 2024-07-11T19:30:44+08:00
 #[test]
 fn test_timestamp_format_iso() {
-    let regex = Regex::new(" [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]").unwrap();
-    new_ucmd!().arg("--time-format=iso").succeeds().stdout_matches(&regex);
+    let regex =
+        Regex::new(" [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")
+            .unwrap();
+    new_ucmd!()
+        .arg("--time-format=iso")
+        .succeeds()
+        .stdout_matches(&regex);
 }
-
