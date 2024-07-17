@@ -12,3 +12,8 @@ pub use self::unix::*;
 mod openbsd;
 #[cfg(target_os = "openbsd")]
 pub use self::openbsd::*;
+
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub use self::windows::*;
