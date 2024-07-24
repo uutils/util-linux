@@ -65,9 +65,12 @@ clap_complete = { workspace = true }
 clap_mangen = { workspace = true }
 dns-lookup = { workspace = true }
 phf = { workspace = true }
+serde = { workspace = true }
+serde_json  = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
 
+#
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }

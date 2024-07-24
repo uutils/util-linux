@@ -14,3 +14,14 @@ fn test_invalid_arg() {
 fn test_hex() {
     new_ucmd!().arg("--hex").succeeds().stdout_contains("0x");
 }
+
+#[test]
+fn test_json() {
+    new_ucmd!()
+        .arg("--json")
+        .succeeds()
+        // ensure some fields are there, non-exhausting
+        .stdout_contains("\"lscpu\": [")
+        .stdout_contains("\"field\": \"Architecture\"")
+        .stdout_contains("\"field\": \"CPU(s)\"");
+}
