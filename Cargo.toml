@@ -28,6 +28,7 @@ uudoc = []
 feat_common_core = [
   "mountpoint",
   "lscpu",
+  "lsmem",
   "ctrlaltdel",
   "rev",
 ]
@@ -58,6 +59,7 @@ textwrap = { workspace = true }
 
 #
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
+lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }

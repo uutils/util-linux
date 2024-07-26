@@ -1,0 +1,15 @@
+[package]
+name = "uu_lsmem"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/lsmem.rs"
+
+[[bin]]
+name = "lsmem"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }

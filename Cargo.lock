@@ -643,6 +643,7 @@ dependencies = [
  "textwrap",
  "uu_ctrlaltdel",
  "uu_lscpu",
+ "uu_lsmem",
  "uu_mountpoint",
  "uu_rev",
  "uucore",
@@ -664,6 +665,14 @@ dependencies = [
  "clap",
  "regex",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_lsmem"
+version = "0.0.1"
+dependencies = [
+ "clap",
  "uucore",
 ]
 
