@@ -25,6 +25,18 @@ fn test_existing_file() {
 }
 
 #[test]
+fn test_zero() {
+    let (at, mut ucmd) = at_and_ucmd!();
+
+    at.write("a.txt", "line A\0line B");
+
+    ucmd.arg("a.txt")
+        .arg("--zero")
+        .succeeds()
+        .stdout_is("A enil\0B enil");
+}
+
+#[test]
 fn test_multiple_files() {
     let (at, mut ucmd) = at_and_ucmd!();
 
