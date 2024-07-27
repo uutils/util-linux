@@ -20,17 +20,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     match files {
         Some(files) => {
             for path in files {
-                let file = match std::fs::File::open(path) {
-                    Ok(val) => val,
-                    Err(err) => {
-                        uucore::error::set_exit_code(1);
-                        uucore::show_error!("cannot open {}: {}", path, err);
-                        continue;
-                    }
+                let Ok(file) = std::fs::File::open(path) else {
+                    uucore::error::set_exit_code(1);
+                    uucore::show_error!("cannot open {path}: No such file or directory");
+                    continue;
                 };
                 if let Err(err) = rev_stream(file) {
                     uucore::error::set_exit_code(1);
-                    uucore::show_error!("cannot read {}: {}", path, err);
+                    uucore::show_error!("cannot read {path}: {err}");
                 }
             }
         }
