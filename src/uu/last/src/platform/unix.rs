@@ -181,7 +181,7 @@ impl Last {
         let mut first_ut_time = None;
         while let Some(ut) = ut_stack.pop() {
             first_ut_time = Some(self.time_string(&ut)); // By the end of iteration we will have the earliest time
-                                                     // (This avoids getting into issues with the compiler)
+                                                         // (This avoids getting into issues with the compiler)
             if counter >= self.limit && self.limit > 0 {
                 break;
             }
@@ -218,14 +218,20 @@ impl Last {
         }
 
         let path = std::path::absolute(&self.file)?;
-        let path_str = path.file_name().ok_or_else(|| { 
-            if path.is_dir() {
-                UIoError::new(io::ErrorKind::InvalidData, "Is a directory") 
-            } else {
-                UIoError::new(io::ErrorKind::Unsupported, "Undefined")
-            }
-            
-        })?.to_str().ok_or(UIoError::new(io::ErrorKind::InvalidData, "invalid character data (not UTF-8)"))?;
+        let path_str = path
+            .file_name()
+            .ok_or_else(|| {
+                if path.is_dir() {
+                    UIoError::new(io::ErrorKind::InvalidData, "Is a directory")
+                } else {
+                    UIoError::new(io::ErrorKind::Unsupported, "Undefined")
+                }
+            })?
+            .to_str()
+            .ok_or(UIoError::new(
+                io::ErrorKind::InvalidData,
+                "invalid character data (not UTF-8)",
+            ))?;
 
         if let Some(file_time) = first_ut_time {
             println!("\n{} begins {}", path_str, file_time);
@@ -250,14 +256,15 @@ impl Last {
         let time_format: Vec<time::format_description::FormatItem> =
             time::format_description::parse(description).unwrap_or_default();
 
-        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC); 
+        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
         let secs: u64 = offset.whole_seconds() as u64;
 
         // The SystemTime time variable, for some reason, converts the time back to UTC
         // and removes the offset. This code is replacing the offset with the system's, and
         // adding back the time to the offset so that offset_time is correct.
-        let offset_time = OffsetDateTime::from(time).replace_offset(offset) + Duration::from_secs(secs);
-        
+        let offset_time =
+            OffsetDateTime::from(time).replace_offset(offset) + Duration::from_secs(secs);
+
         offset_time.format(&time_format).unwrap_or_default()
     }
 
