@@ -100,7 +100,7 @@ fn test_short_invalid_utmp_file() {
     ];
     let _ = testfile.unwrap().write_all(&data);
 
-    let regex = Regex::new(r"\n\S*\sbegins\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*[0-9][0-9]?\s*[0-9][0-9]:[0-9][0-9]")
+    let regex = Regex::new(r"\n\S*\sbegins\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*[0-9][0-9]?\s*[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\s*[0-9]*")
             .unwrap();
 
     new_ucmd!()

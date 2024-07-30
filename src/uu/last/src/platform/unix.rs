@@ -169,6 +169,13 @@ fn find_dns_name(ut: &Utmpx) -> String {
 }
 
 impl Last {
+    const TIME_FULL_FMT: &'static str = "[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]";
+    const END_TIME_SHORT_FMT: &'static str = "[hour]:[minute]";
+    const START_TIME_SHORT_FMT: &'static str =
+        "[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]";
+    const TIME_ISO_FMT: &'static str =
+        "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]";
+
     #[allow(clippy::cognitive_complexity)]
     fn exec(&mut self) -> UResult<()> {
         let mut ut_stack: Vec<Utmpx> = vec![];
@@ -182,7 +189,7 @@ impl Last {
         while let Some(ut) = ut_stack.pop() {
             if ut_stack.len() == 0 {
                 // By the end of loop we will have the earliest time
-                                                         // (This avoids getting into issues with the compiler)
+                // (This avoids getting into issues with the compiler)
                 let first_login_time = ut.login_time();
                 first_ut_time = Some(self.utmp_file_time(
                     first_login_time.unix_timestamp(),
@@ -257,9 +264,8 @@ impl Last {
     #[inline]
     fn utmp_file_time(&self, secs: i64, nsecs: u64) -> String {
         let description = match self.time_format.as_str() {
-            "short" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]"}
-            "full" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
-            "iso" => "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]",
+            "short" | "full" => Self::TIME_FULL_FMT,
+            "iso" => Self::TIME_ISO_FMT,
             _ => return "".to_string(),
         };
 
@@ -283,9 +289,9 @@ impl Last {
     #[inline]
     fn time_string(&self, ut: &Utmpx) -> String {
         let description = match self.time_format.as_str() {
-            "short" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]"}
-            "full" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
-            "iso" => "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]",
+            "short" => Self::START_TIME_SHORT_FMT,
+            "full" => Self::TIME_FULL_FMT,
+            "iso" => Self::TIME_ISO_FMT,
             _ => return "".to_string(),
         };
 
@@ -301,15 +307,15 @@ impl Last {
             Some(val) => val.to_string(),
             _ => {
                 let description = match self.time_format.as_str() {
-                    "short" => {"- [weekday repr:short] [hour]:[minute]"}
-                    "full" => {"- [weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
-                    "iso" => {"- [year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]"}
-                    _ => {return "".to_string()}
+                    "short" => format!("- {}", Self::END_TIME_SHORT_FMT),
+                    "full" => format!("- {}", Self::TIME_FULL_FMT),
+                    "iso" => format!("- {}", Self::TIME_ISO_FMT),
+                    _ => return "".to_string(),
                 };
 
                 // "%H:%M"
                 let time_format: Vec<time::format_description::FormatItem> =
-                    time::format_description::parse(description).unwrap_or_default();
+                    time::format_description::parse(&description).unwrap_or_default();
                 end_ut.format(&time_format).unwrap_or_default()
             }
         }
