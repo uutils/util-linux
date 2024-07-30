@@ -24,24 +24,22 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let zero = matches.get_flag(options::ZERO);
 
     let sep = if zero { b'\0' } else { b'\n' };
-    match files {
-        Some(files) => {
-            for path in files {
-                let Ok(file) = std::fs::File::open(path) else {
-                    uucore::error::set_exit_code(1);
-                    uucore::show_error!("cannot open {path}: No such file or directory");
-                    continue;
-                };
-                if let Err(err) = rev_stream(file, sep) {
-                    uucore::error::set_exit_code(1);
-                    uucore::show_error!("cannot read {path}: {err}");
-                }
+
+    if let Some(files) = files {
+        for path in files {
+            let Ok(file) = std::fs::File::open(path) else {
+                uucore::error::set_exit_code(1);
+                uucore::show_error!("cannot open {path}: No such file or directory");
+                continue;
+            };
+            if let Err(err) = rev_stream(file, sep) {
+                uucore::error::set_exit_code(1);
+                uucore::show_error!("cannot read {path}: {err}");
             }
         }
-        None => {
-            let stdin = std::io::stdin().lock();
-            let _ = rev_stream(stdin, sep);
-        }
+    } else {
+        let stdin = std::io::stdin().lock();
+        let _ = rev_stream(stdin, sep);
     }
 
     Ok(())
