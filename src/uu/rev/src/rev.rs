@@ -54,15 +54,15 @@ fn rev_stream(stream: impl Read, sep: u8) -> std::io::Result<()> {
     loop {
         buf.clear();
         stream.read_until(sep, &mut buf)?;
-        if buf.last().copied() != Some(sep) {
-            buf.reverse();
-            stdout.write_all(&buf)?;
-            break;
-        } else {
+        if buf.last().copied() == Some(sep) {
             buf.pop();
             buf.reverse();
             buf.push(sep);
             stdout.write_all(&buf)?;
+        } else {
+            buf.reverse();
+            stdout.write_all(&buf)?;
+            break;
         }
     }
     Ok(())
