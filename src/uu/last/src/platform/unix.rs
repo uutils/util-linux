@@ -18,10 +18,10 @@ use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
 
+use std::os::linux::fs::MetadataExt;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
-use std::time::SystemTime;
 
 fn get_long_usage() -> String {
     format!(
@@ -180,8 +180,16 @@ impl Last {
         let mut counter = 0;
         let mut first_ut_time = None;
         while let Some(ut) = ut_stack.pop() {
-            first_ut_time = Some(self.time_string(&ut)); // By the end of iteration we will have the earliest time
+            if ut_stack.len() == 0 {
+                // By the end of loop we will have the earliest time
                                                          // (This avoids getting into issues with the compiler)
+                let first_login_time = ut.login_time();
+                first_ut_time = Some(self.utmp_file_time(
+                    first_login_time.unix_timestamp(),
+                    first_login_time.nanosecond().into(),
+                ));
+            }
+
             if counter >= self.limit && self.limit > 0 {
                 break;
             }
@@ -236,7 +244,9 @@ impl Last {
         if let Some(file_time) = first_ut_time {
             println!("\n{} begins {}", path_str, file_time);
         } else {
-            let file_time = self.format_time(fs::metadata(&self.file)?.created()?);
+            let secs = fs::metadata(&self.file)?.st_ctime();
+            let nsecs = fs::metadata(&self.file)?.st_ctime_nsec() as u64;
+            let file_time = self.utmp_file_time(secs, nsecs);
 
             println!("\n{} begins {}", path_str, file_time);
         }
@@ -245,7 +255,7 @@ impl Last {
     }
 
     #[inline]
-    fn format_time(&self, time: SystemTime) -> String {
+    fn utmp_file_time(&self, secs: i64, nsecs: u64) -> String {
         let description = match self.time_format.as_str() {
             "short" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]"}
             "full" => {"[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]:[second] [year]"}
@@ -256,14 +266,16 @@ impl Last {
         let time_format: Vec<time::format_description::FormatItem> =
             time::format_description::parse(description).unwrap_or_default();
 
-        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
-        let secs: u64 = offset.whole_seconds() as u64;
+        let time = time::OffsetDateTime::from_unix_timestamp(secs.into())
+            .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
+            + Duration::from_nanos(nsecs.into());
 
-        // The SystemTime time variable, for some reason, converts the time back to UTC
-        // and removes the offset. This code is replacing the offset with the system's, and
-        // adding back the time to the offset so that offset_time is correct.
+        let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
+        let offset_secs: u64 = offset.whole_seconds() as u64;
+
+        // Adding back the time to the offset so that offset_time is correct.
         let offset_time =
-            OffsetDateTime::from(time).replace_offset(offset) + Duration::from_secs(secs);
+            OffsetDateTime::from(time).replace_offset(offset) + Duration::from_secs(offset_secs);
 
         offset_time.format(&time_format).unwrap_or_default()
     }
