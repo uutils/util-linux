@@ -7,7 +7,7 @@ edition = "2021"
 path = "src/lscpu.rs"
 
 [[bin]]
-name = "mountpoint"
+name = "lscpu"
 path = "src/main.rs"
 
 [dependencies]
