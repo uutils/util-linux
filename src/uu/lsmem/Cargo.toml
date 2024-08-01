@@ -1,17 +1,15 @@
 [package]
-name = "uu_lscpu"
+name = "uu_lsmem"
 version = "0.0.1"
 edition = "2021"
 
 [lib]
-path = "src/lscpu.rs"
+path = "src/lsmem.rs"
 
 [[bin]]
-name = "lscpu"
+name = "lsmem"
 path = "src/main.rs"
 
 [dependencies]
-regex = { workspace = true }
-sysinfo = { workspace = true }
 uucore = { workspace = true }
 clap = { workspace = true }
