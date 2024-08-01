@@ -16,7 +16,6 @@ const USAGE: &str = help_usage!("lscpu.md");
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     let system = System::new_all();
-    let _cpu = system.global_cpu_info();
 
     println!("Architecture: {}", get_architecture());
     println!("CPU(s): {}", system.cpus().len());
