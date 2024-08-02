@@ -9,6 +9,10 @@ mod common;
 #[path = "by-util/test_lscpu.rs"]
 mod test_lscpu;
 
+#[cfg(feature = "lsmem")]
+#[path = "by-util/test_lsmem.rs"]
+mod test_lsmem;
+
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
