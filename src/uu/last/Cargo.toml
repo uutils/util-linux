@@ -1,0 +1,12 @@
+[package]
+name = "uu_last"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/last.rs"
+
+[dependencies]
+uucore = { workspace = true, features = ["utmpx"] }
+clap = { workspace = true}
+dns-lookup = { workspace = true }

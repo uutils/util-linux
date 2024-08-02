@@ -31,6 +31,7 @@ feat_common_core = [
   "lsmem",
   "ctrlaltdel",
   "rev",
+  "last"
 ]
 
 [workspace.dependencies]
@@ -47,6 +48,7 @@ textwrap = { version = "0.16.0", features = ["terminal_size"] }
 xattr = "1.3.1"
 tempfile = "3.9.0"
 rand = { version = "0.8", features = ["small_rng"] }
+dns-lookup = "2.0.4"
 
 [dependencies]
 clap = { workspace = true }
@@ -55,7 +57,7 @@ clap_mangen = { workspace = true }
 uucore = { workspace = true }
 phf = { workspace = true }
 textwrap = { workspace = true }
-
+dns-lookup = { workspace = true }
 
 #
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
@@ -63,6 +65,7 @@ lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
+last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 
 [dev-dependencies]
 pretty_assertions = "1"
