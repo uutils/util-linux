@@ -31,6 +31,7 @@ mod options {
     pub const BYTES: &str = "bytes";
     pub const NOHEADINGS: &str = "noheadings";
     pub const JSON: &str = "json";
+    pub const PAIRS: &str = "pairs";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -212,6 +213,15 @@ struct TableRow {
     zones: String,
 }
 
+impl TableRow {
+    fn to_pairs_string(&self) -> String {
+        format!(
+            r#"RANGE="{}" SIZE="{}" STATE="{}" REMOVABLE="{}" BLOCK="{}""#,
+            self.range, self.size, self.state, self.removable, self.block
+        )
+    }
+}
+
 #[derive(Serialize)]
 struct TableRowJson {
     memory: Vec<TableRow>,
@@ -220,7 +230,7 @@ struct TableRowJson {
 struct Options {
     have_nodes: bool,
     // raw: bool,
-    // export: bool,
+    export: bool,
     json: bool,
     noheadings: bool,
     // summary: bool,
@@ -264,7 +274,7 @@ impl Options {
         Options {
             have_nodes: false,
             // raw: false,
-            // export: false,
+            export: false,
             json: false,
             noheadings: false,
             // summary: false,
@@ -504,6 +514,18 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
     println!("{table_json_string}");
 }
 
+fn print_pairs(lsmem: &Lsmem, opts: &Options) {
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut table_pairs_string = String::new();
+    for row in table_rows {
+        table_pairs_string += &row.to_pairs_string();
+        table_pairs_string += "\n";
+    }
+    // remove the last newline
+    table_pairs_string.pop();
+    println!("{table_pairs_string}");
+}
+
 fn print_summary(lsmem: &Lsmem, opts: &Options) {
     if opts.bytes {
         println!("{:<23} {:>15}", "Memory block size:", lsmem.block_size);
@@ -548,18 +570,25 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     opts.bytes = matches.get_flag(options::BYTES);
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
     opts.json = matches.get_flag(options::JSON);
+    opts.export = matches.get_flag(options::PAIRS);
+
+    if opts.json || opts.export {
+        opts.want_summary = false;
+    }
 
     read_info(&mut lsmem, &mut opts);
 
     if opts.want_table {
         if opts.json {
             print_json(&lsmem, &opts);
+        } else if opts.export {
+            print_pairs(&lsmem, &opts);
         } else {
             print_table(&lsmem, &opts);
         }
     }
 
-    if opts.want_summary && !opts.json {
+    if opts.want_summary {
         print_summary(&lsmem, &opts);
     }
 
@@ -591,6 +620,13 @@ pub fn uu_app() -> Command {
                 .short('J')
                 .long("json")
                 .help("use JSON output format")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::PAIRS)
+                .short('P')
+                .long("pairs")
+                .help("use key=\"value\" output format")
                 .action(ArgAction::SetTrue),
         )
 }
