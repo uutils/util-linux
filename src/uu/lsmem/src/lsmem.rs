@@ -16,7 +16,11 @@ use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 use tabled::{
-    settings::{location::ByColumnName, object, Alignment, Disable, Modify, Style},
+    settings::{
+        location::ByColumnName,
+        object::{self, Rows},
+        Alignment, Disable, Modify, Style,
+    },
     Table, Tabled,
 };
 
@@ -25,6 +29,7 @@ const USAGE: &str = help_usage!("lsmem.md");
 
 mod options {
     pub const BYTES: &str = "bytes";
+    pub const NOHEADINGS: &str = "noheadings";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -209,7 +214,7 @@ struct Options {
     // raw: bool,
     // export: bool,
     // json: bool,
-    // noheadings: bool,
+    noheadings: bool,
     // summary: bool,
     list_all: bool,
     bytes: bool,
@@ -253,7 +258,7 @@ impl Options {
             // raw: false,
             // export: false,
             // json: false,
-            // noheadings: false,
+            noheadings: false,
             // summary: false,
             list_all: false,
             bytes: false,
@@ -475,6 +480,10 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
     table.with(Disable::column(ByColumnName::new("NODE")));
     table.with(Disable::column(ByColumnName::new("ZONES")));
 
+    if opts.noheadings {
+        table.with(Disable::row(Rows::first()));
+    }
+
     println!("{table}");
 }
 
@@ -516,11 +525,11 @@ where
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
-    let opt_bytes = matches.get_flag(options::BYTES);
 
     let mut lsmem = Lsmem::new();
     let mut opts = Options::new();
-    opts.bytes = opt_bytes;
+    opts.bytes = matches.get_flag(options::BYTES);
+    opts.noheadings = matches.get_flag(options::NOHEADINGS);
 
     read_info(&mut lsmem, &mut opts);
 
@@ -546,6 +555,13 @@ pub fn uu_app() -> Command {
                 .short('b')
                 .long("bytes")
                 .help("print SIZE in bytes rather than in human readable format")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::NOHEADINGS)
+                .short('n')
+                .long("noheadings")
+                .help("don't print headings")
                 .action(ArgAction::SetTrue),
         )
 }
