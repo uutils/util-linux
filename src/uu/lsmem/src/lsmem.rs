@@ -7,7 +7,7 @@ mod utils;
 
 use clap::{crate_version, Command};
 use clap::{Arg, ArgAction};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
@@ -30,6 +30,7 @@ const USAGE: &str = help_usage!("lsmem.md");
 mod options {
     pub const BYTES: &str = "bytes";
     pub const NOHEADINGS: &str = "noheadings";
+    pub const JSON: &str = "json";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -191,7 +192,7 @@ impl MemoryBlock {
     }
 }
 
-#[derive(Tabled, Default)]
+#[derive(Tabled, Default, Serialize)]
 struct TableRow {
     #[tabled(rename = "RANGE")]
     range: String,
@@ -204,16 +205,23 @@ struct TableRow {
     #[tabled(rename = "BLOCK")]
     block: String,
     #[tabled(rename = "NODE")]
+    #[serde(skip_serializing)]
     node: String,
     #[tabled(rename = "ZONES")]
+    #[serde(skip_serializing)]
     zones: String,
+}
+
+#[derive(Serialize)]
+struct TableRowJson {
+    memory: Vec<TableRow>,
 }
 
 struct Options {
     have_nodes: bool,
     // raw: bool,
     // export: bool,
-    // json: bool,
+    json: bool,
     noheadings: bool,
     // summary: bool,
     list_all: bool,
@@ -257,7 +265,7 @@ impl Options {
             have_nodes: false,
             // raw: false,
             // export: false,
-            // json: false,
+            json: false,
             noheadings: false,
             // summary: false,
             list_all: false,
@@ -418,8 +426,8 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
     blk
 }
 
-fn create_table(lsmem: &Lsmem, opts: &Options) -> tabled::Table {
-    let mut table = Vec::<TableRow>::new();
+fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
+    let mut table_rows = Vec::<TableRow>::new();
 
     for i in 0..lsmem.nblocks {
         let mut row = TableRow::default();
@@ -465,13 +473,13 @@ fn create_table(lsmem: &Lsmem, opts: &Options) -> tabled::Table {
             row.node = format!("{}", blk.node);
         }
 
-        table.push(row);
+        table_rows.push(row);
     }
-    Table::new(table)
+    table_rows
 }
 
 fn print_table(lsmem: &Lsmem, opts: &Options) {
-    let mut table = create_table(lsmem, opts);
+    let mut table = Table::new(create_table_rows(lsmem, opts));
     table
         .with(Style::blank())
         .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
@@ -485,6 +493,15 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
     }
 
     println!("{table}");
+}
+
+fn print_json(lsmem: &Lsmem, opts: &Options) {
+    let table_json = TableRowJson {
+        memory: create_table_rows(lsmem, opts),
+    };
+
+    let table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    println!("{table_json_string}");
 }
 
 fn print_summary(lsmem: &Lsmem, opts: &Options) {
@@ -530,14 +547,19 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let mut opts = Options::new();
     opts.bytes = matches.get_flag(options::BYTES);
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
+    opts.json = matches.get_flag(options::JSON);
 
     read_info(&mut lsmem, &mut opts);
 
     if opts.want_table {
-        print_table(&lsmem, &opts);
+        if opts.json {
+            print_json(&lsmem, &opts);
+        } else {
+            print_table(&lsmem, &opts);
+        }
     }
 
-    if opts.want_summary {
+    if opts.want_summary && !opts.json {
         print_summary(&lsmem, &opts);
     }
 
@@ -562,6 +584,13 @@ pub fn uu_app() -> Command {
                 .short('n')
                 .long("noheadings")
                 .help("don't print headings")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::JSON)
+                .short('J')
+                .long("json")
+                .help("use JSON output format")
                 .action(ArgAction::SetTrue),
         )
 }
