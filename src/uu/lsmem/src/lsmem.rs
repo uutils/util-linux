@@ -32,6 +32,7 @@ mod options {
     pub const NOHEADINGS: &str = "noheadings";
     pub const JSON: &str = "json";
     pub const PAIRS: &str = "pairs";
+    pub const RAW: &str = "raw";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -220,6 +221,12 @@ impl TableRow {
             self.range, self.size, self.state, self.removable, self.block
         )
     }
+    fn to_raw_string(&self) -> String {
+        format!(
+            r#"{} {} {} {} {}"#,
+            self.range, self.size, self.state, self.removable, self.block
+        )
+    }
 }
 
 #[derive(Serialize)]
@@ -229,11 +236,10 @@ struct TableRowJson {
 
 struct Options {
     have_nodes: bool,
-    // raw: bool,
+    raw: bool,
     export: bool,
     json: bool,
     noheadings: bool,
-    // summary: bool,
     list_all: bool,
     bytes: bool,
     want_summary: bool,
@@ -273,11 +279,10 @@ impl Options {
     fn new() -> Options {
         Options {
             have_nodes: false,
-            // raw: false,
+            raw: false,
             export: false,
             json: false,
             noheadings: false,
-            // summary: false,
             list_all: false,
             bytes: false,
             want_summary: true, // default true
@@ -510,20 +515,33 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
         memory: create_table_rows(lsmem, opts),
     };
 
-    let table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    let mut table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    table_json_string = table_json_string.replace("\"yes\"", "true");
+    table_json_string = table_json_string.replace("\"no\"", "false");
     println!("{table_json_string}");
 }
 
 fn print_pairs(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
-    let mut table_pairs_string = String::new();
+    let table_pairs_string = table_rows
+        .into_iter()
+        .map(|row| row.to_pairs_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    println!("{table_pairs_string}");
+}
+
+fn print_raw(lsmem: &Lsmem, opts: &Options) {
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut table_raw_string = String::new();
     for row in table_rows {
-        table_pairs_string += &row.to_pairs_string();
-        table_pairs_string += "\n";
+        table_raw_string += &row.to_raw_string();
+        table_raw_string += "\n";
     }
     // remove the last newline
-    table_pairs_string.pop();
-    println!("{table_pairs_string}");
+    table_raw_string.pop();
+    println!("RANGE SIZE STATE REMOVABLE BLOCK");
+    println!("{table_raw_string}");
 }
 
 fn print_summary(lsmem: &Lsmem, opts: &Options) {
@@ -571,8 +589,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
     opts.json = matches.get_flag(options::JSON);
     opts.export = matches.get_flag(options::PAIRS);
+    opts.raw = matches.get_flag(options::RAW);
 
-    if opts.json || opts.export {
+    if opts.json || opts.export || opts.raw {
         opts.want_summary = false;
     }
 
@@ -583,6 +602,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             print_json(&lsmem, &opts);
         } else if opts.export {
             print_pairs(&lsmem, &opts);
+        } else if opts.raw {
+            print_raw(&lsmem, &opts);
         } else {
             print_table(&lsmem, &opts);
         }
@@ -620,13 +641,23 @@ pub fn uu_app() -> Command {
                 .short('J')
                 .long("json")
                 .help("use JSON output format")
-                .action(ArgAction::SetTrue),
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::PAIRS, options::RAW]),
         )
         .arg(
             Arg::new(options::PAIRS)
                 .short('P')
                 .long("pairs")
                 .help("use key=\"value\" output format")
-                .action(ArgAction::SetTrue),
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::JSON, options::RAW]),
+        )
+        .arg(
+            Arg::new(options::RAW)
+                .short('r')
+                .long("raw")
+                .help("use raw output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::JSON, options::PAIRS]),
         )
 }
