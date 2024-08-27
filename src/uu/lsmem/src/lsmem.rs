@@ -7,7 +7,7 @@ mod utils;
 
 use clap::{crate_version, Command};
 use clap::{Arg, ArgAction};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
@@ -16,7 +16,11 @@ use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 use tabled::{
-    settings::{location::ByColumnName, object, Alignment, Disable, Modify, Style},
+    settings::{
+        location::ByColumnName,
+        object::{self, Rows},
+        Alignment, Disable, Modify, Style,
+    },
     Table, Tabled,
 };
 
@@ -25,6 +29,10 @@ const USAGE: &str = help_usage!("lsmem.md");
 
 mod options {
     pub const BYTES: &str = "bytes";
+    pub const NOHEADINGS: &str = "noheadings";
+    pub const JSON: &str = "json";
+    pub const PAIRS: &str = "pairs";
+    pub const RAW: &str = "raw";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -186,7 +194,7 @@ impl MemoryBlock {
     }
 }
 
-#[derive(Tabled, Default)]
+#[derive(Tabled, Default, Serialize)]
 struct TableRow {
     #[tabled(rename = "RANGE")]
     range: String,
@@ -199,18 +207,39 @@ struct TableRow {
     #[tabled(rename = "BLOCK")]
     block: String,
     #[tabled(rename = "NODE")]
+    #[serde(skip_serializing)]
     node: String,
     #[tabled(rename = "ZONES")]
+    #[serde(skip_serializing)]
     zones: String,
+}
+
+impl TableRow {
+    fn to_pairs_string(&self) -> String {
+        format!(
+            r#"RANGE="{}" SIZE="{}" STATE="{}" REMOVABLE="{}" BLOCK="{}""#,
+            self.range, self.size, self.state, self.removable, self.block
+        )
+    }
+    fn to_raw_string(&self) -> String {
+        format!(
+            r#"{} {} {} {} {}"#,
+            self.range, self.size, self.state, self.removable, self.block
+        )
+    }
+}
+
+#[derive(Serialize)]
+struct TableRowJson {
+    memory: Vec<TableRow>,
 }
 
 struct Options {
     have_nodes: bool,
-    // raw: bool,
-    // export: bool,
-    // json: bool,
-    // noheadings: bool,
-    // summary: bool,
+    raw: bool,
+    export: bool,
+    json: bool,
+    noheadings: bool,
     list_all: bool,
     bytes: bool,
     want_summary: bool,
@@ -250,11 +279,10 @@ impl Options {
     fn new() -> Options {
         Options {
             have_nodes: false,
-            // raw: false,
-            // export: false,
-            // json: false,
-            // noheadings: false,
-            // summary: false,
+            raw: false,
+            export: false,
+            json: false,
+            noheadings: false,
             list_all: false,
             bytes: false,
             want_summary: true, // default true
@@ -413,8 +441,8 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
     blk
 }
 
-fn create_table(lsmem: &Lsmem, opts: &Options) -> tabled::Table {
-    let mut table = Vec::<TableRow>::new();
+fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
+    let mut table_rows = Vec::<TableRow>::new();
 
     for i in 0..lsmem.nblocks {
         let mut row = TableRow::default();
@@ -460,13 +488,13 @@ fn create_table(lsmem: &Lsmem, opts: &Options) -> tabled::Table {
             row.node = format!("{}", blk.node);
         }
 
-        table.push(row);
+        table_rows.push(row);
     }
-    Table::new(table)
+    table_rows
 }
 
 fn print_table(lsmem: &Lsmem, opts: &Options) {
-    let mut table = create_table(lsmem, opts);
+    let mut table = Table::new(create_table_rows(lsmem, opts));
     table
         .with(Style::blank())
         .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
@@ -475,7 +503,45 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
     table.with(Disable::column(ByColumnName::new("NODE")));
     table.with(Disable::column(ByColumnName::new("ZONES")));
 
+    if opts.noheadings {
+        table.with(Disable::row(Rows::first()));
+    }
+
     println!("{table}");
+}
+
+fn print_json(lsmem: &Lsmem, opts: &Options) {
+    let table_json = TableRowJson {
+        memory: create_table_rows(lsmem, opts),
+    };
+
+    let mut table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    table_json_string = table_json_string.replace("\"yes\"", "true");
+    table_json_string = table_json_string.replace("\"no\"", "false");
+    println!("{table_json_string}");
+}
+
+fn print_pairs(lsmem: &Lsmem, opts: &Options) {
+    let table_rows = create_table_rows(lsmem, opts);
+    let table_pairs_string = table_rows
+        .into_iter()
+        .map(|row| row.to_pairs_string())
+        .collect::<Vec<_>>()
+        .join("\n");
+    println!("{table_pairs_string}");
+}
+
+fn print_raw(lsmem: &Lsmem, opts: &Options) {
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut table_raw_string = String::new();
+    for row in table_rows {
+        table_raw_string += &row.to_raw_string();
+        table_raw_string += "\n";
+    }
+    // remove the last newline
+    table_raw_string.pop();
+    println!("RANGE SIZE STATE REMOVABLE BLOCK");
+    println!("{table_raw_string}");
 }
 
 fn print_summary(lsmem: &Lsmem, opts: &Options) {
@@ -516,16 +582,31 @@ where
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
-    let opt_bytes = matches.get_flag(options::BYTES);
 
     let mut lsmem = Lsmem::new();
     let mut opts = Options::new();
-    opts.bytes = opt_bytes;
+    opts.bytes = matches.get_flag(options::BYTES);
+    opts.noheadings = matches.get_flag(options::NOHEADINGS);
+    opts.json = matches.get_flag(options::JSON);
+    opts.export = matches.get_flag(options::PAIRS);
+    opts.raw = matches.get_flag(options::RAW);
+
+    if opts.json || opts.export || opts.raw {
+        opts.want_summary = false;
+    }
 
     read_info(&mut lsmem, &mut opts);
 
     if opts.want_table {
-        print_table(&lsmem, &opts);
+        if opts.json {
+            print_json(&lsmem, &opts);
+        } else if opts.export {
+            print_pairs(&lsmem, &opts);
+        } else if opts.raw {
+            print_raw(&lsmem, &opts);
+        } else {
+            print_table(&lsmem, &opts);
+        }
     }
 
     if opts.want_summary {
@@ -547,5 +628,36 @@ pub fn uu_app() -> Command {
                 .long("bytes")
                 .help("print SIZE in bytes rather than in human readable format")
                 .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::NOHEADINGS)
+                .short('n')
+                .long("noheadings")
+                .help("don't print headings")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::JSON)
+                .short('J')
+                .long("json")
+                .help("use JSON output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::PAIRS, options::RAW]),
+        )
+        .arg(
+            Arg::new(options::PAIRS)
+                .short('P')
+                .long("pairs")
+                .help("use key=\"value\" output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::JSON, options::RAW]),
+        )
+        .arg(
+            Arg::new(options::RAW)
+                .short('r')
+                .long("raw")
+                .help("use raw output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::JSON, options::PAIRS]),
         )
 }
