@@ -187,7 +187,7 @@ impl Last {
         let mut counter = 0;
         let mut first_ut_time = None;
         while let Some(ut) = ut_stack.pop() {
-            if ut_stack.len() == 0 {
+            if ut_stack.is_empty() {
                 // By the end of loop we will have the earliest time
                 // (This avoids getting into issues with the compiler)
                 let first_login_time = ut.login_time();
@@ -272,16 +272,15 @@ impl Last {
         let time_format: Vec<time::format_description::FormatItem> =
             time::format_description::parse(description).unwrap_or_default();
 
-        let time = time::OffsetDateTime::from_unix_timestamp(secs.into())
+        let time = time::OffsetDateTime::from_unix_timestamp(secs)
             .unwrap_or(time::OffsetDateTime::UNIX_EPOCH)
-            + Duration::from_nanos(nsecs.into());
+            + Duration::from_nanos(nsecs);
 
         let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
         let offset_secs: u64 = offset.whole_seconds() as u64;
 
         // Adding back the time to the offset so that offset_time is correct.
-        let offset_time =
-            OffsetDateTime::from(time).replace_offset(offset) + Duration::from_secs(offset_secs);
+        let offset_time = time.replace_offset(offset) + Duration::from_secs(offset_secs);
 
         offset_time.format(&time_format).unwrap_or_default()
     }
