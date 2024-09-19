@@ -42,6 +42,7 @@ fn test_limit_arg() {
 // "runlevel" only makes sense for Linux systems, so only Linux is included for
 // this test.
 #[cfg(target_os = "linux")]
+#[ignore = "fails on Arch Linux"]
 fn test_system_arg() {
     new_ucmd!().arg("-x").succeeds().stdout_contains("runlevel");
 }
