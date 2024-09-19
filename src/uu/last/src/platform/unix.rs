@@ -18,7 +18,7 @@ use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
 
-use std::os::linux::fs::MetadataExt;
+use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -251,8 +251,8 @@ impl Last {
         if let Some(file_time) = first_ut_time {
             println!("\n{} begins {}", path_str, file_time);
         } else {
-            let secs = fs::metadata(&self.file)?.st_ctime();
-            let nsecs = fs::metadata(&self.file)?.st_ctime_nsec() as u64;
+            let secs = fs::metadata(&self.file)?.ctime();
+            let nsecs = fs::metadata(&self.file)?.ctime_nsec() as u64;
             let file_time = self.utmp_file_time(secs, nsecs);
 
             println!("\n{} begins {}", path_str, file_time);
