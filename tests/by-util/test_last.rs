@@ -41,7 +41,7 @@ fn test_limit_arg() {
 // "shutdown" cannot be checked for since not every machine will have shutdown
 // "runlevel" only makes sense for Linux systems, so only Linux is included for
 // this test.
-#[cfg(linux)]
+#[cfg(target_os = "linux")]
 fn test_system_arg() {
     new_ucmd!().arg("-x").succeeds().stdout_contains("runlevel");
 }
