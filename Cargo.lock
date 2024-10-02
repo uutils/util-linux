@@ -892,6 +892,7 @@ dependencies = [
  "uu_lsmem",
  "uu_mountpoint",
  "uu_rev",
+ "uu_setsid",
  "uucore",
  "xattr",
 ]
@@ -947,6 +948,15 @@ name = "uu_rev"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_setsid"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
  "uucore",
 ]
 
