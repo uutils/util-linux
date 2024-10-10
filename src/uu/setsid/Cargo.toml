@@ -1,0 +1,16 @@
+[package]
+name = "uu_setsid"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+uucore = { workspace = true }
+libc = { workspace = true }
+clap = { workspace = true }
+
+[lib]
+path = "src/setsid.rs"
+
+[[bin]]
+name = "setsid"
+path = "src/main.rs"

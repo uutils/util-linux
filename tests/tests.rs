@@ -25,6 +25,10 @@ mod test_ctrlaltdel;
 #[path = "by-util/test_rev.rs"]
 mod test_rev;
 
+#[cfg(feature = "setsid")]
+#[path = "by-util/test_setsid.rs"]
+mod test_setsid;
+
 #[cfg(feature = "last")]
 #[path = "by-util/test_last.rs"]
 mod test_last;
