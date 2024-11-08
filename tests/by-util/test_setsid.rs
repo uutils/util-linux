@@ -161,7 +161,7 @@ mod unix {
 
 #[cfg(not(target_family = "unix"))]
 mod non_unix {
-    use crate::common::util::{TestScenario, UCommand};
+    use crate::common::util::TestScenario;
 
     #[test]
     fn unsupported_platforms() {
