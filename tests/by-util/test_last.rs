@@ -4,8 +4,10 @@
 // file that was distributed with this source code.
 // spell-checker:ignore (words) symdir somefakedir
 
+#[cfg(unix)]
 use crate::common::util::TestScenario;
 
+#[cfg(unix)]
 use regex::Regex;
 use std::fs;
 use std::io::Write;
