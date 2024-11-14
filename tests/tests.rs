@@ -32,3 +32,7 @@ mod test_setsid;
 #[cfg(feature = "last")]
 #[path = "by-util/test_last.rs"]
 mod test_last;
+
+#[cfg(feature = "dmesg")]
+#[path = "by-util/test_dmesg.rs"]
+mod test_dmesg;
