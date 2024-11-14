@@ -880,6 +880,7 @@ dependencies = [
  "tempfile",
  "textwrap",
  "uu_ctrlaltdel",
+ "uu_dmesg",
  "uu_last",
  "uu_lscpu",
  "uu_lsmem",
@@ -892,6 +893,14 @@ dependencies = [
 
 [[package]]
 name = "uu_ctrlaltdel"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_dmesg"
 version = "0.0.1"
 dependencies = [
  "clap",

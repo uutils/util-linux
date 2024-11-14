@@ -1,0 +1,15 @@
+[package]
+name = "uu_dmesg"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/dmesg.rs"
+
+[[bin]]
+name = "dmesg"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+uucore = { workspace = true }
