@@ -37,8 +37,8 @@ pub fn uu_app() -> Command {
 }
 
 mod options {
-    pub const KMSG_FILE: &'static str = "kmsg-file";
-    pub const JSON: &'static str = "json";
+    pub const KMSG_FILE: &str = "kmsg-file";
+    pub const JSON: &str = "json";
 }
 
 struct Dmesg<'a> {
