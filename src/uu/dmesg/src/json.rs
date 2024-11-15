@@ -27,9 +27,9 @@ impl<'a> From<&'a Vec<crate::Record>> for Dmesg<'a> {
         let mut dmesg_json = Dmesg { dmesg: vec![] };
         for record in value {
             let record_json = Record {
-                pri: record._priority_facility,
-                time: record._timestamp_us,
-                msg: &record._message,
+                pri: record.priority_facility,
+                time: record.timestamp_us,
+                msg: &record.message,
             };
             dmesg_json.dmesg.push(record_json);
         }

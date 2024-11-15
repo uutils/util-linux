@@ -113,10 +113,10 @@ enum OutputFormat {
 }
 
 struct Record {
-    _priority_facility: u32,
+    priority_facility: u32,
     _sequence: u64,
-    _timestamp_us: u64,
-    _message: String,
+    timestamp_us: u64,
+    message: String,
 }
 
 impl Record {
@@ -126,10 +126,10 @@ impl Record {
         let time = str::parse(time);
         match (pri_fac, seq, time) {
             (Ok(pri_fac), Ok(seq), Ok(time)) => Record {
-                _priority_facility: pri_fac,
+                priority_facility: pri_fac,
                 _sequence: seq,
-                _timestamp_us: time,
-                _message: msg,
+                timestamp_us: time,
+                message: msg,
             },
             _ => panic!("parse error."),
         }
