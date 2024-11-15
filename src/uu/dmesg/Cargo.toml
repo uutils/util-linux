@@ -13,3 +13,4 @@ path = "src/main.rs"
 [dependencies]
 clap = { workspace = true }
 uucore = { workspace = true }
+regex = { workspace = true }

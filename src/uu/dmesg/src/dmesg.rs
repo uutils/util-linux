@@ -1,4 +1,6 @@
 use clap::{crate_version, Arg, ArgAction, Command};
+use regex::Regex;
+use std::fs;
 use uucore::error::UResult;
 
 #[uucore::main]
@@ -11,7 +13,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if matches.get_flag(options::JSON) {
         dmesg.output_format = OutputFormat::Json;
     }
-    dmesg.parse().print();
+    dmesg.parse()?.print();
     Ok(())
 }
 
@@ -52,13 +54,44 @@ impl Dmesg<'_> {
         }
     }
 
-    fn parse(self) -> Self {
-        self
+    fn parse(mut self) -> UResult<Self> {
+        let mut records = vec![];
+        let re = Self::record_regex();
+        let lines = self.read_lines_from_kmsg_file()?;
+        for line in lines {
+            for (_, [pri_fac, seq, time, msg]) in re.captures_iter(&line).map(|c| c.extract()) {
+                records.push(Record::from_str_fields(pri_fac, seq, time, msg.to_string()));
+            }
+        }
+        self._records = Some(records);
+        Ok(self)
     }
 
-    fn print(&self) {
-
+    fn record_regex() -> Regex {
+        let valid_number_pattern = "0|[1-9][0-9]*";
+        let additional_fields_pattern = ",^[,;]*";
+        let record_pattern = format!(
+            "(?m)^({0}),({0}),({0}),.(?:{1})*;(.*)$",
+            valid_number_pattern, additional_fields_pattern
+        );
+        Regex::new(&record_pattern).expect("invalid regex.")
     }
+
+    fn read_lines_from_kmsg_file(&self) -> UResult<Vec<String>> {
+        let mut lines = vec![];
+        let mut line = vec![];
+        for byte in fs::read(self.kmsg_file)? {
+            if byte == 0 {
+                lines.push(String::from_utf8_lossy(&line).to_string());
+                line.clear();
+            } else {
+                line.push(byte);
+            }
+        }
+        Ok(lines)
+    }
+
+    fn print(&self) {}
 }
 
 enum OutputFormat {
@@ -67,4 +100,25 @@ enum OutputFormat {
 }
 
 struct Record {
+    _priority_facility: u32,
+    _sequence: u64,
+    _timestamp_us: u64,
+    _message: String,
+}
+
+impl Record {
+    fn from_str_fields(pri_fac: &str, seq: &str, time: &str, msg: String) -> Record {
+        let pri_fac = str::parse(pri_fac);
+        let seq = str::parse(seq);
+        let time = str::parse(time);
+        match (pri_fac, seq, time) {
+            (Ok(pri_fac), Ok(seq), Ok(time)) => Record {
+                _priority_facility: pri_fac,
+                _sequence: seq,
+                _timestamp_us: time,
+                _message: msg,
+            },
+            _ => panic!("parse error."),
+        }
+    }
 }
