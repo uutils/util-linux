@@ -3,6 +3,8 @@ use regex::Regex;
 use std::fs;
 use uucore::error::UResult;
 
+mod json;
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let mut dmesg = Dmesg::new();
@@ -42,7 +44,7 @@ mod options {
 struct Dmesg<'a> {
     kmsg_file: &'a str,
     output_format: OutputFormat,
-    _records: Option<Vec<Record>>,
+    records: Option<Vec<Record>>,
 }
 
 impl Dmesg<'_> {
@@ -50,7 +52,7 @@ impl Dmesg<'_> {
         Dmesg {
             kmsg_file: "/dev/kmsg",
             output_format: OutputFormat::Normal,
-            _records: None,
+            records: None,
         }
     }
 
@@ -63,7 +65,7 @@ impl Dmesg<'_> {
                 records.push(Record::from_str_fields(pri_fac, seq, time, msg.to_string()));
             }
         }
-        self._records = Some(records);
+        self.records = Some(records);
         Ok(self)
     }
 
@@ -91,7 +93,18 @@ impl Dmesg<'_> {
         Ok(lines)
     }
 
-    fn print(&self) {}
+    fn print(&self) {
+        match self.output_format {
+            OutputFormat::Json => self.print_json(),
+            OutputFormat::Normal => unimplemented!(),
+        }
+    }
+
+    fn print_json(&self) {
+        if let Some(records) = &self.records {
+            println!("{}", json::serialize_records(records));
+        }
+    }
 }
 
 enum OutputFormat {

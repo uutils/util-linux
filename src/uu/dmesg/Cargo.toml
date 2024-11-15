@@ -14,3 +14,5 @@ path = "src/main.rs"
 clap = { workspace = true }
 uucore = { workspace = true }
 regex = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
