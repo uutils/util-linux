@@ -31,12 +31,14 @@ pub fn uu_app() -> Command {
             Arg::new(options::KMSG_FILE)
                 .short('K')
                 .long("kmsg-file")
+                .help("use the file in kmsg format")
                 .action(ArgAction::Set),
         )
         .arg(
             Arg::new(options::JSON)
                 .short('J')
                 .long("json")
+                .help("use JSON output format")
                 .action(ArgAction::SetTrue),
         )
 }
