@@ -6,9 +6,12 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::fs;
-use uucore::error::UResult;
+use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod json;
+
+const ABOUT: &str = help_about!("dmesg.md");
+const USAGE: &str = help_usage!("dmesg.md");
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
@@ -26,6 +29,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())
+        .override_usage(format_usage(USAGE))
+        .about(ABOUT)
         .version(crate_version!())
         .arg(
             Arg::new(options::KMSG_FILE)
