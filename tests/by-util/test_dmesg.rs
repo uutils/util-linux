@@ -10,6 +10,17 @@ fn test_invalid_arg() {
 }
 
 #[test]
+fn test_kmsg_nonexistent_file() {
+    new_ucmd!()
+        .arg("--kmsg-file")
+        .arg("definitely-nonexistent-file")
+        .fails()
+        .code_is(1)
+        .no_stdout()
+        .stderr_is("dmesg: cannot open definitely-nonexistent-file: No such file or directory\n");
+}
+
+#[test]
 fn test_kmsg_json() {
     new_ucmd!()
         .arg("--kmsg-file")
