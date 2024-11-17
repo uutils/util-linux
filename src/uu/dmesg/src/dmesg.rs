@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::fs;
-use uucore::{error::UResult, format_usage, help_about, help_usage};
+use uucore::{error::FromIo, error::UResult, format_usage, help_about, help_usage};
 
 mod json;
 
@@ -94,7 +94,9 @@ impl Dmesg<'_> {
     fn read_lines_from_kmsg_file(&self) -> UResult<Vec<String>> {
         let mut lines = vec![];
         let mut line = vec![];
-        for byte in fs::read(self.kmsg_file)? {
+        let kmsg_bytes = fs::read(self.kmsg_file)
+            .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
+        for byte in kmsg_bytes {
             if byte == 0 {
                 lines.push(String::from_utf8_lossy(&line).to_string());
                 line.clear();
