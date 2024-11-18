@@ -92,18 +92,12 @@ impl Dmesg<'_> {
     }
 
     fn read_lines_from_kmsg_file(&self) -> UResult<Vec<String>> {
-        let mut lines = vec![];
-        let mut line = vec![];
         let kmsg_bytes = fs::read(self.kmsg_file)
             .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
-        for byte in kmsg_bytes {
-            if byte == 0 {
-                lines.push(String::from_utf8_lossy(&line).to_string());
-                line.clear();
-            } else {
-                line.push(byte);
-            }
-        }
+        let lines = kmsg_bytes
+            .split(|&byte| byte == 0)
+            .map(|line| String::from_utf8_lossy(line).to_string())
+            .collect();
         Ok(lines)
     }
 
