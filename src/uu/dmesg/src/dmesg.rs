@@ -6,7 +6,10 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::fs;
-use uucore::{error::FromIo, error::UResult, format_usage, help_about, help_usage};
+use uucore::{
+    error::{FromIo, UResult, USimpleError},
+    format_usage, help_about, help_usage,
+};
 
 mod json;
 
@@ -74,7 +77,12 @@ impl Dmesg<'_> {
         let lines = self.read_lines_from_kmsg_file()?;
         for line in lines {
             for (_, [pri_fac, seq, time, msg]) in re.captures_iter(&line).map(|c| c.extract()) {
-                records.push(Record::from_str_fields(pri_fac, seq, time, msg.to_string()));
+                records.push(Record::from_str_fields(
+                    pri_fac,
+                    seq,
+                    time,
+                    msg.to_string(),
+                )?);
             }
         }
         self.records = Some(records);
@@ -128,18 +136,18 @@ struct Record {
 }
 
 impl Record {
-    fn from_str_fields(pri_fac: &str, seq: &str, time: &str, msg: String) -> Record {
+    fn from_str_fields(pri_fac: &str, seq: &str, time: &str, msg: String) -> UResult<Record> {
         let pri_fac = str::parse(pri_fac);
         let seq = str::parse(seq);
         let time = str::parse(time);
         match (pri_fac, seq, time) {
-            (Ok(pri_fac), Ok(seq), Ok(time)) => Record {
+            (Ok(pri_fac), Ok(seq), Ok(time)) => Ok(Record {
                 priority_facility: pri_fac,
                 _sequence: seq,
                 timestamp_us: time,
                 message: msg,
-            },
-            _ => panic!("parse error."),
+            }),
+            _ => Err(USimpleError::new(1, "Failed to parse record field(s)")),
         }
     }
 }
