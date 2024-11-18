@@ -32,7 +32,8 @@ feat_common_core = [
   "ctrlaltdel",
   "rev",
   "setsid",
-  "last"
+  "last",
+  "dmesg"
 ]
 
 [workspace.dependencies]
@@ -72,6 +73,7 @@ ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", pa
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
+dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
 
 [dev-dependencies]
 pretty_assertions = "1"
