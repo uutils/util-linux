@@ -19,7 +19,7 @@ use tabled::{
     settings::{
         location::ByColumnName,
         object::{self, Rows},
-        Alignment, Disable, Modify, Style,
+        Alignment, Modify, Remove, Style,
     },
     Table, Tabled,
 };
@@ -500,11 +500,11 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
         .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
 
     // the default version
-    table.with(Disable::column(ByColumnName::new("NODE")));
-    table.with(Disable::column(ByColumnName::new("ZONES")));
+    table.with(Remove::column(ByColumnName::new("NODE")));
+    table.with(Remove::column(ByColumnName::new("ZONES")));
 
     if opts.noheadings {
-        table.with(Disable::row(Rows::first()));
+        table.with(Remove::row(Rows::first()));
     }
 
     println!("{table}");
