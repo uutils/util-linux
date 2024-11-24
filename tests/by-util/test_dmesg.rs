@@ -46,3 +46,13 @@ fn test_kmsg_time_format() {
             .stdout_is_fixture(expected_output);
     }
 }
+
+#[test]
+fn test_invalid_time_format() {
+    new_ucmd!()
+        .arg("--time-format=definitely-invalid")
+        .fails()
+        .code_is(1)
+        .no_stdout()
+        .stderr_is("dmesg: unknown time format: definitely-invalid");
+}
