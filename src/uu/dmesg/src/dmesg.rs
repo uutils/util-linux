@@ -49,11 +49,21 @@ pub fn uu_app() -> Command {
                 .help("use JSON output format")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new(options::TIME_FORMAT)
+                .long("time-format")
+                .help(
+                    "show timestamp using the given format:\n".to_string()
+                        + "  [delta|reltime|ctime|notime|iso|raw]",
+                )
+                .action(ArgAction::Set),
+        )
 }
 
 mod options {
     pub const KMSG_FILE: &str = "kmsg-file";
     pub const JSON: &str = "json";
+    pub const TIME_FORMAT: &str = "time-format";
 }
 
 struct Dmesg<'a> {
