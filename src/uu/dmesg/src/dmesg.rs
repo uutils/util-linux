@@ -155,9 +155,13 @@ impl Dmesg<'_> {
         if let Some(records) = &self.records {
             for record in records {
                 match self.time_format {
+                    TimeFormat::Ctime => {
+                        print!("[{}] ", time_formatter::ctime(record.timestamp_us))
+                    }
                     TimeFormat::Raw => {
                         print!("[{}] ", time_formatter::raw(record.timestamp_us))
                     }
+                    TimeFormat::Notime => (),
                     _ => unimplemented!(),
                 }
                 println!("{}", record.message);
