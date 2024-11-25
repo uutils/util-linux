@@ -54,5 +54,5 @@ fn test_invalid_time_format() {
         .fails()
         .code_is(1)
         .no_stdout()
-        .stderr_is("dmesg: unknown time format: definitely-invalid");
+        .stderr_is("dmesg: unknown time format: definitely-invalid\n");
 }
