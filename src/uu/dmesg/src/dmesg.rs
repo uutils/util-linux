@@ -12,6 +12,7 @@ use uucore::{
 };
 
 mod json;
+mod time_formatter;
 
 const ABOUT: &str = help_about!("dmesg.md");
 const USAGE: &str = help_usage!("dmesg.md");
@@ -69,6 +70,7 @@ mod options {
 struct Dmesg<'a> {
     kmsg_file: &'a str,
     output_format: OutputFormat,
+    time_format: TimeFormat,
     records: Option<Vec<Record>>,
 }
 
@@ -77,6 +79,7 @@ impl Dmesg<'_> {
         Dmesg {
             kmsg_file: "/dev/kmsg",
             output_format: OutputFormat::Normal,
+            time_format: TimeFormat::Raw,
             records: None,
         }
     }
@@ -122,7 +125,7 @@ impl Dmesg<'_> {
     fn print(&self) {
         match self.output_format {
             OutputFormat::Json => self.print_json(),
-            OutputFormat::Normal => unimplemented!(),
+            OutputFormat::Normal => self.print_normal(),
         }
     }
 
@@ -131,11 +134,33 @@ impl Dmesg<'_> {
             println!("{}", json::serialize_records(records));
         }
     }
+
+    fn print_normal(&self) {
+        if let Some(records) = &self.records {
+            for record in records {
+                match self.time_format {
+                    TimeFormat::Raw => {
+                        print!("[{}] ", time_formatter::raw(record.timestamp_us))
+                    }
+                    _ => unimplemented!(),
+                }
+                println!("{}", record.message);
+            }
+        }
+    }
 }
 
 enum OutputFormat {
     Normal,
     Json,
+}
+
+enum TimeFormat {
+    Delta,
+    Reltime,
+    Ctime,
+    Iso,
+    Raw,
 }
 
 struct Record {
