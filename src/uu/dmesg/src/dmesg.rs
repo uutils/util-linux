@@ -153,8 +153,15 @@ impl Dmesg<'_> {
 
     fn print_normal(&self) {
         if let Some(records) = &self.records {
+            let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
             for record in records {
                 match self.time_format {
+                    TimeFormat::Reltime => {
+                        print!(
+                            "[{}] ",
+                            reltime_formatter.format(record.timestamp_us as i64)
+                        )
+                    }
                     TimeFormat::Ctime => {
                         print!("[{}] ", time_formatter::ctime(record.timestamp_us))
                     }
