@@ -29,6 +29,11 @@ pub struct ReltimeFormatter {
     previous_unix_timestamp: i64,
 }
 
+pub struct DeltaFormatter {
+    state: State,
+    prev_timestamp_us: i64,
+}
+
 pub enum State {
     Initial,
     AfterBoot,
@@ -71,6 +76,39 @@ impl ReltimeFormatter {
         let sign = if delta_us >= 0 { 1.0 } else { -1.0 };
         format!(
             "{:>+4.0}.{:0>6}",
+            sign * f64::from(seconds as i32),
+            sub_seconds
+        )
+    }
+}
+
+impl DeltaFormatter {
+    pub fn new() -> Self {
+        DeltaFormatter {
+            state: State::Initial,
+            prev_timestamp_us: 0,
+        }
+    }
+
+    pub fn format(&mut self, timestamp_us: i64) -> String {
+        let format_res = match self.state {
+            State::Delta => Self::delta(timestamp_us - self.prev_timestamp_us),
+            _ => Self::delta(0),
+        };
+        self.prev_timestamp_us = timestamp_us;
+        self.state = match self.state {
+            State::Initial if timestamp_us == 0 => State::AfterBoot,
+            _ => State::Delta,
+        };
+        format_res
+    }
+
+    fn delta(delta_us: i64) -> String {
+        let seconds = i64::abs(delta_us / 1000000);
+        let sub_seconds = i64::abs(delta_us % 1000000);
+        let sign = if delta_us >= 0 { 1.0 } else { -1.0 };
+        format!(
+            "<{:>5.0}.{:0>6}>",
             sign * f64::from(seconds as i32),
             sub_seconds
         )

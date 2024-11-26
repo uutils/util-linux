@@ -154,8 +154,12 @@ impl Dmesg<'_> {
     fn print_normal(&self) {
         if let Some(records) = &self.records {
             let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
+            let mut delta_formatter = time_formatter::DeltaFormatter::new();
             for record in records {
                 match self.time_format {
+                    TimeFormat::Delta => {
+                        print!("[{}] ", delta_formatter.format(record.timestamp_us as i64))
+                    }
                     TimeFormat::Reltime => {
                         print!(
                             "[{}] ",
@@ -172,7 +176,6 @@ impl Dmesg<'_> {
                         print!("[{}] ", time_formatter::raw(record.timestamp_us))
                     }
                     TimeFormat::Notime => (),
-                    _ => unimplemented!(),
                 }
                 println!("{}", record.message);
             }
