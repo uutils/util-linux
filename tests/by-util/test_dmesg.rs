@@ -70,7 +70,7 @@ fn test_kmsg_time_format(format: &str) {
         .arg(time_format_arg)
         .succeeds()
         .no_stderr()
-        .stdout_is_fixture(expected_output);
+        .stdout_is_templated_fixture(expected_output, &[("\r\n", "\n")]);
 }
 
 #[test]
