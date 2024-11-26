@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, TimeDelta, Timelike};
+use chrono::{DateTime, FixedOffset, TimeDelta};
 #[cfg(feature = "fixed-boot-time")]
 use chrono::{NaiveDate, NaiveTime};
 use std::sync::OnceLock;
@@ -10,13 +10,9 @@ pub fn raw(timestamp_us: u64) -> String {
 }
 
 pub fn ctime(timestamp_us: u64) -> String {
-    let mut date_time = boot_time()
+    let date_time = boot_time()
         .checked_add_signed(TimeDelta::microseconds(timestamp_us as i64))
         .unwrap();
-    // dmesg always round up sub seconds.
-    if date_time.time().nanosecond() > 0 {
-        date_time = date_time.checked_add_signed(TimeDelta::seconds(1)).unwrap();
-    }
     date_time.format("%a %b %d %H:%M:%S %Y").to_string()
 }
 
@@ -26,7 +22,7 @@ static BOOT_TIME: OnceLock<DateTime<FixedOffset>> = OnceLock::new();
 fn boot_time() -> DateTime<FixedOffset> {
     *BOOT_TIME.get_or_init(|| {
         let date = NaiveDate::from_ymd_opt(2024, 11, 18).unwrap();
-        let time = NaiveTime::from_hms_opt(19, 34, 12).unwrap();
+        let time = NaiveTime::from_hms_micro_opt(19, 34, 12, 866807).unwrap();
         let tz = FixedOffset::east_opt(7 * 3600).unwrap();
         chrono::NaiveDateTime::new(date, time)
             .and_local_timezone(tz)
