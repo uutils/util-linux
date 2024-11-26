@@ -158,6 +158,9 @@ impl Dmesg<'_> {
                     TimeFormat::Ctime => {
                         print!("[{}] ", time_formatter::ctime(record.timestamp_us))
                     }
+                    TimeFormat::Iso => {
+                        print!("{} ", time_formatter::iso(record.timestamp_us))
+                    }
                     TimeFormat::Raw => {
                         print!("[{}] ", time_formatter::raw(record.timestamp_us))
                     }

@@ -16,6 +16,13 @@ pub fn ctime(timestamp_us: u64) -> String {
     date_time.format("%a %b %d %H:%M:%S %Y").to_string()
 }
 
+pub fn iso(timestamp_us: u64) -> String {
+    let date_time = boot_time()
+        .checked_add_signed(TimeDelta::microseconds(timestamp_us as i64))
+        .unwrap();
+    date_time.format("%Y-%m-%dT%H:%M:%S,%6f%:z").to_string()
+}
+
 static BOOT_TIME: OnceLock<DateTime<FixedOffset>> = OnceLock::new();
 
 #[cfg(feature = "fixed-boot-time")]
