@@ -130,6 +130,40 @@ fn boot_time() -> DateTime<FixedOffset> {
 }
 
 #[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(unix)]
+#[cfg(not(target_os = "openbsd"))]
 fn boot_time() -> DateTime<FixedOffset> {
-    *BOOT_TIME.get_or_init(|| procfs::boot_time().unwrap().into())
+    *BOOT_TIME.get_or_init(|| boot_time_from_utmpx().unwrap())
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(windows)]
+fn boot_time() -> DateTime<FixedOffset> {
+    // TODO: get windows boot time
+    *BOOT_TIME.get_or_init(|| chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(target_os = "openbsd")]
+fn boot_time() -> DateTime<FixedOffset> {
+    // TODO: get openbsd boot time
+    *BOOT_TIME.get_or_init(|| chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(unix)]
+#[cfg(not(target_os = "openbsd"))]
+fn boot_time_from_utmpx() -> Option<DateTime<FixedOffset>> {
+    for record in uucore::utmpx::Utmpx::iter_all_records() {
+        if record.record_type() == uucore::utmpx::BOOT_TIME {
+            let t = record.login_time();
+            return Some(
+                chrono::DateTime::from_timestamp(t.unix_timestamp(), t.nanosecond())
+                    .unwrap()
+                    .with_timezone(&chrono::Local)
+                    .into(),
+            );
+        }
+    }
+    None
 }
