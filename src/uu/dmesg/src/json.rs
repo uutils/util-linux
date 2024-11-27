@@ -23,7 +23,7 @@ struct Dmesg<'a> {
 #[derive(serde::Serialize)]
 struct Record<'a> {
     pri: u32,
-    time: u64,
+    time: i64,
     msg: &'a str,
 }
 
@@ -129,11 +129,11 @@ impl serde_json::ser::Formatter for DmesgFormatter {
         }
     }
 
-    fn write_u64<W>(&mut self, writer: &mut W, value: u64) -> io::Result<()>
+    fn write_i64<W>(&mut self, writer: &mut W, value: i64) -> io::Result<()>
     where
         W: ?Sized + io::Write,
     {
-        // The only u64 field in Dmesg is time, which requires a specific format
+        // The only i64 field in Dmesg is time, which requires a specific format
         let seconds = value / 1000000;
         let sub_seconds = value % 1000000;
         let repr = format!("{:>5}.{:0>6}", seconds, sub_seconds);

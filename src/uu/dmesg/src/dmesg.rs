@@ -158,13 +158,10 @@ impl Dmesg<'_> {
             for record in records {
                 match self.time_format {
                     TimeFormat::Delta => {
-                        print!("[{}] ", delta_formatter.format(record.timestamp_us as i64))
+                        print!("[{}] ", delta_formatter.format(record.timestamp_us))
                     }
                     TimeFormat::Reltime => {
-                        print!(
-                            "[{}] ",
-                            reltime_formatter.format(record.timestamp_us as i64)
-                        )
+                        print!("[{}] ", reltime_formatter.format(record.timestamp_us))
                     }
                     TimeFormat::Ctime => {
                         print!("[{}] ", time_formatter::ctime(record.timestamp_us))
@@ -200,7 +197,7 @@ enum TimeFormat {
 struct Record {
     priority_facility: u32,
     _sequence: u64,
-    timestamp_us: u64,
+    timestamp_us: i64,
     message: String,
 }
 

@@ -3,22 +3,22 @@ use chrono::{DateTime, FixedOffset, TimeDelta};
 use chrono::{NaiveDate, NaiveTime};
 use std::sync::OnceLock;
 
-pub fn raw(timestamp_us: u64) -> String {
+pub fn raw(timestamp_us: i64) -> String {
     let seconds = timestamp_us / 1000000;
     let sub_seconds = timestamp_us % 1000000;
     format!("{:>5}.{:0>6}", seconds, sub_seconds)
 }
 
-pub fn ctime(timestamp_us: u64) -> String {
+pub fn ctime(timestamp_us: i64) -> String {
     let date_time = boot_time()
-        .checked_add_signed(TimeDelta::microseconds(timestamp_us as i64))
+        .checked_add_signed(TimeDelta::microseconds(timestamp_us))
         .unwrap();
     date_time.format("%a %b %d %H:%M:%S %Y").to_string()
 }
 
-pub fn iso(timestamp_us: u64) -> String {
+pub fn iso(timestamp_us: i64) -> String {
     let date_time = boot_time()
-        .checked_add_signed(TimeDelta::microseconds(timestamp_us as i64))
+        .checked_add_signed(TimeDelta::microseconds(timestamp_us))
         .unwrap();
     date_time.format("%Y-%m-%dT%H:%M:%S,%6f%:z").to_string()
 }
