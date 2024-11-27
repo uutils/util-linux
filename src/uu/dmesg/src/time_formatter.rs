@@ -73,12 +73,10 @@ impl ReltimeFormatter {
     fn delta(delta_us: i64) -> String {
         let seconds = i64::abs(delta_us / 1000000);
         let sub_seconds = i64::abs(delta_us % 1000000);
-        let sign = if delta_us >= 0 { 1.0 } else { -1.0 };
-        format!(
-            "{:>+4.0}.{:0>6}",
-            sign * f64::from(seconds as i32),
-            sub_seconds
-        )
+        let sign = if delta_us >= 0 { '+' } else { '-' };
+        let mut res = format!("{}.{:0>6}", seconds, sub_seconds);
+        res.insert(0, sign);
+        format!("{:>11}", res)
     }
 }
 
@@ -106,12 +104,11 @@ impl DeltaFormatter {
     fn delta(delta_us: i64) -> String {
         let seconds = i64::abs(delta_us / 1000000);
         let sub_seconds = i64::abs(delta_us % 1000000);
-        let sign = if delta_us >= 0 { 1.0 } else { -1.0 };
-        format!(
-            "<{:>5.0}.{:0>6}>",
-            sign * f64::from(seconds as i32),
-            sub_seconds
-        )
+        let mut res = format!("{}.{:0>6}", seconds, sub_seconds);
+        if delta_us < 0 {
+            res.insert(0, '-');
+        }
+        format!("<{:>12}>", res)
     }
 }
 
