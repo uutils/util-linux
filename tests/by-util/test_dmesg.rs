@@ -79,6 +79,5 @@ fn test_invalid_time_format() {
         .arg("--time-format=definitely-invalid")
         .fails()
         .code_is(1)
-        .no_stdout()
-        .stderr_is("dmesg: unknown time format: definitely-invalid\n");
+        .stderr_only("dmesg: unknown time format: definitely-invalid\n");
 }
