@@ -28,20 +28,20 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         dmesg.output_format = OutputFormat::Json;
     }
     if let Some(time_format) = matches.get_one::<String>(options::TIME_FORMAT) {
-        match &time_format[..] {
-            "delta" => dmesg.time_format = TimeFormat::Delta,
-            "reltime" => dmesg.time_format = TimeFormat::Reltime,
-            "ctime" => dmesg.time_format = TimeFormat::Ctime,
-            "notime" => dmesg.time_format = TimeFormat::Notime,
-            "iso" => dmesg.time_format = TimeFormat::Iso,
-            "raw" => dmesg.time_format = TimeFormat::Raw,
+        dmesg.time_format = match &time_format[..] {
+            "delta" => TimeFormat::Delta,
+            "reltime" => TimeFormat::Reltime,
+            "ctime" => TimeFormat::Ctime,
+            "notime" => TimeFormat::Notime,
+            "iso" => TimeFormat::Iso,
+            "raw" => TimeFormat::Raw,
             _ => {
                 return Err(USimpleError::new(
                     1,
                     format!("unknown time format: {time_format}"),
                 ))
             }
-        }
+        };
     }
     dmesg.parse()?.print();
     Ok(())
