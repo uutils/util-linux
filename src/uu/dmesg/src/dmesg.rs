@@ -12,6 +12,7 @@ use uucore::{
 };
 
 mod json;
+mod time_formatter;
 
 const ABOUT: &str = help_about!("dmesg.md");
 const USAGE: &str = help_usage!("dmesg.md");
@@ -25,6 +26,22 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
     if matches.get_flag(options::JSON) {
         dmesg.output_format = OutputFormat::Json;
+    }
+    if let Some(time_format) = matches.get_one::<String>(options::TIME_FORMAT) {
+        dmesg.time_format = match &time_format[..] {
+            "delta" => TimeFormat::Delta,
+            "reltime" => TimeFormat::Reltime,
+            "ctime" => TimeFormat::Ctime,
+            "notime" => TimeFormat::Notime,
+            "iso" => TimeFormat::Iso,
+            "raw" => TimeFormat::Raw,
+            _ => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("unknown time format: {time_format}"),
+                ))
+            }
+        };
     }
     dmesg.parse()?.print();
     Ok(())
@@ -49,16 +66,27 @@ pub fn uu_app() -> Command {
                 .help("use JSON output format")
                 .action(ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new(options::TIME_FORMAT)
+                .long("time-format")
+                .help(
+                    "show timestamp using the given format:\n".to_string()
+                        + "  [delta|reltime|ctime|notime|iso|raw]",
+                )
+                .action(ArgAction::Set),
+        )
 }
 
 mod options {
     pub const KMSG_FILE: &str = "kmsg-file";
     pub const JSON: &str = "json";
+    pub const TIME_FORMAT: &str = "time-format";
 }
 
 struct Dmesg<'a> {
     kmsg_file: &'a str,
     output_format: OutputFormat,
+    time_format: TimeFormat,
     records: Option<Vec<Record>>,
 }
 
@@ -67,6 +95,7 @@ impl Dmesg<'_> {
         Dmesg {
             kmsg_file: "/dev/kmsg",
             output_format: OutputFormat::Normal,
+            time_format: TimeFormat::Raw,
             records: None,
         }
     }
@@ -112,13 +141,41 @@ impl Dmesg<'_> {
     fn print(&self) {
         match self.output_format {
             OutputFormat::Json => self.print_json(),
-            OutputFormat::Normal => unimplemented!(),
+            OutputFormat::Normal => self.print_normal(),
         }
     }
 
     fn print_json(&self) {
         if let Some(records) = &self.records {
             println!("{}", json::serialize_records(records));
+        }
+    }
+
+    fn print_normal(&self) {
+        if let Some(records) = &self.records {
+            let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
+            let mut delta_formatter = time_formatter::DeltaFormatter::new();
+            for record in records {
+                match self.time_format {
+                    TimeFormat::Delta => {
+                        print!("[{}] ", delta_formatter.format(record.timestamp_us))
+                    }
+                    TimeFormat::Reltime => {
+                        print!("[{}] ", reltime_formatter.format(record.timestamp_us))
+                    }
+                    TimeFormat::Ctime => {
+                        print!("[{}] ", time_formatter::ctime(record.timestamp_us))
+                    }
+                    TimeFormat::Iso => {
+                        print!("{} ", time_formatter::iso(record.timestamp_us))
+                    }
+                    TimeFormat::Raw => {
+                        print!("[{}] ", time_formatter::raw(record.timestamp_us))
+                    }
+                    TimeFormat::Notime => (),
+                }
+                println!("{}", record.message);
+            }
         }
     }
 }
@@ -128,10 +185,19 @@ enum OutputFormat {
     Json,
 }
 
+enum TimeFormat {
+    Delta,
+    Reltime,
+    Ctime,
+    Notime,
+    Iso,
+    Raw,
+}
+
 struct Record {
     priority_facility: u32,
     _sequence: u64,
-    timestamp_us: u64,
+    timestamp_us: i64,
     message: String,
 }
 
