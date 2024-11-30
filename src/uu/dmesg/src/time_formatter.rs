@@ -79,8 +79,7 @@ impl ReltimeFormatter {
         let seconds = i64::abs(delta_us / 1000000);
         let sub_seconds = i64::abs(delta_us % 1000000);
         let sign = if delta_us >= 0 { '+' } else { '-' };
-        let mut res = format!("{}.{:0>6}", seconds, sub_seconds);
-        res.insert(0, sign);
+        let res = format!("{}{}.{:0>6}", sign, seconds, sub_seconds);
         format!("{:>11}", res)
     }
 }
