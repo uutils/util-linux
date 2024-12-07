@@ -5,7 +5,10 @@
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::{BufRead, BufReader},
+};
 use uucore::{
     error::{FromIo, UResult, USimpleError},
     format_usage, help_about, help_usage,
@@ -192,6 +195,56 @@ enum TimeFormat {
     Notime,
     Iso,
     Raw,
+}
+
+struct RecordIterator {
+    file_reader: BufReader<File>,
+}
+
+impl Iterator for RecordIterator {
+    type Item = UResult<Record>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.read_record_line() {
+            Err(e) => Some(Err(e)),
+            Ok(None) => None,
+            Ok(Some(line)) => match self.parse_record(&line) {
+                None => self.next(),
+                Some(record) => Some(Ok(record)),
+            },
+        }
+    }
+}
+
+impl RecordIterator {
+    fn read_record_line(&mut self) -> UResult<Option<String>> {
+        let mut buf = vec![];
+        let num_bytes = self.file_reader.read_until(0, &mut buf)?;
+        match num_bytes {
+            0 => Ok(None),
+            _ => Ok(Some(String::from_utf8_lossy(&buf).to_string())),
+        }
+    }
+
+    fn parse_record(&self, record_line: &str) -> Option<Record> {
+        Self::record_regex()
+            .captures_iter(record_line)
+            .map(|c| c.extract())
+            .filter_map(|(_, [pri_fac, seq, time, msg])| {
+                Record::from_str_fields(pri_fac, seq, time, msg.to_string()).ok()
+            })
+            .next()
+    }
+
+    fn record_regex() -> Regex {
+        let valid_number_pattern = "0|[1-9][0-9]*";
+        let additional_fields_pattern = ",^[,;]*";
+        let record_pattern = format!(
+            "(?m)^({0}),({0}),({0}),.(?:{1})*;(.*)$",
+            valid_number_pattern, additional_fields_pattern
+        );
+        Regex::new(&record_pattern).expect("invalid regex.")
+    }
 }
 
 struct Record {
