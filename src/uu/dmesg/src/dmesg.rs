@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{BufRead, BufReader},
 };
 use uucore::{
@@ -46,7 +46,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             }
         };
     }
-    dmesg.parse()?.print();
+    dmesg.print()?;
     Ok(())
 }
 
@@ -90,7 +90,6 @@ struct Dmesg<'a> {
     kmsg_file: &'a str,
     output_format: OutputFormat,
     time_format: TimeFormat,
-    records: Option<Vec<Record>>,
 }
 
 impl Dmesg<'_> {
@@ -99,87 +98,55 @@ impl Dmesg<'_> {
             kmsg_file: "/dev/kmsg",
             output_format: OutputFormat::Normal,
             time_format: TimeFormat::Raw,
-            records: None,
         }
     }
 
-    fn parse(mut self) -> UResult<Self> {
-        let mut records = vec![];
-        let re = Self::record_regex();
-        let lines = self.read_lines_from_kmsg_file()?;
-        for line in lines {
-            for (_, [pri_fac, seq, time, msg]) in re.captures_iter(&line).map(|c| c.extract()) {
-                records.push(Record::from_str_fields(
-                    pri_fac,
-                    seq,
-                    time,
-                    msg.to_string(),
-                )?);
-            }
-        }
-        self.records = Some(records);
-        Ok(self)
-    }
-
-    fn record_regex() -> Regex {
-        let valid_number_pattern = "0|[1-9][0-9]*";
-        let additional_fields_pattern = ",^[,;]*";
-        let record_pattern = format!(
-            "(?m)^({0}),({0}),({0}),.(?:{1})*;(.*)$",
-            valid_number_pattern, additional_fields_pattern
-        );
-        Regex::new(&record_pattern).expect("invalid regex.")
-    }
-
-    fn read_lines_from_kmsg_file(&self) -> UResult<Vec<String>> {
-        let kmsg_bytes = fs::read(self.kmsg_file)
-            .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
-        let lines = kmsg_bytes
-            .split(|&byte| byte == 0)
-            .map(|line| String::from_utf8_lossy(line).to_string())
-            .collect();
-        Ok(lines)
-    }
-
-    fn print(&self) {
+    fn print(&self) -> UResult<()> {
         match self.output_format {
             OutputFormat::Json => self.print_json(),
             OutputFormat::Normal => self.print_normal(),
         }
     }
 
-    fn print_json(&self) {
-        if let Some(records) = &self.records {
-            println!("{}", json::serialize_records(records));
-        }
+    fn print_json(&self) -> UResult<()> {
+        let records: UResult<Vec<Record>> = self.try_iter()?.collect();
+        println!("{}", json::serialize_records(&records?));
+        Ok(())
     }
 
-    fn print_normal(&self) {
-        if let Some(records) = &self.records {
-            let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
-            let mut delta_formatter = time_formatter::DeltaFormatter::new();
-            for record in records {
-                match self.time_format {
-                    TimeFormat::Delta => {
-                        print!("[{}] ", delta_formatter.format(record.timestamp_us))
-                    }
-                    TimeFormat::Reltime => {
-                        print!("[{}] ", reltime_formatter.format(record.timestamp_us))
-                    }
-                    TimeFormat::Ctime => {
-                        print!("[{}] ", time_formatter::ctime(record.timestamp_us))
-                    }
-                    TimeFormat::Iso => {
-                        print!("{} ", time_formatter::iso(record.timestamp_us))
-                    }
-                    TimeFormat::Raw => {
-                        print!("[{}] ", time_formatter::raw(record.timestamp_us))
-                    }
-                    TimeFormat::Notime => (),
+    fn print_normal(&self) -> UResult<()> {
+        let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
+        let mut delta_formatter = time_formatter::DeltaFormatter::new();
+        for record in self.try_iter()? {
+            let record = record?;
+            match self.time_format {
+                TimeFormat::Delta => {
+                    print!("[{}] ", delta_formatter.format(record.timestamp_us))
                 }
-                println!("{}", record.message);
+                TimeFormat::Reltime => {
+                    print!("[{}] ", reltime_formatter.format(record.timestamp_us))
+                }
+                TimeFormat::Ctime => {
+                    print!("[{}] ", time_formatter::ctime(record.timestamp_us))
+                }
+                TimeFormat::Iso => {
+                    print!("{} ", time_formatter::iso(record.timestamp_us))
+                }
+                TimeFormat::Raw => {
+                    print!("[{}] ", time_formatter::raw(record.timestamp_us))
+                }
+                TimeFormat::Notime => (),
             }
+            println!("{}", record.message);
         }
+        Ok(())
+    }
+
+    fn try_iter(&self) -> UResult<RecordIterator> {
+        let file = File::open(self.kmsg_file)
+            .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
+        let file_reader = BufReader::new(file);
+        Ok(RecordIterator { file_reader })
     }
 }
 
