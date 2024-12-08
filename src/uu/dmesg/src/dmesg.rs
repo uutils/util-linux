@@ -8,10 +8,11 @@ use regex::Regex;
 use std::{
     collections::HashSet,
     fs::File,
+    hash::Hash,
     io::{BufRead, BufReader},
 };
 use uucore::{
-    error::{FromIo, UResult, USimpleError},
+    error::{FromIo, UError, UResult, USimpleError},
     format_usage, help_about, help_usage,
 };
 
@@ -186,7 +187,7 @@ impl Dmesg<'_> {
     }
 
     fn print_json(&self) -> UResult<()> {
-        let records: UResult<Vec<Record>> = self.try_iter()?.collect();
+        let records: UResult<Vec<Record>> = self.try_filtered_iter()?.collect();
         println!("{}", json::serialize_records(&records?));
         Ok(())
     }
@@ -194,7 +195,7 @@ impl Dmesg<'_> {
     fn print_normal(&self) -> UResult<()> {
         let mut reltime_formatter = time_formatter::ReltimeFormatter::new();
         let mut delta_formatter = time_formatter::DeltaFormatter::new();
-        for record in self.try_iter()? {
+        for record in self.try_filtered_iter()? {
             let record = record?;
             match self.time_format {
                 TimeFormat::Delta => {
@@ -219,11 +220,39 @@ impl Dmesg<'_> {
         Ok(())
     }
 
+    fn try_filtered_iter(&self) -> UResult<Box<dyn Iterator<Item = UResult<Record>> + '_>> {
+        Ok(match (&self.facility_filters, &self.level_filters) {
+            (None, None) => Box::new(self.try_iter()?),
+            (None, Some(set)) => Box::new(self.try_iter()?.filter(Self::is_record_in_set(set))),
+            (Some(set), None) => Box::new(self.try_iter()?.filter(Self::is_record_in_set(set))),
+            (Some(set_1), Some(set_2)) => Box::new(
+                self.try_iter()?
+                    .filter(Self::is_record_in_set(set_1))
+                    .filter(Self::is_record_in_set(set_2)),
+            ),
+        })
+    }
+
     fn try_iter(&self) -> UResult<RecordIterator> {
         let file = File::open(self.kmsg_file)
             .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
         let file_reader = BufReader::new(file);
         Ok(RecordIterator { file_reader })
+    }
+
+    fn is_record_in_set<T>(
+        set: &HashSet<T>,
+    ) -> impl Fn(&Result<Record, Box<dyn UError>>) -> bool + '_
+    where
+        T: TryFrom<u32> + Eq + Hash,
+    {
+        |record: &UResult<Record>| match record {
+            Ok(record) => match T::try_from(record.priority_facility) {
+                Ok(t) => set.contains(&t),
+                Err(_) => true,
+            },
+            Err(_) => true,
+        }
     }
 }
 
@@ -351,6 +380,60 @@ impl Record {
                 message: msg,
             }),
             _ => Err(USimpleError::new(1, "Failed to parse record field(s)")),
+        }
+    }
+}
+
+impl TryFrom<u32> for Level {
+    type Error = Box<dyn UError>;
+
+    fn try_from(value: u32) -> UResult<Self> {
+        let priority = value & 0b111;
+        match priority {
+            0 => Ok(Level::Emerg),
+            1 => Ok(Level::Alert),
+            2 => Ok(Level::Crit),
+            3 => Ok(Level::Err),
+            4 => Ok(Level::Warn),
+            5 => Ok(Level::Notice),
+            6 => Ok(Level::Info),
+            7 => Ok(Level::Debug),
+            _ => todo!(),
+        }
+    }
+}
+
+impl TryFrom<u32> for Facility {
+    type Error = Box<dyn UError>;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        let facility = (value >> 3) as u8;
+        match facility {
+            0 => Ok(Facility::Kern),
+            1 => Ok(Facility::User),
+            2 => Ok(Facility::Mail),
+            3 => Ok(Facility::Daemon),
+            4 => Ok(Facility::Auth),
+            5 => Ok(Facility::Syslog),
+            6 => Ok(Facility::Lpr),
+            7 => Ok(Facility::News),
+            8 => Ok(Facility::Uucp),
+            9 => Ok(Facility::Cron),
+            10 => Ok(Facility::Authpriv),
+            11 => Ok(Facility::Ftp),
+            12 => Ok(Facility::Res0),
+            13 => Ok(Facility::Res1),
+            14 => Ok(Facility::Res2),
+            15 => Ok(Facility::Res3),
+            16 => Ok(Facility::Local0),
+            17 => Ok(Facility::Local1),
+            18 => Ok(Facility::Local2),
+            19 => Ok(Facility::Local3),
+            20 => Ok(Facility::Local4),
+            21 => Ok(Facility::Local5),
+            22 => Ok(Facility::Local6),
+            23 => Ok(Facility::Local7),
+            _ => todo!(),
         }
     }
 }
