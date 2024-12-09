@@ -10,6 +10,7 @@ use std::{
     fs::File,
     hash::Hash,
     io::{BufRead, BufReader},
+    sync::OnceLock,
 };
 use uucore::{
     error::{FromIo, UError, UResult, USimpleError},
@@ -340,7 +341,7 @@ impl RecordIterator {
     }
 
     fn parse_record(&self, record_line: &str) -> Option<Record> {
-        Self::record_regex()
+        record_regex()
             .captures_iter(record_line)
             .map(|c| c.extract())
             .filter_map(|(_, [pri_fac, seq, time, msg])| {
@@ -348,8 +349,10 @@ impl RecordIterator {
             })
             .next()
     }
+}
 
-    fn record_regex() -> Regex {
+fn record_regex() -> &'static Regex {
+    RECORD_REGEX.get_or_init(|| {
         let valid_number_pattern = "0|[1-9][0-9]*";
         let additional_fields_pattern = ",^[,;]*";
         let record_pattern = format!(
@@ -357,8 +360,10 @@ impl RecordIterator {
             valid_number_pattern, additional_fields_pattern
         );
         Regex::new(&record_pattern).expect("invalid regex.")
-    }
+    })
 }
+
+static RECORD_REGEX: OnceLock<Regex> = OnceLock::new();
 
 struct Record {
     priority_facility: u32,
