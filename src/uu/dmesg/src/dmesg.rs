@@ -261,17 +261,11 @@ impl Dmesg<'_> {
         Ok(())
     }
 
-    fn try_filtered_iter(&self) -> UResult<Box<dyn Iterator<Item = UResult<Record>> + '_>> {
-        Ok(match (&self.facility_filters, &self.level_filters) {
-            (None, None) => Box::new(self.try_iter()?),
-            (None, Some(set)) => Box::new(self.try_iter()?.filter(Self::is_record_in_set(set))),
-            (Some(set), None) => Box::new(self.try_iter()?.filter(Self::is_record_in_set(set))),
-            (Some(set_1), Some(set_2)) => Box::new(
-                self.try_iter()?
-                    .filter(Self::is_record_in_set(set_1))
-                    .filter(Self::is_record_in_set(set_2)),
-            ),
-        })
+    fn try_filtered_iter(&self) -> UResult<impl Iterator<Item = UResult<Record>> + '_> {
+        Ok(self
+            .try_iter()?
+            .filter(Self::is_record_in_set(&self.facility_filters))
+            .filter(Self::is_record_in_set(&self.level_filters)))
     }
 
     fn try_iter(&self) -> UResult<RecordIterator> {
@@ -282,17 +276,17 @@ impl Dmesg<'_> {
     }
 
     fn is_record_in_set<T>(
-        set: &HashSet<T>,
+        set: &Option<HashSet<T>>,
     ) -> impl Fn(&Result<Record, Box<dyn UError>>) -> bool + '_
     where
         T: TryFrom<u32> + Eq + Hash,
     {
-        |record: &UResult<Record>| match record {
-            Ok(record) => match T::try_from(record.priority_facility) {
+        move |record: &UResult<Record>| match (record, set) {
+            (Ok(record), Some(set)) => match T::try_from(record.priority_facility) {
                 Ok(t) => set.contains(&t),
-                Err(_) => true,
+                Err(_) => false,
             },
-            Err(_) => true,
+            _ => true,
         }
     }
 }
