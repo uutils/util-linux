@@ -157,3 +157,16 @@ fn test_since_until() {
         .succeeds()
         .stdout_only_fixture("test_since_until.expected");
 }
+
+#[test]
+fn test_since_until_invalid_time() {
+    let options = ["--since", "--until"];
+    for option in options {
+        new_ucmd!()
+            .arg(format!("{option}=definitely-invalid"))
+            .fails()
+            .stderr_only(format!(
+                "dmesg: invalid time value \"definitely-invalid\"\n"
+            ));
+    }
+}
