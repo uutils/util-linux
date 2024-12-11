@@ -105,8 +105,28 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
         dmesg.level_filters = Some(level_filters);
     }
-    if let Some(_since) = matches.get_one::<String>(options::SINCE) {}
-    if let Some(_until) = matches.get_one::<String>(options::UNTIL) {}
+    if let Some(since) = matches.get_one::<String>(options::SINCE) {
+        let since = remove_enclosing_quotes(since);
+        if let Ok(since) = parse_datetime::parse_datetime(since) {
+            dmesg.since_filter = Some(since);
+        } else {
+            return Err(USimpleError::new(
+                1,
+                format!("invalid time value \"{since}\""),
+            ));
+        }
+    }
+    if let Some(until) = matches.get_one::<String>(options::UNTIL) {
+        let until = remove_enclosing_quotes(until);
+        if let Ok(until) = parse_datetime::parse_datetime(until) {
+            dmesg.until_filter = Some(until);
+        } else {
+            return Err(USimpleError::new(
+                1,
+                format!("invalid time value \"{until}\""),
+            ));
+        }
+    }
     dmesg.print()?;
     Ok(())
 }
@@ -183,6 +203,8 @@ struct Dmesg<'a> {
     time_format: TimeFormat,
     facility_filters: Option<HashSet<Facility>>,
     level_filters: Option<HashSet<Level>>,
+    since_filter: Option<chrono::DateTime<chrono::FixedOffset>>,
+    until_filter: Option<chrono::DateTime<chrono::FixedOffset>>,
 }
 
 impl Dmesg<'_> {
@@ -193,6 +215,8 @@ impl Dmesg<'_> {
             time_format: TimeFormat::Raw,
             facility_filters: None,
             level_filters: None,
+            since_filter: None,
+            until_filter: None,
         }
     }
 
@@ -456,5 +480,13 @@ impl TryFrom<u32> for Facility {
             23 => Ok(Facility::Local7),
             _ => todo!(),
         }
+    }
+}
+
+fn remove_enclosing_quotes(value: &str) -> &str {
+    if value.starts_with('"') && value.ends_with('"') {
+        &value[1..value.len() - 1]
+    } else {
+        value
     }
 }
