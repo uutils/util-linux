@@ -116,6 +116,12 @@ impl DeltaFormatter {
     }
 }
 
+pub fn datetime_from_microseconds_since_boot(microseconds: i64) -> DateTime<FixedOffset> {
+    boot_time()
+        .checked_add_signed(TimeDelta::microseconds(microseconds))
+        .unwrap()
+}
+
 static BOOT_TIME: OnceLock<DateTime<FixedOffset>> = OnceLock::new();
 
 #[cfg(feature = "fixed-boot-time")]

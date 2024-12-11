@@ -3,6 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use chrono::{DateTime, FixedOffset};
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::{
@@ -265,7 +266,9 @@ impl Dmesg<'_> {
         Ok(self
             .try_iter()?
             .filter(Self::is_record_in_set(&self.facility_filters))
-            .filter(Self::is_record_in_set(&self.level_filters)))
+            .filter(Self::is_record_in_set(&self.level_filters))
+            .filter(Self::is_record_since(&self.since_filter))
+            .filter(Self::is_record_until(&self.until_filter)))
     }
 
     fn try_iter(&self) -> UResult<RecordIterator> {
@@ -286,6 +289,32 @@ impl Dmesg<'_> {
                 Ok(t) => set.contains(&t),
                 Err(_) => false,
             },
+            _ => true,
+        }
+    }
+
+    fn is_record_since(
+        since: &Option<DateTime<FixedOffset>>,
+    ) -> impl Fn(&UResult<Record>) -> bool + '_ {
+        move |record: &UResult<Record>| match (record, since) {
+            (Ok(record), Some(since)) => {
+                let time =
+                    time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us);
+                time >= *since
+            }
+            _ => true,
+        }
+    }
+
+    fn is_record_until(
+        until: &Option<DateTime<FixedOffset>>,
+    ) -> impl Fn(&UResult<Record>) -> bool + '_ {
+        move |record: &UResult<Record>| match (record, until) {
+            (Ok(record), Some(until)) => {
+                let time =
+                    time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us);
+                time <= *until
+            }
             _ => true,
         }
     }
