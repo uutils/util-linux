@@ -105,6 +105,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
         dmesg.level_filters = Some(level_filters);
     }
+    if let Some(_since) = matches.get_one::<String>(options::SINCE) {}
+    if let Some(_until) = matches.get_one::<String>(options::UNTIL) {}
     dmesg.print()?;
     Ok(())
 }
@@ -151,6 +153,18 @@ pub fn uu_app() -> Command {
                 .help("restrict output to defined levels")
                 .action(ArgAction::Append),
         )
+        .arg(
+            Arg::new(options::SINCE)
+                .long("since")
+                .help("display the lines since the specified time")
+                .action(ArgAction::Set),
+        )
+        .arg(
+            Arg::new(options::UNTIL)
+                .long("until")
+                .help("display the lines until the specified time")
+                .action(ArgAction::Set),
+        )
 }
 
 mod options {
@@ -159,6 +173,8 @@ mod options {
     pub const TIME_FORMAT: &str = "time-format";
     pub const FACILITY: &str = "facility";
     pub const LEVEL: &str = "level";
+    pub const SINCE: &str = "since";
+    pub const UNTIL: &str = "until";
 }
 
 struct Dmesg<'a> {
