@@ -108,25 +108,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
     if let Some(since) = matches.get_one::<String>(options::SINCE) {
         let since = remove_enclosing_quotes(since);
-        if let Ok(since) = parse_datetime::parse_datetime(since) {
-            dmesg.since_filter = Some(since);
-        } else {
-            return Err(USimpleError::new(
-                1,
-                format!("invalid time value \"{since}\""),
-            ));
-        }
+        dmesg.since_filter = Some(time_formatter::parse_datetime(since)?);
     }
     if let Some(until) = matches.get_one::<String>(options::UNTIL) {
         let until = remove_enclosing_quotes(until);
-        if let Ok(until) = parse_datetime::parse_datetime(until) {
-            dmesg.until_filter = Some(until);
-        } else {
-            return Err(USimpleError::new(
-                1,
-                format!("invalid time value \"{until}\""),
-            ));
-        }
+        dmesg.until_filter = Some(time_formatter::parse_datetime(until)?);
     }
     dmesg.print()?;
     Ok(())

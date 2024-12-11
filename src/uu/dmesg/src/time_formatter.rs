@@ -7,6 +7,7 @@ use chrono::{DateTime, FixedOffset, TimeDelta};
 #[cfg(feature = "fixed-boot-time")]
 use chrono::{NaiveDate, NaiveTime};
 use std::sync::OnceLock;
+use uucore::error::{UResult, USimpleError};
 
 pub fn raw(timestamp_us: i64) -> String {
     let seconds = timestamp_us / 1000000;
@@ -116,6 +117,15 @@ impl DeltaFormatter {
     }
 }
 
+pub fn parse_datetime(s: &str) -> UResult<DateTime<FixedOffset>> {
+    #[cfg(feature = "fixed-boot-time")]
+    set_fixed_timezone();
+    match parse_datetime::parse_datetime(s) {
+        Ok(date_time) => Ok(date_time),
+        Err(_) => Err(USimpleError::new(1, format!("invalid time value \"{s}\""))),
+    }
+}
+
 pub fn datetime_from_microseconds_since_boot(microseconds: i64) -> DateTime<FixedOffset> {
     boot_time()
         .checked_add_signed(TimeDelta::microseconds(microseconds))
@@ -173,4 +183,12 @@ fn boot_time_from_utmpx() -> Option<DateTime<FixedOffset>> {
         }
     }
     None
+}
+
+#[cfg(feature = "fixed-boot-time")]
+static SET_TZ: OnceLock<()> = OnceLock::new();
+
+#[cfg(feature = "fixed-boot-time")]
+fn set_fixed_timezone() {
+    *SET_TZ.get_or_init(|| std::env::set_var("TZ", "Asia/Jakarta"))
 }
