@@ -129,6 +129,24 @@ fn test_filter_levels() {
 }
 
 #[test]
+fn test_invalid_facility_argument() {
+    new_ucmd!()
+        .arg("--facility=definitely-invalid")
+        .fails()
+        .code_is(1)
+        .stderr_only("dmesg: unknown facility 'definitely-invalid'\n");
+}
+
+#[test]
+fn test_invalid_level_argument() {
+    new_ucmd!()
+        .arg("--level=definitely-invalid")
+        .fails()
+        .code_is(1)
+        .stderr_only("dmesg: unknown level 'definitely-invalid'\n");
+}
+
+#[test]
 fn test_filter_multiple() {
     let mut cmd = new_ucmd!();
     let result = cmd
