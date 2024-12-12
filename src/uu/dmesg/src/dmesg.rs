@@ -493,7 +493,9 @@ impl TryFrom<u32> for Facility {
 }
 
 fn remove_enclosing_quotes(value: &str) -> &str {
-    if value.starts_with('"') && value.ends_with('"') {
+    if (value.starts_with('"') || value.starts_with('\''))
+        && (value.ends_with('"') || value.ends_with('\''))
+    {
         &value[1..value.len() - 1]
     } else {
         value
