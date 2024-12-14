@@ -107,11 +107,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         dmesg.level_filters = Some(level_filters);
     }
     if let Some(since) = matches.get_one::<String>(options::SINCE) {
-        let since = remove_enclosing_quotes(since);
         dmesg.since_filter = Some(time_formatter::parse_datetime(since)?);
     }
     if let Some(until) = matches.get_one::<String>(options::UNTIL) {
-        let until = remove_enclosing_quotes(until);
         dmesg.until_filter = Some(time_formatter::parse_datetime(until)?);
     }
     dmesg.print()?;
@@ -489,15 +487,5 @@ impl TryFrom<u32> for Facility {
             23 => Ok(Facility::Local7),
             _ => todo!(),
         }
-    }
-}
-
-fn remove_enclosing_quotes(value: &str) -> &str {
-    if (value.starts_with('"') || value.starts_with('\''))
-        && (value.ends_with('"') || value.ends_with('\''))
-    {
-        &value[1..value.len() - 1]
-    } else {
-        value
     }
 }
