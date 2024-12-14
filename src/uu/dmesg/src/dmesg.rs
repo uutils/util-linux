@@ -266,13 +266,10 @@ impl Dmesg<'_> {
         set: &Option<HashSet<T>>,
     ) -> impl Fn(&Result<Record, Box<dyn UError>>) -> bool + '_
     where
-        T: TryFrom<u32> + Eq + Hash,
+        T: From<u32> + Eq + Hash,
     {
         move |record: &UResult<Record>| match (record, set) {
-            (Ok(record), Some(set)) => match T::try_from(record.priority_facility) {
-                Ok(t) => set.contains(&t),
-                Err(_) => false,
-            },
+            (Ok(record), Some(set)) => set.contains(&T::from(record.priority_facility)),
             _ => true,
         }
     }
@@ -344,6 +341,7 @@ enum Facility {
     Local5,
     Local6,
     Local7,
+    Unknown,
 }
 
 #[derive(Eq, Hash, PartialEq)]
@@ -356,6 +354,7 @@ enum Level {
     Notice,
     Info,
     Debug,
+    Unknown,
 }
 
 struct RecordIterator {
@@ -436,56 +435,52 @@ impl Record {
     }
 }
 
-impl TryFrom<u32> for Level {
-    type Error = Box<dyn UError>;
-
-    fn try_from(value: u32) -> UResult<Self> {
+impl From<u32> for Level {
+    fn from(value: u32) -> Self {
         let priority = value & 0b111;
         match priority {
-            0 => Ok(Level::Emerg),
-            1 => Ok(Level::Alert),
-            2 => Ok(Level::Crit),
-            3 => Ok(Level::Err),
-            4 => Ok(Level::Warn),
-            5 => Ok(Level::Notice),
-            6 => Ok(Level::Info),
-            7 => Ok(Level::Debug),
-            _ => todo!(),
+            0 => Level::Emerg,
+            1 => Level::Alert,
+            2 => Level::Crit,
+            3 => Level::Err,
+            4 => Level::Warn,
+            5 => Level::Notice,
+            6 => Level::Info,
+            7 => Level::Debug,
+            _ => Level::Unknown,
         }
     }
 }
 
-impl TryFrom<u32> for Facility {
-    type Error = Box<dyn UError>;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
+impl From<u32> for Facility {
+    fn from(value: u32) -> Self {
         let facility = (value >> 3) as u8;
         match facility {
-            0 => Ok(Facility::Kern),
-            1 => Ok(Facility::User),
-            2 => Ok(Facility::Mail),
-            3 => Ok(Facility::Daemon),
-            4 => Ok(Facility::Auth),
-            5 => Ok(Facility::Syslog),
-            6 => Ok(Facility::Lpr),
-            7 => Ok(Facility::News),
-            8 => Ok(Facility::Uucp),
-            9 => Ok(Facility::Cron),
-            10 => Ok(Facility::Authpriv),
-            11 => Ok(Facility::Ftp),
-            12 => Ok(Facility::Res0),
-            13 => Ok(Facility::Res1),
-            14 => Ok(Facility::Res2),
-            15 => Ok(Facility::Res3),
-            16 => Ok(Facility::Local0),
-            17 => Ok(Facility::Local1),
-            18 => Ok(Facility::Local2),
-            19 => Ok(Facility::Local3),
-            20 => Ok(Facility::Local4),
-            21 => Ok(Facility::Local5),
-            22 => Ok(Facility::Local6),
-            23 => Ok(Facility::Local7),
-            _ => todo!(),
+            0 => Facility::Kern,
+            1 => Facility::User,
+            2 => Facility::Mail,
+            3 => Facility::Daemon,
+            4 => Facility::Auth,
+            5 => Facility::Syslog,
+            6 => Facility::Lpr,
+            7 => Facility::News,
+            8 => Facility::Uucp,
+            9 => Facility::Cron,
+            10 => Facility::Authpriv,
+            11 => Facility::Ftp,
+            12 => Facility::Res0,
+            13 => Facility::Res1,
+            14 => Facility::Res2,
+            15 => Facility::Res3,
+            16 => Facility::Local0,
+            17 => Facility::Local1,
+            18 => Facility::Local2,
+            19 => Facility::Local3,
+            20 => Facility::Local4,
+            21 => Facility::Local5,
+            22 => Facility::Local6,
+            23 => Facility::Local7,
+            _ => Facility::Unknown,
         }
     }
 }
