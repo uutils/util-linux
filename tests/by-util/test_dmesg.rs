@@ -170,8 +170,8 @@ fn test_since_until() {
     new_ucmd!()
         .arg("--kmsg-file")
         .arg("kmsg.input")
-        .arg("--since=\"2024-11-19 17:47:32 +0700\"")
-        .arg("--until='2024-11-19 18:55:52 +0700'")
+        .arg("--since=2024-11-19 17:47:32 +0700")
+        .arg("--until=2024-11-19 18:55:52 +0700")
         .succeeds()
         .no_stderr()
         .stdout_is_templated_fixture("test_since_until.expected", &[("\r\n", "\n")]);
