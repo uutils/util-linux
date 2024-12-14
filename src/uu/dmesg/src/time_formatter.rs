@@ -118,10 +118,8 @@ impl DeltaFormatter {
 }
 
 pub fn parse_datetime(s: &str) -> UResult<DateTime<FixedOffset>> {
-    match parse_datetime::parse_datetime(s) {
-        Ok(date_time) => Ok(date_time),
-        Err(_) => Err(USimpleError::new(1, format!("invalid time value \"{s}\""))),
-    }
+    parse_datetime::parse_datetime(s)
+        .map_err(|_| USimpleError::new(1, format!("invalid time value \"{s}\"")))
 }
 
 pub fn datetime_from_microseconds_since_boot(microseconds: i64) -> DateTime<FixedOffset> {
