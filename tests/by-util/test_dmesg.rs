@@ -81,3 +81,111 @@ fn test_invalid_time_format() {
         .code_is(1)
         .stderr_only("dmesg: unknown time format: definitely-invalid\n");
 }
+
+#[test]
+fn test_filter_facility() {
+    let facilities = [
+        "kern", "user", "mail", "daemon", "auth", "syslog", "lpr", "news", "uucp", "cron",
+        "authpriv", "ftp", "local0", "local1", "local2", "local3", "local4", "local5", "local6",
+        "local7",
+    ];
+    for facility in facilities {
+        let facility_filter_arg = format!("--facility={facility}");
+        let mut cmd = new_ucmd!();
+        let result = cmd
+            .arg("--kmsg-file")
+            .arg("kmsg.input")
+            .arg(facility_filter_arg)
+            .succeeds();
+        let stdout = result.no_stderr().stdout_str();
+        assert_eq!(stdout.lines().count(), 8);
+        let expected = format!("LOG_{}", facility.to_uppercase());
+        stdout
+            .lines()
+            .for_each(|line| assert!(line.contains(&expected)));
+    }
+}
+
+#[test]
+fn test_filter_levels() {
+    let levels = [
+        "emerg", "alert", "crit", "err", "warn", "notice", "info", "debug",
+    ];
+    for level in levels {
+        let level_filter_arg = format!("--level={level}");
+        let mut cmd = new_ucmd!();
+        let result = cmd
+            .arg("--kmsg-file")
+            .arg("kmsg.input")
+            .arg(level_filter_arg)
+            .succeeds();
+        let stdout = result.no_stderr().stdout_str();
+        assert_eq!(stdout.lines().count(), 20);
+        let expected = format!("LOG_{}", level.to_uppercase());
+        stdout
+            .lines()
+            .for_each(|line| assert!(line.contains(&expected)));
+    }
+}
+
+#[test]
+fn test_invalid_facility_argument() {
+    new_ucmd!()
+        .arg("--facility=definitely-invalid")
+        .fails()
+        .code_is(1)
+        .stderr_only("dmesg: unknown facility 'definitely-invalid'\n");
+}
+
+#[test]
+fn test_invalid_level_argument() {
+    new_ucmd!()
+        .arg("--level=definitely-invalid")
+        .fails()
+        .code_is(1)
+        .stderr_only("dmesg: unknown level 'definitely-invalid'\n");
+}
+
+#[test]
+fn test_filter_multiple() {
+    let mut cmd = new_ucmd!();
+    let result = cmd
+        .arg("--kmsg-file")
+        .arg("kmsg.input")
+        .arg("--facility=kern,user")
+        .arg("--level=emerg,alert")
+        .succeeds();
+    let stdout = result.no_stderr().stdout_str();
+    assert_eq!(stdout.lines().count(), 4);
+    stdout.lines().for_each(|line| {
+        assert!(
+            (line.contains("LOG_KERN") || line.contains("LOG_USER"))
+                && (line.contains("LOG_EMERG") || line.contains("LOG_ALERT"))
+        )
+    });
+}
+
+#[test]
+fn test_since_until() {
+    new_ucmd!()
+        .arg("--kmsg-file")
+        .arg("kmsg.input")
+        .arg("--since=2024-11-19 17:47:32 +0700")
+        .arg("--until=2024-11-19 18:55:52 +0700")
+        .succeeds()
+        .no_stderr()
+        .stdout_is_templated_fixture("test_since_until.expected", &[("\r\n", "\n")]);
+}
+
+#[test]
+fn test_since_until_invalid_time() {
+    let options = ["--since", "--until"];
+    for option in options {
+        new_ucmd!()
+            .arg(format!("{option}=definitely-invalid"))
+            .fails()
+            .stderr_only(format!(
+                "dmesg: invalid time value \"definitely-invalid\"\n"
+            ));
+    }
+}
