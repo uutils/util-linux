@@ -9,14 +9,22 @@ use regex::Regex;
 use std::{
     collections::HashSet,
     fs::File,
+    fs::OpenOptions,
     hash::Hash,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, ErrorKind},
     sync::OnceLock,
 };
+
+#[cfg(not(target_os = "windows"))]
+use std::{os::fd::AsRawFd, os::unix::fs::OpenOptionsExt};
+
 use uucore::{
-    error::{FromIo, UError, UResult, USimpleError},
+    error::{FromIo, UError, UIoError, UResult, USimpleError},
     format_usage, help_about, help_usage,
 };
+
+#[cfg(not(target_os = "windows"))]
+use uucore::libc;
 
 mod json;
 mod time_formatter;
@@ -28,10 +36,6 @@ const USAGE: &str = help_usage!("dmesg.md");
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let mut dmesg = Dmesg::new();
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
-    if let Some(kmsg_file) = matches.get_one::<String>(options::KMSG_FILE) {
-        dmesg.kmsg_file = kmsg_file;
-        dmesg.kmsg_record_separator = 0;
-    }
     if matches.get_flag(options::JSON) {
         dmesg.output_format = OutputFormat::Json;
     }
@@ -112,6 +116,12 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
     if let Some(until) = matches.get_one::<String>(options::UNTIL) {
         dmesg.until_filter = Some(time_formatter::parse_datetime(until)?);
+    }
+    if let Some(kmsg_file) = matches.get_one::<String>(options::KMSG_FILE) {
+        dmesg.kmsg_file = kmsg_file;
+        dmesg.kmsg_record_separator = 0;
+    } else if cfg!(target_os = "windows") {
+        return Err(USimpleError::new(1, "Windows requires the use of '-K'"));
     }
     dmesg.print()?;
     Ok(())
@@ -198,7 +208,7 @@ impl Dmesg<'_> {
     fn new() -> Self {
         Dmesg {
             kmsg_file: "/dev/kmsg",
-            kmsg_record_separator: 10, // '\n'
+            kmsg_record_separator: b'\n',
             output_format: OutputFormat::Normal,
             time_format: TimeFormat::Raw,
             facility_filters: None,
@@ -259,12 +269,26 @@ impl Dmesg<'_> {
     }
 
     fn try_iter(&self) -> UResult<RecordIterator> {
-        let file = File::open(self.kmsg_file)
+        let mut open_option = OpenOptions::new();
+        open_option.read(true);
+
+        #[cfg(not(target_os = "windows"))]
+        open_option.custom_flags(libc::O_NONBLOCK);
+
+        let file = open_option
+            .open(self.kmsg_file)
             .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let fd = file.as_raw_fd();
+            unsafe { libc::lseek(fd, 0, libc::SEEK_DATA) };
+        }
+
         let file_reader = BufReader::new(file);
         Ok(RecordIterator {
             file_reader,
-            kmsg_record_separator: self.kmsg_record_separator
+            kmsg_record_separator: self.kmsg_record_separator,
         })
     }
 
@@ -386,10 +410,20 @@ impl Iterator for RecordIterator {
 impl RecordIterator {
     fn read_record_line(&mut self) -> UResult<Option<String>> {
         let mut buf = vec![];
-        let num_bytes = self.file_reader.read_until(self.kmsg_record_separator, &mut buf)?;
-        match num_bytes {
-            0 => Ok(None),
-            _ => Ok(Some(String::from_utf8_lossy(&buf).to_string())),
+        match self
+            .file_reader
+            .read_until(self.kmsg_record_separator, &mut buf)
+        {
+            /*
+             * - a read(2) from /dev/kmsg returns WouldBlock if there aren't
+             *   any new record
+             * - a read(2) from a file returns 0 if the we reached the end
+             * In these cases return Ok(None)
+             */
+            Ok(0) => Ok(None),
+            Ok(_) => Ok(Some(String::from_utf8_lossy(&buf).to_string())),
+            Err(e) if e.kind() == ErrorKind::WouldBlock => Ok(None),
+            Err(e) => Err(Box::new(UIoError::from(e))),
         }
     }
 
