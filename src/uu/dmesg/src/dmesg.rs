@@ -30,6 +30,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     if let Some(kmsg_file) = matches.get_one::<String>(options::KMSG_FILE) {
         dmesg.kmsg_file = kmsg_file;
+        dmesg.kmsg_record_separator = 0;
     }
     if matches.get_flag(options::JSON) {
         dmesg.output_format = OutputFormat::Json;
@@ -184,6 +185,7 @@ mod options {
 
 struct Dmesg<'a> {
     kmsg_file: &'a str,
+    kmsg_record_separator: u8,
     output_format: OutputFormat,
     time_format: TimeFormat,
     facility_filters: Option<HashSet<Facility>>,
@@ -196,6 +198,7 @@ impl Dmesg<'_> {
     fn new() -> Self {
         Dmesg {
             kmsg_file: "/dev/kmsg",
+            kmsg_record_separator: 10, // '\n'
             output_format: OutputFormat::Normal,
             time_format: TimeFormat::Raw,
             facility_filters: None,
@@ -259,7 +262,10 @@ impl Dmesg<'_> {
         let file = File::open(self.kmsg_file)
             .map_err_context(|| format!("cannot open {}", self.kmsg_file))?;
         let file_reader = BufReader::new(file);
-        Ok(RecordIterator { file_reader })
+        Ok(RecordIterator {
+            file_reader,
+            kmsg_record_separator: self.kmsg_record_separator
+        })
     }
 
     fn is_record_in_set<T>(
@@ -359,6 +365,7 @@ enum Level {
 
 struct RecordIterator {
     file_reader: BufReader<File>,
+    kmsg_record_separator: u8,
 }
 
 impl Iterator for RecordIterator {
@@ -379,7 +386,7 @@ impl Iterator for RecordIterator {
 impl RecordIterator {
     fn read_record_line(&mut self) -> UResult<Option<String>> {
         let mut buf = vec![];
-        let num_bytes = self.file_reader.read_until(0, &mut buf)?;
+        let num_bytes = self.file_reader.read_until(self.kmsg_record_separator, &mut buf)?;
         match num_bytes {
             0 => Ok(None),
             _ => Ok(Some(String::from_utf8_lossy(&buf).to_string())),
