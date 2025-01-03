@@ -76,6 +76,8 @@ fn test_kmsg_time_format(format: &str) {
 #[test]
 fn test_invalid_time_format() {
     new_ucmd!()
+        .arg("--kmsg-file")
+        .arg("kmsg.input")
         .arg("--time-format=definitely-invalid")
         .fails()
         .code_is(1)
@@ -131,6 +133,8 @@ fn test_filter_levels() {
 #[test]
 fn test_invalid_facility_argument() {
     new_ucmd!()
+        .arg("--kmsg-file")
+        .arg("kmsg.input")
         .arg("--facility=definitely-invalid")
         .fails()
         .code_is(1)
@@ -140,6 +144,8 @@ fn test_invalid_facility_argument() {
 #[test]
 fn test_invalid_level_argument() {
     new_ucmd!()
+        .arg("--kmsg-file")
+        .arg("kmsg.input")
         .arg("--level=definitely-invalid")
         .fails()
         .code_is(1)
@@ -182,6 +188,8 @@ fn test_since_until_invalid_time() {
     let options = ["--since", "--until"];
     for option in options {
         new_ucmd!()
+            .arg("--kmsg-file")
+            .arg("kmsg.input")
             .arg(format!("{option}=definitely-invalid"))
             .fails()
             .stderr_only(format!(
