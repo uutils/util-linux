@@ -35,6 +35,7 @@ First, reimplement the most important tools from util-linux:
   Started
 - `fsck`: Checks and repairs filesystems.
 - `fsfreeze`: Freezes/unfreezes filesystems.
+  Done
 - `fstrim`: Discards unused blocks on filesystems.
 - `wipefs`: Wipes filesystem signatures.
 

@@ -36,3 +36,7 @@ mod test_last;
 #[cfg(feature = "dmesg")]
 #[path = "by-util/test_dmesg.rs"]
 mod test_dmesg;
+
+#[cfg(feature = "fsfreeze")]
+#[path = "by-util/test_fsfreeze.rs"]
+mod test_fsfreeze;

@@ -26,6 +26,7 @@ default = ["feat_common_core"]
 uudoc = []
 
 feat_common_core = [
+  "fsfreeze",
   "mountpoint",
   "lscpu",
   "lsmem",
@@ -55,6 +56,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.122"
 tabled = "0.17.0"
 dns-lookup = "2.0.4"
+linux-raw-sys = { version = "0.6.5", features = ["ioctl"] }
 
 [dependencies]
 clap = { workspace = true }
@@ -66,6 +68,7 @@ textwrap = { workspace = true }
 dns-lookup = { workspace = true }
 
 #
+fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
