@@ -1,0 +1,19 @@
+[package]
+name = "uu_blockdev"
+version = "0.0.1"
+edition = "2021"
+description = "blockdev ~ Get or set various block device attributes."
+
+[lib]
+path = "src/blockdev.rs"
+
+[[bin]]
+name = "blockdev"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+linux-raw-sys = { workspace = true }
+regex = { workspace = true }
+sysinfo = { workspace = true }
+uucore = { workspace = true }

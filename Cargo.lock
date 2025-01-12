@@ -1020,6 +1020,7 @@ dependencies = [
  "rlimit",
  "tempfile",
  "textwrap",
+ "uu_blockdev",
  "uu_ctrlaltdel",
  "uu_dmesg",
  "uu_fsfreeze",
@@ -1031,6 +1032,17 @@ dependencies = [
  "uu_setsid",
  "uucore",
  "xattr",
+]
+
+[[package]]
+name = "uu_blockdev"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "linux-raw-sys 0.7.0",
+ "regex",
+ "sysinfo",
+ "uucore",
 ]
 
 [[package]]
