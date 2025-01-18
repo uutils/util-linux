@@ -184,8 +184,6 @@ fn test_since_until_invalid_time() {
         new_ucmd!()
             .arg(format!("{option}=definitely-invalid"))
             .fails()
-            .stderr_only(format!(
-                "dmesg: invalid time value \"definitely-invalid\"\n"
-            ));
+            .stderr_only("dmesg: invalid time value \"definitely-invalid\"\n");
     }
 }
