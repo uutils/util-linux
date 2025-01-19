@@ -376,6 +376,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazy_static"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+
+[[package]]
 name = "libc"
 version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1122,13 +1128,14 @@ dependencies = [
 
 [[package]]
 name = "uucore"
-version = "0.0.28"
+version = "0.0.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04ea43050c46912575654c5181f4135529e8d4003fca80803af10cdef3ca6412"
+checksum = "50e0dc1598d959a08f24cea4d9e992f7ca874bd4ac80746683272afd37603b5e"
 dependencies = [
  "clap",
  "dns-lookup",
  "glob",
+ "lazy_static",
  "libc",
  "nix",
  "number_prefix",
@@ -1141,9 +1148,9 @@ dependencies = [
 
 [[package]]
 name = "uucore_procs"
-version = "0.0.27"
+version = "0.0.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3d588f57acb2ba416e072a6fa652f2e11cf727267c697d2e2d65175f3b10c41"
+checksum = "27d3de33ab2b56c0437cca084a2aeb1d46c56d138ab6341c009a90018a9a1c5f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1152,9 +1159,9 @@ dependencies = [
 
 [[package]]
 name = "uuhelp_parser"
-version = "0.0.27"
+version = "0.0.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96f26868814bf1ca9deec910a08007c93eb1d8e407ce36451999d4c1c1ea6767"
+checksum = "0cf4c8b31abfb5dc79940d6ca8000a1a6aa42f38711cdeaacb95850c69924cbc"
 
 [[package]]
 name = "wasi"

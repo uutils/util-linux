@@ -55,7 +55,7 @@ sysinfo = "0.33"
 tabled = "0.17.0"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
-uucore = "0.0.28"
+uucore = "0.0.29"
 xattr = "1.3.1"
 
 [dependencies]
