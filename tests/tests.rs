@@ -17,6 +17,10 @@ mod test_lsmem;
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
 
+#[cfg(feature = "blockdev")]
+#[path = "by-util/test_blockdev.rs"]
+mod test_blockdev;
+
 #[cfg(feature = "ctrlaltdel")]
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
