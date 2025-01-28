@@ -9,3 +9,8 @@ use crate::common::util::TestScenario;
 fn test_invalid_arg() {
     new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
 }
+
+#[test]
+fn test_lscpt_with_arg() {
+    new_ucmd!().arg("--hex").succeeds().stdout_contains("0x");
+}
