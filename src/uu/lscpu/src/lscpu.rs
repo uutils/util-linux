@@ -3,7 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, Command};
+use clap::{crate_version, Arg, ArgAction, Command};
 use regex::Regex;
 use std::fs;
 use sysinfo::System;
@@ -16,9 +16,14 @@ const USAGE: &str = help_usage!("lscpu.md");
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     let system = System::new_all();
+    let hex = _matches.get_flag(options::HEX);
 
     println!("Architecture: {}", get_architecture());
-    println!("CPU(s): {}", system.cpus().len());
+    if hex {
+        println!("CPU(s): 0x{:x}", system.cpus().len());
+    } else {
+        println!("CPU(s): {}", system.cpus().len());
+    }
     // Add more CPU information here...
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
@@ -29,6 +34,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         };
     }
     Ok(())
+}
+
+// More options can be added here
+mod options {
+    pub const HEX: &str = "hex";
 }
 
 fn get_architecture() -> String {
@@ -46,5 +56,7 @@ pub fn uu_app() -> Command {
         .version(crate_version!())
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
-        .infer_long_args(true)
+        .infer_long_args(true).arg(Arg::new(options::HEX).short('x').long("hex").action(ArgAction::SetTrue).help("Use hexadecimal masks for CPU sets (for example 'ff'). The default is to print the
+        sets in list format (for example 0,1). Note that before version 2.30 the mask has been
+        printed with 0x prefix.").required(false))
 }
