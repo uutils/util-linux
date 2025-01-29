@@ -14,9 +14,9 @@ const USAGE: &str = help_usage!("lscpu.md");
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+    let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
     let system = System::new_all();
-    let hex = _matches.get_flag(options::HEX);
+    let hex = matches.get_flag(options::HEX);
 
     println!("Architecture: {}", get_architecture());
     if hex {
