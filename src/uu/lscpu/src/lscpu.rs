@@ -56,7 +56,16 @@ pub fn uu_app() -> Command {
         .version(crate_version!())
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
-        .infer_long_args(true).arg(Arg::new(options::HEX).short('x').long("hex").action(ArgAction::SetTrue).help("Use hexadecimal masks for CPU sets (for example 'ff'). The default is to print the
-        sets in list format (for example 0,1). Note that before version 2.30 the mask has been
-        printed with 0x prefix.").required(false))
+        .infer_long_args(true)
+        .arg(
+            Arg::new(options::HEX)
+                .short('x')
+                .long("hex")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Use hexadecimal masks for CPU sets (for example 'ff'). \
+                    The default is to print the sets in list format (for example 0,1).",
+                )
+                .required(false),
+        )
 }
