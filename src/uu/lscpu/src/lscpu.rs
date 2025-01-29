@@ -64,8 +64,7 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::SetTrue)
                 .help(
                     "Use hexadecimal masks for CPU sets (for example 'ff'). \
-                    The default is to print the sets in list format (for example 0,1). \
-                    Note that before version 2.30 the mask has been printed with 0x prefix.",
+                    The default is to print the sets in list format (for example 0,1).",
                 )
                 .required(false),
         )
