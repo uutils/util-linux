@@ -26,6 +26,7 @@ default = ["feat_common_core"]
 uudoc = []
 
 feat_common_core = [
+  "blockdev",
   "ctrlaltdel",
   "dmesg",
   "fsfreeze",
@@ -67,6 +68,7 @@ phf = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
 
+blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
