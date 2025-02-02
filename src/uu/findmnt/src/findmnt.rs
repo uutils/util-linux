@@ -31,7 +31,7 @@ pub struct Findmnt<'a> {
     file_name: &'a str,
 }
 
-impl<'a> Findmnt<'a> {
+impl Findmnt<'_> {
     pub fn new(file_name: &str) -> Findmnt {
         Findmnt {
             file_name,
@@ -95,7 +95,7 @@ impl<'a> Findmnt<'a> {
 
     fn filter(&self, pattern: Types) -> Vec<Node> {
         let mut temp_vec = Vec::<Node>::new();
-        let _ = self.filter_with_pattern(pattern).iter().for_each(|node| {
+        self.filter_with_pattern(pattern).iter().for_each(|node| {
             temp_vec.push(node.clone());
         });
         temp_vec
@@ -125,13 +125,13 @@ pub enum Types {
 impl fmt::Display for Types {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Types::ROOT => write!(f, "{}", "/"),
-            Types::PROC => write!(f, "{}", "/proc"),
-            Types::SYS => write!(f, "{}", "/sys"),
-            Types::DEV => write!(f, "{}", "/dev"),
-            Types::RUN => write!(f, "{}", "/run"),
-            Types::TMP => write!(f, "{}", "/tmp"),
-            Types::BOOT => write!(f, "{}", "/boot"),
+            Types::ROOT => write!(f, "/"),
+            Types::PROC => write!(f, "/proc"),
+            Types::SYS => write!(f, "/sys"),
+            Types::DEV => write!(f, "/dev"),
+            Types::RUN => write!(f, "/run"),
+            Types::TMP => write!(f, "/tmp"),
+            Types::BOOT => write!(f, "/boot"),
         }
     }
 }
@@ -155,7 +155,7 @@ impl Node {
         }
     }
 
-    pub fn filter_with_pattern(node_vec: &Vec<Node>, pattern: Types) -> Vec<Node> {
+    pub fn filter_with_pattern(node_vec: &[Node], pattern: Types) -> Vec<Node> {
         node_vec
             .iter()
             .filter(|node| node.target.starts_with(&pattern.to_string()))
@@ -171,7 +171,7 @@ impl Node {
         let (_, rest) = rest.trim().split_once("-").unwrap();
         let (fstype, rest) = rest.trim().split_once(" ").unwrap();
         let (source, rest) = rest.trim().split_once(" ").unwrap();
-        let options_added = if let Some(_) = rest.split_once("rw") {
+        let options_added = if rest.split_once("rw").is_some() {
             rest.split_once("rw").unwrap().1
         } else {
             rest
