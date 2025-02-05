@@ -11,6 +11,6 @@ fn test_invalid_arg() {
 }
 
 #[test]
-fn test_lscpt_with_arg() {
+fn test_hex() {
     new_ucmd!().arg("--hex").succeeds().stdout_contains("0x");
 }
