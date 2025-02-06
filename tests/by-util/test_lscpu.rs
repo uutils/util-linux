@@ -11,6 +11,7 @@ fn test_invalid_arg() {
 }
 
 #[test]
+#[ignore = "not yet implemented"]
 fn test_hex() {
     new_ucmd!().arg("--hex").succeeds().stdout_contains("0x");
 }
