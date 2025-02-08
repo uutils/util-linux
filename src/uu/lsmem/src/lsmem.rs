@@ -457,11 +457,14 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
         let size = blk.count * lsmem.block_size;
         row.range = format!("0x{:016x}-0x{:016x}", start, start + size - 1);
 
-        // Size
+        // Size (always at least 5 long)
         row.size = if opts.bytes {
-            format!("{}", blk.count * lsmem.block_size)
+            format!("{:>5}", blk.count * lsmem.block_size)
         } else {
-            utils::size_to_human_string(blk.count * lsmem.block_size)
+            format!(
+                "{:>5}",
+                utils::size_to_human_string(blk.count * lsmem.block_size)
+            )
         };
 
         // State
