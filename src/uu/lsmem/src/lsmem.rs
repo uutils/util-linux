@@ -526,7 +526,10 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
         memory: create_table_rows(lsmem, opts),
     };
 
-    let mut table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    let mut table_json_string = serde_json::to_string_pretty(&table_json)
+        .unwrap()
+        .replace("  ", "   ") // Ident 3 spaces
+        .replace("},\n      {", "},{"); // Remove newlines between '}, {'
     table_json_string = table_json_string.replace("\"yes\"", "true");
     table_json_string = table_json_string.replace("\"no\"", "false");
     println!("{table_json_string}");
