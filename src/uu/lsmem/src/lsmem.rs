@@ -609,6 +609,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
     }
 
+    // Padding line between table and summary if both are shown
+    if opts.want_table && opts.want_summary {
+        println!();
+    }
+
     if opts.want_summary {
         print_summary(&lsmem, &opts);
     }
