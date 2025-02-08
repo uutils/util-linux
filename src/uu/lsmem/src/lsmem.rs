@@ -15,15 +15,6 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
-use tabled::{
-    settings::{
-        location::ByColumnName,
-        object::{self, Rows},
-        Alignment, Modify, Remove, Style,
-    },
-    Table, Tabled,
-};
-
 const ABOUT: &str = help_about!("lsmem.md");
 const USAGE: &str = help_usage!("lsmem.md");
 
@@ -45,14 +36,7 @@ const PATH_SUB_REMOVABLE: &str = "removable";
 const PATH_SUB_STATE: &str = "state";
 const NAME_MEMORY: &str = "memory";
 
-// struct ColDesc {
-//     name: &'static str, // Rust's equivalent to `const char *`
-//     whint: f64,         // Rust uses `f64` for double precision floating-point numbers
-//     flags: i32,         // Using `i32` for integers
-//     help: &'static str, // Rust's equivalent to `const char *`
-// }
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 enum Columns {
     #[serde(rename = "RANGE")]
     Range,
@@ -69,52 +53,59 @@ enum Columns {
     #[serde(rename = "ZONES")]
     Zones,
 }
-// const SCOLS_FL_RIGHT: i32 = 1;
 
-// static COLDESCS: [ColDesc; 7] = [
-//     ColDesc {
-//         name: "RANGE",
-//         whint: 0.0,
-//         flags: 0,
-//         help: "start and end address of the memory range",
-//     },
-//     ColDesc {
-//         name: "SIZE",
-//         whint: 5.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "size of the memory range",
-//     },
-//     ColDesc {
-//         name: "STATE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "online status of the memory range",
-//     },
-//     ColDesc {
-//         name: "REMOVABLE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "memory is removable",
-//     },
-//     ColDesc {
-//         name: "BLOCK",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "memory block number or blocks range",
-//     },
-//     ColDesc {
-//         name: "NODE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "numa node of memory",
-//     },
-//     ColDesc {
-//         name: "ZONES",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "valid zones for the memory range",
-//     },
-// ];
+const ALL_COLUMNS: &[Columns] = &[
+    Columns::Range,
+    Columns::Size,
+    Columns::State,
+    Columns::Removable,
+    Columns::Block,
+    Columns::Node,
+    Columns::Zones,
+];
+
+impl Columns {
+    fn get_name(&self) -> String {
+        serde_json::to_string(self)
+            .unwrap()
+            .trim_matches('"')
+            .to_string()
+    }
+
+    #[allow(dead_code)]
+    fn get_float_direction(&self) -> &'static str {
+        match self {
+            Columns::Range => "<",
+            Columns::Size => ">",
+            Columns::State => ">",
+            Columns::Removable => ">",
+            Columns::Block => ">",
+            Columns::Node => ">",
+            Columns::Zones => ">",
+        }
+    }
+
+    #[allow(dead_code)]
+    fn get_width_hint(&self) -> i8 {
+        if self == &Columns::Size {
+            5
+        } else {
+            self.get_name().len() as i8
+        }
+    }
+
+    fn get_help(&self) -> &'static str {
+        match self {
+            Columns::Range => "start and end address of the memory range",
+            Columns::Size => "size of the memory range",
+            Columns::State => "online status of the memory range",
+            Columns::Removable => "memory is removable",
+            Columns::Block => "memory block number or blocks range",
+            Columns::Node => "numa node of memory",
+            Columns::Zones => "valid zones for the memory range",
+        }
+    }
+}
 
 #[derive(Debug, Deserialize, PartialEq, Clone, Copy)]
 enum ZoneId {
@@ -195,22 +186,15 @@ impl MemoryBlock {
     }
 }
 
-#[derive(Tabled, Default, Serialize)]
+#[derive(Default, Serialize)]
 struct TableRow {
-    #[tabled(rename = "RANGE")]
     range: String,
-    #[tabled(rename = "SIZE")]
     size: String,
-    #[tabled(rename = "STATE")]
     state: String,
-    #[tabled(rename = "REMOVABLE")]
     removable: String,
-    #[tabled(rename = "BLOCK")]
     block: String,
-    #[tabled(rename = "NODE")]
-    #[serde(skip_serializing)]
     node: String,
-    #[tabled(rename = "ZONES")]
+    #[allow(unused)]
     #[serde(skip_serializing)]
     zones: String,
 }
@@ -237,20 +221,20 @@ struct TableRowJson {
 
 struct Options {
     all: bool,
-    have_nodes: bool,
-    raw: bool,
-    export: bool,
-    json: bool,
-    noheadings: bool,
-    list_all: bool,
     bytes: bool,
+    export: bool,
+    have_nodes: bool,
+    have_zones: bool,
+    json: bool,
+    list_all: bool,
+    noheadings: bool,
+    raw: bool,
+    split_by_node: bool,
+    split_by_removable: bool,
+    split_by_state: bool,
+    split_by_zones: bool,
     want_summary: bool,
     want_table: bool,
-    split_by_node: bool,
-    split_by_state: bool,
-    split_by_removable: bool,
-    split_by_zones: bool,
-    have_zones: bool,
 }
 
 struct Lsmem {
@@ -457,14 +441,11 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
         let size = blk.count * lsmem.block_size;
         row.range = format!("0x{:016x}-0x{:016x}", start, start + size - 1);
 
-        // Size (always at least 5 long)
+        // Size
         row.size = if opts.bytes {
-            format!("{:>5}", blk.count * lsmem.block_size)
+            format!("{}", blk.count * lsmem.block_size)
         } else {
-            format!(
-                "{:>5}",
-                utils::size_to_human_string(blk.count * lsmem.block_size)
-            )
+            utils::size_to_human_string(blk.count * lsmem.block_size)
         };
 
         // State
@@ -500,31 +481,46 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
 }
 
 fn print_table(lsmem: &Lsmem, opts: &Options) {
-    let mut table = Table::new(create_table_rows(lsmem, opts));
-    table
-        .with(Style::blank())
-        .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut col_widths = vec![5, 5, 6, 9, 5]; // Initialize with default minimum widths
 
-    // Remove padding in beginning and end of table
-    table.get_config_mut().set_padding(
-        tabled::grid::config::Entity::Global,
-        tabled::grid::config::Sides::new(
-            tabled::grid::config::Indent::default(),
-            tabled::grid::config::Indent::default(),
-            tabled::grid::config::Indent::default(),
-            tabled::grid::config::Indent::default(),
-        ),
-    );
-
-    // the default version
-    table.with(Remove::column(ByColumnName::new("NODE")));
-    table.with(Remove::column(ByColumnName::new("ZONES")));
-
-    if opts.noheadings {
-        table.with(Remove::row(Rows::first()));
+    // Calculate minimum column widths based on the actual data
+    for row in &table_rows {
+        col_widths[0] = col_widths[0].max(row.range.len());
+        col_widths[1] = col_widths[1].max(row.size.len());
+        col_widths[2] = col_widths[2].max(row.state.len());
+        col_widths[3] = col_widths[3].max(row.removable.len());
+        col_widths[4] = col_widths[4].max(row.block.len());
     }
 
-    println!("{table}");
+    if !opts.noheadings {
+        println!(
+            "{:<col0$} {:>col1$} {:>col2$} {:>col3$} {:>col4$}",
+            "RANGE",
+            "SIZE",
+            "STATE",
+            "REMOVABLE",
+            "BLOCK",
+            col0 = col_widths[0],
+            col1 = col_widths[1],
+            col2 = col_widths[2],
+            col3 = col_widths[3],
+            col4 = col_widths[4],
+        );
+    }
+
+    for row in table_rows {
+        let mut columns = vec![];
+        columns.push(format!("{:<col0$}", row.range, col0 = col_widths[0]));
+        columns.push(format!("{:>col1$}", row.size, col1 = col_widths[1]));
+        columns.push(format!("{:>col2$}", row.state, col2 = col_widths[2]));
+        columns.push(format!("{:>col3$}", row.removable, col3 = col_widths[3]));
+        columns.push(format!("{:>col4$}", row.block, col4 = col_widths[4]));
+        // Default version skips NODE and ZONES
+        // columns.push(format!("{:>col5$}", row.node, col5 = col_widths[5]));
+        // columns.push(format!("{:>col6$}", row.zones, col6 = col_widths[6]));
+        println!("{}", columns.join(" "));
+    }
 }
 
 fn print_json(lsmem: &Lsmem, opts: &Options) {
@@ -685,4 +681,12 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::SetTrue)
                 .conflicts_with_all([options::JSON, options::PAIRS]),
         )
+        .after_help(&format!(
+            "Available output columns:\n{}",
+            ALL_COLUMNS
+                .iter()
+                .map(|col| format!("{:>11}  {}", col.get_name(), col.get_help()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ))
 }
