@@ -561,21 +561,13 @@ fn print_summary(lsmem: &Lsmem, opts: &Options) {
         println!("{:<23} {:>15}", "Total online memory:", lsmem.mem_online);
         println!("{:<23} {:>15}", "Total offline memory:", lsmem.mem_offline);
     } else {
-        println!(
-            "{:<23} {:>15}",
-            "Memory block size:",
-            utils::size_to_human_string(lsmem.block_size)
-        );
-        println!(
-            "{:<23} {:>15}",
-            "Total online memory:",
-            utils::size_to_human_string(lsmem.mem_online)
-        );
-        println!(
-            "{:<23} {:>15}",
-            "Total offline memory:",
-            utils::size_to_human_string(lsmem.mem_offline)
-        );
+        let block_size_str = utils::size_to_human_string(lsmem.block_size);
+        let mem_online_str = utils::size_to_human_string(lsmem.mem_online);
+        let mem_offline_str = utils::size_to_human_string(lsmem.mem_offline);
+
+        println!("{:<23} {:>5}", "Memory block size:", block_size_str);
+        println!("{:<23} {:>5}", "Total online memory:", mem_online_str);
+        println!("{:<23} {:>5}", "Total offline memory:", mem_offline_str);
     }
 }
 
