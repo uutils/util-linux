@@ -5,7 +5,8 @@
 
 mod utils;
 
-use clap::{crate_version, Command};
+use clap::builder::{EnumValueParser, PossibleValue, PossibleValuesParser};
+use clap::{crate_version, Command, ValueEnum};
 use clap::{Arg, ArgAction};
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
@@ -21,10 +22,13 @@ const USAGE: &str = help_usage!("lsmem.md");
 mod options {
     pub const ALL: &str = "all";
     pub const BYTES: &str = "bytes";
-    pub const NOHEADINGS: &str = "noheadings";
     pub const JSON: &str = "json";
+    pub const NOHEADINGS: &str = "noheadings";
+    pub const OUTPUT: &str = "output";
+    pub const OUTPUT_ALL: &str = "output-all";
     pub const PAIRS: &str = "pairs";
     pub const RAW: &str = "raw";
+    pub const SPLIT: &str = "split";
 }
 
 // const BUFSIZ: usize = 1024;
@@ -36,8 +40,8 @@ const PATH_SUB_REMOVABLE: &str = "removable";
 const PATH_SUB_STATE: &str = "state";
 const NAME_MEMORY: &str = "memory";
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-enum Columns {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum Column {
     #[serde(rename = "RANGE")]
     Range,
     #[serde(rename = "SIZE")]
@@ -54,55 +58,84 @@ enum Columns {
     Zones,
 }
 
-const ALL_COLUMNS: &[Columns] = &[
-    Columns::Range,
-    Columns::Size,
-    Columns::State,
-    Columns::Removable,
-    Columns::Block,
-    Columns::Node,
-    Columns::Zones,
-];
-
-impl Columns {
-    fn get_name(&self) -> String {
-        serde_json::to_string(self)
-            .unwrap()
-            .trim_matches('"')
-            .to_string()
+impl ValueEnum for Column {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            Column::Range,
+            Column::Size,
+            Column::State,
+            Column::Removable,
+            Column::Block,
+            Column::Node,
+            Column::Zones,
+        ]
     }
 
-    #[allow(dead_code)]
-    fn get_float_direction(&self) -> &'static str {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(PossibleValue::new(self.get_name()))
+    }
+}
+
+/// Default columns to display if none are explicitly specified.
+const DEFAULT_COLUMNS: &[Column] = &[
+    Column::Range,
+    Column::Size,
+    Column::State,
+    Column::Removable,
+    Column::Block,
+];
+/// Which columns (attributes) are possible to split memory blocks to ranges on.
+const SPLIT_COLUMNS: &[Column] = &[
+    Column::State,
+    Column::Removable,
+    Column::Node,
+    Column::Zones,
+];
+
+impl Column {
+    fn get_name(&self) -> &'static str {
         match self {
-            Columns::Range => "<",
-            Columns::Size => ">",
-            Columns::State => ">",
-            Columns::Removable => ">",
-            Columns::Block => ">",
-            Columns::Node => ">",
-            Columns::Zones => ">",
+            Column::Range => "RANGE",
+            Column::Size => "SIZE",
+            Column::State => "STATE",
+            Column::Removable => "REMOVABLE",
+            Column::Block => "BLOCK",
+            Column::Node => "NODE",
+            Column::Zones => "ZONES",
         }
     }
 
     #[allow(dead_code)]
-    fn get_width_hint(&self) -> i8 {
-        if self == &Columns::Size {
+    fn get_float_right(&self) -> bool {
+        match self {
+            Column::Range => false,
+            Column::Size => true,
+            Column::State => true,
+            Column::Removable => true,
+            Column::Block => true,
+            Column::Node => true,
+            Column::Zones => true,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn get_width_hint(&self) -> usize {
+        if self == &Column::Size {
             5
         } else {
-            self.get_name().len() as i8
+            self.get_name().len()
         }
     }
 
     fn get_help(&self) -> &'static str {
         match self {
-            Columns::Range => "start and end address of the memory range",
-            Columns::Size => "size of the memory range",
-            Columns::State => "online status of the memory range",
-            Columns::Removable => "memory is removable",
-            Columns::Block => "memory block number or blocks range",
-            Columns::Node => "numa node of memory",
-            Columns::Zones => "valid zones for the memory range",
+            Column::Range => "start and end address of the memory range",
+            Column::Size => "size of the memory range",
+            Column::State => "online status of the memory range",
+            Column::Removable => "memory is removable",
+            Column::Block => "memory block number or blocks range",
+            Column::Node => "numa node of memory",
+            Column::Zones => "valid zones for the memory range",
         }
     }
 }
@@ -200,6 +233,17 @@ struct TableRow {
 }
 
 impl TableRow {
+    fn get_value(&self, column: &Column) -> String {
+        match column {
+            Column::Range => self.range.clone(),
+            Column::Size => self.size.clone(),
+            Column::State => self.state.clone(),
+            Column::Removable => self.removable.clone(),
+            Column::Block => self.block.clone(),
+            Column::Node => self.node.clone(),
+            Column::Zones => self.zones.clone(),
+        }
+    }
     fn to_pairs_string(&self) -> String {
         format!(
             r#"RANGE="{}" SIZE="{}" STATE="{}" REMOVABLE="{}" BLOCK="{}""#,
@@ -220,19 +264,24 @@ struct TableRowJson {
 }
 
 struct Options {
+    // Set by command-line arguments
     all: bool,
     bytes: bool,
-    export: bool,
-    have_nodes: bool,
-    have_zones: bool,
-    json: bool,
-    list_all: bool,
+    columns: Vec<Column>,
     noheadings: bool,
+    json: bool,
+    pairs: bool,
     raw: bool,
     split_by_node: bool,
     split_by_removable: bool,
     split_by_state: bool,
     split_by_zones: bool,
+
+    // Set by read_info
+    have_nodes: bool,
+    have_zones: bool,
+
+    // Computed from flags above
     want_summary: bool,
     want_table: bool,
 }
@@ -265,20 +314,22 @@ impl Options {
     fn new() -> Options {
         Options {
             all: false,
-            have_nodes: false,
-            raw: false,
-            export: false,
-            json: false,
-            noheadings: false,
-            list_all: false,
             bytes: false,
+            columns: Vec::default(),
+            noheadings: false,
+            json: false,
+            pairs: false,
+            raw: false,
+            split_by_node: false,
+            split_by_removable: false,
+            split_by_state: false,
+            split_by_zones: false,
+
+            have_nodes: false,
+            have_zones: false,
+
             want_summary: true, // default true
             want_table: true,   // default true
-            split_by_node: false,
-            split_by_state: false,
-            split_by_removable: false,
-            split_by_zones: false,
-            have_zones: false,
         }
     }
 }
@@ -321,7 +372,7 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
         } else {
             lsmem.mem_offline += lsmem.block_size;
         }
-        if !opts.all && is_mergeable(lsmem, opts, &blk) {
+        if is_mergeable(lsmem, opts, &blk) {
             lsmem.blocks[lsmem.nblocks - 1].count += 1;
             continue;
         }
@@ -349,7 +400,7 @@ fn is_mergeable(lsmem: &Lsmem, opts: &Options, blk: &MemoryBlock) -> bool {
     }
 
     let curr_block = &lsmem.blocks[lsmem.nblocks - 1];
-    if opts.list_all {
+    if opts.all {
         return false;
     }
     if curr_block.index + curr_block.count != blk.index {
@@ -482,44 +533,53 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
 
 fn print_table(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
-    let mut col_widths = vec![5, 5, 6, 9, 5]; // Initialize with default minimum widths
+    let mut col_widths = vec![0; opts.columns.len()];
+
+    // Initialize column widths based on column names
+    for (i, column) in opts.columns.iter().enumerate() {
+        col_widths[i] = column.get_width_hint();
+    }
 
     // Calculate minimum column widths based on the actual data
     for row in &table_rows {
-        col_widths[0] = col_widths[0].max(row.range.len());
-        col_widths[1] = col_widths[1].max(row.size.len());
-        col_widths[2] = col_widths[2].max(row.state.len());
-        col_widths[3] = col_widths[3].max(row.removable.len());
-        col_widths[4] = col_widths[4].max(row.block.len());
+        for (i, column) in opts.columns.iter().enumerate() {
+            let width = match column {
+                Column::Range => row.range.len(),
+                Column::Size => row.size.len(),
+                Column::State => row.state.len(),
+                Column::Removable => row.removable.len(),
+                Column::Block => row.block.len(),
+                Column::Node => row.node.len(),
+                Column::Zones => row.zones.len(),
+            };
+            col_widths[i] = col_widths[i].max(width);
+        }
     }
 
     if !opts.noheadings {
-        println!(
-            "{:<col0$} {:>col1$} {:>col2$} {:>col3$} {:>col4$}",
-            "RANGE",
-            "SIZE",
-            "STATE",
-            "REMOVABLE",
-            "BLOCK",
-            col0 = col_widths[0],
-            col1 = col_widths[1],
-            col2 = col_widths[2],
-            col3 = col_widths[3],
-            col4 = col_widths[4],
-        );
+        let mut output = vec![];
+        for (i, column) in opts.columns.iter().enumerate() {
+            let formatted = if column.get_float_right() {
+                format!("{:>width$}", column.get_name(), width = col_widths[i])
+            } else {
+                format!("{:<width$}", column.get_name(), width = col_widths[i])
+            };
+            output.push(formatted);
+        }
+        println!("{}", output.join(" "));
     }
 
     for row in table_rows {
-        let mut columns = vec![];
-        columns.push(format!("{:<col0$}", row.range, col0 = col_widths[0]));
-        columns.push(format!("{:>col1$}", row.size, col1 = col_widths[1]));
-        columns.push(format!("{:>col2$}", row.state, col2 = col_widths[2]));
-        columns.push(format!("{:>col3$}", row.removable, col3 = col_widths[3]));
-        columns.push(format!("{:>col4$}", row.block, col4 = col_widths[4]));
-        // Default version skips NODE and ZONES
-        // columns.push(format!("{:>col5$}", row.node, col5 = col_widths[5]));
-        // columns.push(format!("{:>col6$}", row.zones, col6 = col_widths[6]));
-        println!("{}", columns.join(" "));
+        let mut output = vec![];
+        for (i, column) in opts.columns.iter().enumerate() {
+            let formatted = if column.get_float_right() {
+                format!("{:>width$}", row.get_value(column), width = col_widths[i])
+            } else {
+                format!("{:<width$}", row.get_value(column), width = col_widths[i])
+            };
+            output.push(formatted);
+        }
+        println!("{}", output.join(" "));
     }
 }
 
@@ -597,10 +657,35 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     opts.bytes = matches.get_flag(options::BYTES);
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
     opts.json = matches.get_flag(options::JSON);
-    opts.export = matches.get_flag(options::PAIRS);
+    opts.pairs = matches.get_flag(options::PAIRS);
     opts.raw = matches.get_flag(options::RAW);
+    opts.columns = matches
+        .get_many::<Column>(options::OUTPUT)
+        .unwrap_or_default()
+        .map(|c| c.to_owned())
+        .collect::<Vec<Column>>();
 
-    if opts.json || opts.export || opts.raw {
+    // Only respect --output-all if no column list were provided.
+    // --output takes priority over --output-all.
+    if opts.columns.is_empty() {
+        if matches.get_flag(options::OUTPUT_ALL) {
+            opts.columns = Column::value_variants().to_vec();
+        } else {
+            opts.columns = DEFAULT_COLUMNS.to_vec();
+        }
+    }
+
+    let split_columns = matches
+        .get_many::<String>(options::SPLIT)
+        .unwrap_or_default()
+        .map(|c| c.to_owned())
+        .collect::<Vec<String>>();
+    opts.split_by_node = split_columns.contains(&Column::Node.get_name().to_string());
+    opts.split_by_removable = split_columns.contains(&Column::Removable.get_name().to_string());
+    opts.split_by_state = split_columns.contains(&Column::State.get_name().to_string());
+    opts.split_by_zones = split_columns.contains(&Column::Zones.get_name().to_string());
+
+    if opts.json || opts.pairs || opts.raw {
         opts.want_summary = false;
     }
 
@@ -609,7 +694,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if opts.want_table {
         if opts.json {
             print_json(&lsmem, &opts);
-        } else if opts.export {
+        } else if opts.pairs {
             print_pairs(&lsmem, &opts);
         } else if opts.raw {
             print_raw(&lsmem, &opts);
@@ -637,27 +722,6 @@ pub fn uu_app() -> Command {
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
         .arg(
-            Arg::new(options::ALL)
-                .short('a')
-                .long("all")
-                .help("list each individual memory block")
-                .action(ArgAction::SetTrue),
-        )
-        .arg(
-            Arg::new(options::BYTES)
-                .short('b')
-                .long("bytes")
-                .help("print SIZE in bytes rather than in human readable format")
-                .action(ArgAction::SetTrue),
-        )
-        .arg(
-            Arg::new(options::NOHEADINGS)
-                .short('n')
-                .long("noheadings")
-                .help("don't print headings")
-                .action(ArgAction::SetTrue),
-        )
-        .arg(
             Arg::new(options::JSON)
                 .short('J')
                 .long("json")
@@ -674,6 +738,44 @@ pub fn uu_app() -> Command {
                 .conflicts_with_all([options::JSON, options::RAW]),
         )
         .arg(
+            Arg::new(options::ALL)
+                .short('a')
+                .long("all")
+                .help("list each individual memory block")
+                .action(ArgAction::SetTrue)
+                .conflicts_with(options::SPLIT),
+        )
+        .arg(
+            Arg::new(options::BYTES)
+                .short('b')
+                .long("bytes")
+                .help("print SIZE in bytes rather than in human readable format")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::NOHEADINGS)
+                .short('n')
+                .long("noheadings")
+                .help("don't print headings")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::OUTPUT)
+                .short('o')
+                .long("output")
+                .help("output columns")
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_delimiter(',')
+                .value_parser(EnumValueParser::<Column>::new()),
+        )
+        .arg(
+            Arg::new(options::OUTPUT_ALL)
+                .long("output-all")
+                .help("output all columns")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new(options::RAW)
                 .short('r')
                 .long("raw")
@@ -681,9 +783,25 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::SetTrue)
                 .conflicts_with_all([options::JSON, options::PAIRS]),
         )
+        .arg(
+            Arg::new(options::SPLIT)
+                .short('S')
+                .long("split")
+                .help("split ranges by specified columns")
+                .conflicts_with(options::ALL)
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_delimiter(',')
+                .value_parser(PossibleValuesParser::new(
+                    SPLIT_COLUMNS
+                        .iter()
+                        .map(|col| col.to_possible_value().unwrap())
+                        .collect::<Vec<_>>(),
+                )),
+        )
         .after_help(&format!(
             "Available output columns:\n{}",
-            ALL_COLUMNS
+            Column::value_variants()
                 .iter()
                 .map(|col| format!("{:>11}  {}", col.get_name(), col.get_help()))
                 .collect::<Vec<_>>()
