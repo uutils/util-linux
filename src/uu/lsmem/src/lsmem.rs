@@ -499,6 +499,17 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
         .with(Style::blank())
         .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
 
+    // Remove padding in beginning and end of table
+    table.get_config_mut().set_padding(
+        tabled::grid::config::Entity::Global,
+        tabled::grid::config::Sides::new(
+            tabled::grid::config::Indent::default(),
+            tabled::grid::config::Indent::default(),
+            tabled::grid::config::Indent::default(),
+            tabled::grid::config::Indent::default(),
+        ),
+    );
+
     // the default version
     table.with(Remove::column(ByColumnName::new("NODE")));
     table.with(Remove::column(ByColumnName::new("ZONES")));
