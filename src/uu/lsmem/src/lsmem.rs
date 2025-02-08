@@ -28,6 +28,7 @@ const ABOUT: &str = help_about!("lsmem.md");
 const USAGE: &str = help_usage!("lsmem.md");
 
 mod options {
+    pub const ALL: &str = "all";
     pub const BYTES: &str = "bytes";
     pub const NOHEADINGS: &str = "noheadings";
     pub const JSON: &str = "json";
@@ -235,6 +236,7 @@ struct TableRowJson {
 }
 
 struct Options {
+    all: bool,
     have_nodes: bool,
     raw: bool,
     export: bool,
@@ -278,6 +280,7 @@ impl Lsmem {
 impl Options {
     fn new() -> Options {
         Options {
+            all: false,
             have_nodes: false,
             raw: false,
             export: false,
@@ -334,7 +337,7 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
         } else {
             lsmem.mem_offline += lsmem.block_size;
         }
-        if is_mergeable(lsmem, opts, &blk) {
+        if !opts.all && is_mergeable(lsmem, opts, &blk) {
             lsmem.blocks[lsmem.nblocks - 1].count += 1;
             continue;
         }
@@ -591,6 +594,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut lsmem = Lsmem::new();
     let mut opts = Options::new();
+    opts.all = matches.get_flag(options::ALL);
     opts.bytes = matches.get_flag(options::BYTES);
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
     opts.json = matches.get_flag(options::JSON);
@@ -633,6 +637,13 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+        .arg(
+            Arg::new(options::ALL)
+                .short('a')
+                .long("all")
+                .help("list each individual memory block")
+                .action(ArgAction::SetTrue),
+        )
         .arg(
             Arg::new(options::BYTES)
                 .short('b')
