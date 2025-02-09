@@ -26,19 +26,6 @@ fn test_invalid_arg() {
     new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
 }
 
-#[test]
-fn test_columns_table() {
-    sysroot_test_with_args("test_lsmem_columns_table.expected", &["-o", "block,size"]);
-}
-
-#[test]
-fn test_columns_raw() {
-    sysroot_test_with_args(
-        "test_lsmem_columns_raw.expected",
-        &["-o", "block,size", "-r"],
-    );
-}
-
 // FAILS, COMMENT FOR NOW - TODO
 // #[test]
 // fn test_columns_json() {
@@ -54,6 +41,19 @@ fn test_columns_pairs() {
         "test_lsmem_columns_pairs.expected",
         &["-o", "block,size", "-P"],
     );
+}
+
+#[test]
+fn test_columns_raw() {
+    sysroot_test_with_args(
+        "test_lsmem_columns_raw.expected",
+        &["-o", "block,size", "-r"],
+    );
+}
+
+#[test]
+fn test_columns_table() {
+    sysroot_test_with_args("test_lsmem_columns_table.expected", &["-o", "block,size"]);
 }
 
 #[test]
