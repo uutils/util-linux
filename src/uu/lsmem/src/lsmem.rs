@@ -132,26 +132,33 @@ impl Column {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
 enum ZoneId {
-    #[serde(rename = "ZONE_DMA")]
+    #[serde(rename = "DMA")]
     ZoneDma,
-    #[serde(rename = "ZONE_DMA32")]
+    #[serde(rename = "DMA32")]
     ZoneDma32,
-    #[serde(rename = "ZONE_NORMAL")]
+    #[serde(rename = "Normal")]
     ZoneNormal,
-    #[serde(rename = "ZONE_HIGHMEM")]
+    #[serde(rename = "Highmem")]
     ZoneHighmem,
-    #[serde(rename = "ZONE_MOVABLE")]
+    #[serde(rename = "Movable")]
     ZoneMovable,
-    #[serde(rename = "ZONE_DEVICE")]
+    #[serde(rename = "Device")]
     ZoneDevice,
-    #[serde(rename = "ZONE_NONE")]
+    #[serde(rename = "None")]
     ZoneNone,
-    #[serde(rename = "ZONE_UNKNOWN")]
+    #[serde(rename = "Unknown")]
     ZoneUnknown,
     #[serde(rename = "MAX_NR_ZONES")]
     MaxNrZones,
+}
+
+impl core::fmt::Display for ZoneId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let value = serde_json::to_string(self).unwrap().replace("\"", "");
+        write!(f, "{}", value)
+    }
 }
 
 impl FromStr for ZoneId {
@@ -527,6 +534,17 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
             row.node = format!("{}", blk.node);
         }
 
+        // Zones
+        if opts.have_zones {
+            row.zones = blk
+                .zones
+                .iter()
+                .filter(|zone| **zone != ZoneId::ZoneUnknown)
+                .map(|zone| zone.to_string())
+                .collect::<Vec<String>>()
+                .join("/");
+        }
+
         table_rows.push(row);
     }
     table_rows
@@ -703,11 +721,23 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
     }
 
-    let split_columns = matches
+    let mut split_columns = matches
         .get_many::<String>(options::SPLIT)
         .unwrap_or_default()
         .map(|c| c.to_uppercase())
         .collect::<Vec<String>>();
+
+    // This seems like a bug in util-linux, but effectively, if split_columns is empty,
+    // then DEFAULT it to the value of custom columns. Becase "zones" is not one of the
+    // default columns, that means we just happen to not split on it most of the time.
+    if split_columns.is_empty() {
+        split_columns = opts
+            .columns
+            .iter()
+            .map(|c| c.get_name().to_string())
+            .collect();
+    }
+
     opts.split_by_node = split_columns.contains(&Column::Node.get_name().to_string());
     opts.split_by_removable = split_columns.contains(&Column::Removable.get_name().to_string());
     opts.split_by_state = split_columns.contains(&Column::State.get_name().to_string());

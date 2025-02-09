@@ -121,6 +121,15 @@ fn test_split_node() {
 }
 
 #[test]
+fn test_split_output_default() {
+    // If split is not provided, then it defaults to splitting on the provided(or default) columns
+    sysroot_test_with_args(
+        "test_lsmem_split_output_default.expected",
+        &["-o", "block,size,zones,node"],
+    );
+}
+
+#[test]
 fn test_split_removable() {
     sysroot_test_with_args("test_lsmem_split_removable.expected", &["-S", "removable"]);
 }
