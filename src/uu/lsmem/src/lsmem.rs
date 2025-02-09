@@ -686,11 +686,15 @@ fn read_file_content<T: core::str::FromStr>(path: &Path) -> io::Result<T>
 where
     T::Err: std::fmt::Debug, // Required to unwrap the result of T::from_str
 {
-    let file = fs::File::open(path)?;
+    let file = fs::File::open(path).expect("Failed to open file");
     let mut reader = BufReader::new(file);
     let mut content = String::new();
-    reader.read_line(&mut content)?;
-    Ok(content.trim().to_string().parse().unwrap())
+    reader.read_line(&mut content).expect("Failed to read line");
+    content
+        .trim()
+        .to_string()
+        .parse()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse content"))
 }
 
 #[uucore::main]
