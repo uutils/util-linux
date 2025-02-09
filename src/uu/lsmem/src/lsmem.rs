@@ -29,16 +29,16 @@ mod options {
     pub const PAIRS: &str = "pairs";
     pub const RAW: &str = "raw";
     pub const SPLIT: &str = "split";
+    pub const SYSROOT: &str = "sysroot";
 }
 
-// const BUFSIZ: usize = 1024;
-
-const PATH_SYS_MEMORY: &str = "/sys/devices/system/memory";
-const PATH_BLOCK_SIZE_BYTES: &str = "/sys/devices/system/memory/block_size_bytes";
-const PATH_VALID_ZONES: &str = "/sys/devices/system/memory/valid_zones";
+const PATH_NAME_MEMORY: &str = "memory";
+const PATH_NAME_NODE: &str = "node";
+const PATH_SUB_BLOCK_SIZE_BYTES: &str = "block_size_bytes";
 const PATH_SUB_REMOVABLE: &str = "removable";
 const PATH_SUB_STATE: &str = "state";
-const NAME_MEMORY: &str = "memory";
+const PATH_SUB_VALID_ZONES: &str = "valid_zones";
+const PATH_SYS_MEMORY: &str = "/sys/devices/system/memory";
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Column {
@@ -107,15 +107,7 @@ impl Column {
 
     #[allow(dead_code)]
     fn get_float_right(&self) -> bool {
-        match self {
-            Column::Range => false,
-            Column::Size => true,
-            Column::State => true,
-            Column::Removable => true,
-            Column::Block => true,
-            Column::Node => true,
-            Column::Zones => true,
-        }
+        self != &Column::Range
     }
 
     #[allow(dead_code)]
@@ -226,8 +218,8 @@ struct TableRow {
     state: String,
     removable: String,
     block: String,
+    #[serde(skip_serializing)]
     node: String,
-    #[allow(unused)]
     #[serde(skip_serializing)]
     zones: String,
 }
@@ -276,6 +268,8 @@ struct Options {
     split_by_removable: bool,
     split_by_state: bool,
     split_by_zones: bool,
+    /// Default to PATH_SYS_MEMORY, but a prefix can be appended
+    sysmem: String,
 
     // Set by read_info
     have_nodes: bool,
@@ -324,6 +318,7 @@ impl Options {
             split_by_removable: false,
             split_by_state: false,
             split_by_zones: false,
+            sysmem: String::from(PATH_SYS_MEMORY),
 
             have_nodes: false,
             have_zones: false,
@@ -336,16 +331,20 @@ impl Options {
 
 fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
     lsmem.block_size = u64::from_str_radix(
-        &read_file_content::<String>(Path::new(PATH_BLOCK_SIZE_BYTES)).unwrap(),
+        &read_file_content::<String>(&Path::new(&format!(
+            "{}/{}",
+            opts.sysmem, PATH_SUB_BLOCK_SIZE_BYTES
+        )))
+        .unwrap(),
         16,
     )
     .unwrap();
-    lsmem.dirs = get_block_paths();
+    lsmem.dirs = get_block_paths(opts);
     lsmem.dirs.sort_by(|a, b| {
         let filename_a = a.to_str().unwrap().split('/').last().unwrap();
         let filename_b = b.to_str().unwrap().split('/').last().unwrap();
-        let idx_a: u64 = filename_a[NAME_MEMORY.len()..].parse().unwrap();
-        let idx_b: u64 = filename_b[NAME_MEMORY.len()..].parse().unwrap();
+        let idx_a: u64 = filename_a[PATH_NAME_MEMORY.len()..].parse().unwrap();
+        let idx_b: u64 = filename_b[PATH_NAME_MEMORY.len()..].parse().unwrap();
         idx_a.cmp(&idx_b)
     });
     lsmem.ndirs = lsmem.dirs.len();
@@ -355,7 +354,7 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
         }
 
         let mut p = path.clone();
-        p.push("valid_zones");
+        p.push(PATH_SUB_VALID_ZONES);
         if fs::read_dir(p).is_ok() {
             opts.have_zones = true;
         }
@@ -381,13 +380,13 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
     }
 }
 
-fn get_block_paths() -> Vec<PathBuf> {
+fn get_block_paths(opts: &mut Options) -> Vec<PathBuf> {
     let mut paths = Vec::<PathBuf>::new();
-    for entry in fs::read_dir(PATH_SYS_MEMORY).unwrap() {
+    for entry in fs::read_dir(&opts.sysmem).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
         let filename = path.to_str().unwrap().split('/').last().unwrap();
-        if path.is_dir() && filename.starts_with(NAME_MEMORY) {
+        if path.is_dir() && filename.starts_with(PATH_NAME_MEMORY) {
             paths.push(path);
         }
     }
@@ -434,8 +433,8 @@ fn memory_block_get_node(path: &PathBuf) -> Result<i32, <i32 as FromStr>::Err> {
         let entry = entry.unwrap();
         let path = entry.path();
         let filename = path.to_str().unwrap().split('/').last().unwrap();
-        if path.is_dir() && filename.starts_with("node") {
-            return filename["node".len()..].parse();
+        if path.is_dir() && filename.starts_with(PATH_NAME_NODE) {
+            return filename[PATH_NAME_NODE.len()..].parse();
         }
     }
     Ok(-1)
@@ -446,7 +445,7 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
     blk.count = 1;
     blk.state = MemoryState::Unknown;
     let filename = path.to_str().unwrap().split('/').last().unwrap();
-    blk.index = filename[NAME_MEMORY.len()..].parse().unwrap();
+    blk.index = filename[PATH_NAME_MEMORY.len()..].parse().unwrap();
 
     let mut removable_path = path.clone();
     removable_path.push(PATH_SUB_REMOVABLE);
@@ -464,7 +463,11 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
 
     blk.nr_zones = 0;
     if opts.have_zones {
-        if let Ok(raw_content) = read_file_content::<String>(Path::new(PATH_VALID_ZONES)) {
+        if let Ok(raw_content) = read_file_content::<String>(Path::new(&format!(
+            "{}/{}",
+            opts.sysmem.clone(),
+            PATH_SUB_VALID_ZONES
+        ))) {
             let zone_toks = raw_content.split(' ').collect::<Vec<&str>>();
             for (i, zone_tok) in zone_toks
                 .iter()
@@ -608,6 +611,10 @@ fn print_pairs(lsmem: &Lsmem, opts: &Options) {
 }
 
 fn print_raw(lsmem: &Lsmem, opts: &Options) {
+    if !opts.noheadings {
+        println!("RANGE SIZE STATE REMOVABLE BLOCK");
+    }
+
     let table_rows = create_table_rows(lsmem, opts);
     let mut table_raw_string = String::new();
     for row in table_rows {
@@ -616,7 +623,6 @@ fn print_raw(lsmem: &Lsmem, opts: &Options) {
     }
     // remove the last newline
     table_raw_string.pop();
-    println!("RANGE SIZE STATE REMOVABLE BLOCK");
     println!("{table_raw_string}");
 }
 
@@ -687,6 +693,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     if opts.json || opts.pairs || opts.raw {
         opts.want_summary = false;
+    }
+
+    if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
+        opts.sysmem = format!(
+            "{}/{}",
+            sysroot.trim_end_matches('/'),
+            opts.sysmem.trim_start_matches('/')
+        );
     }
 
     read_info(&mut lsmem, &mut opts);
@@ -766,6 +780,7 @@ pub fn uu_app() -> Command {
                 .help("output columns")
                 .ignore_case(true)
                 .action(ArgAction::Set)
+                .value_name("list")
                 .value_delimiter(',')
                 .value_parser(EnumValueParser::<Column>::new()),
         )
@@ -791,6 +806,7 @@ pub fn uu_app() -> Command {
                 .conflicts_with(options::ALL)
                 .ignore_case(true)
                 .action(ArgAction::Set)
+                .value_name("list")
                 .value_delimiter(',')
                 .value_parser(PossibleValuesParser::new(
                     SPLIT_COLUMNS
@@ -798,6 +814,14 @@ pub fn uu_app() -> Command {
                         .map(|col| col.to_possible_value().unwrap())
                         .collect::<Vec<_>>(),
                 )),
+        )
+        .arg(
+            Arg::new(options::SYSROOT)
+                .short('s')
+                .long("sysroot")
+                .help("use the specified directory as system root")
+                .action(ArgAction::Set)
+                .value_name("dir"),
         )
         .after_help(&format!(
             "Available output columns:\n{}",
