@@ -48,14 +48,13 @@ fn test_columns_raw() {
 //     );
 // }
 
-// FAILS, COMMENT FOR NOW - TODO
-// #[test]
-// fn test_columns_pairs() {
-//     sysroot_test_with_args(
-//         "test_lsmem_columns_pairs.expected",
-//         &["-o", "block,size", "-P"],
-//     );
-// }
+#[test]
+fn test_columns_pairs() {
+    sysroot_test_with_args(
+        "test_lsmem_columns_pairs.expected",
+        &["-o", "block,size", "-P"],
+    );
+}
 
 #[test]
 fn test_json() {

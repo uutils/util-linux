@@ -236,12 +236,6 @@ impl TableRow {
             Column::Zones => self.zones.clone(),
         }
     }
-    fn to_pairs_string(&self) -> String {
-        format!(
-            r#"RANGE="{}" SIZE="{}" STATE="{}" REMOVABLE="{}" BLOCK="{}""#,
-            self.range, self.size, self.state, self.removable, self.block
-        )
-    }
 }
 
 #[derive(Serialize)]
@@ -554,29 +548,29 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
     }
 
     if !opts.noheadings {
-        let mut output = vec![];
+        let mut column_names = vec![];
         for (i, column) in opts.columns.iter().enumerate() {
             let formatted = if column.get_float_right() {
                 format!("{:>width$}", column.get_name(), width = col_widths[i])
             } else {
                 format!("{:<width$}", column.get_name(), width = col_widths[i])
             };
-            output.push(formatted);
+            column_names.push(formatted);
         }
-        println!("{}", output.join(" "));
+        println!("{}", column_names.join(" "));
     }
 
     for row in table_rows {
-        let mut output = vec![];
+        let mut column_values = vec![];
         for (i, column) in opts.columns.iter().enumerate() {
             let formatted = if column.get_float_right() {
                 format!("{:>width$}", row.get_value(column), width = col_widths[i])
             } else {
                 format!("{:<width$}", row.get_value(column), width = col_widths[i])
             };
-            output.push(formatted);
+            column_values.push(formatted);
         }
-        println!("{}", output.join(" "));
+        println!("{}", column_values.join(" "));
     }
 }
 
@@ -596,33 +590,35 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
 
 fn print_pairs(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
-    let table_pairs_string = table_rows
-        .into_iter()
-        .map(|row| row.to_pairs_string())
-        .collect::<Vec<_>>()
-        .join("\n");
-    println!("{table_pairs_string}");
+
+    for row in table_rows {
+        let mut pairs = Vec::new();
+        for col in &opts.columns {
+            pairs.push(format!("{}=\"{}\"", col.get_name(), row.get_value(col)));
+        }
+        println!("{}", pairs.join(" "));
+    }
 }
 
 fn print_raw(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
 
     if !opts.noheadings {
-        let headings = opts
+        let column_names = opts
             .columns
             .iter()
             .map(|col| col.get_name().to_string())
             .collect::<Vec<String>>();
-        println!("{}", headings.join(" "));
+        println!("{}", column_names.join(" "));
     }
 
     for row in table_rows {
-        let columns = opts
+        let column_values = opts
             .columns
             .iter()
             .map(|col| row.get_value(col).to_string())
             .collect::<Vec<String>>();
-        println!("{}", columns.join(" "));
+        println!("{}", column_values.join(" "));
     }
 }
 
