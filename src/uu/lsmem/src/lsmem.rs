@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -785,7 +785,12 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
 
     if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
-        opts.sysmem = Path::new(sysroot).join(opts.sysmem).display().to_string();
+        opts.sysmem = format!(
+            "{}{}{}",
+            sysroot.trim_end_matches(MAIN_SEPARATOR),
+            MAIN_SEPARATOR,
+            opts.sysmem.trim_start_matches(MAIN_SEPARATOR)
+        );
     }
 
     read_info(&mut lsmem, &mut opts);
