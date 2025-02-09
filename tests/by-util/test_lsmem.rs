@@ -7,7 +7,13 @@ use crate::common::util::TestScenario;
 
 #[must_use]
 fn sysroot() -> String {
-    format!("{}/tests/fixtures/lsmem/input", env!("CARGO_MANIFEST_DIR"))
+    path_concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "tests",
+        "fixtures",
+        "lsmem",
+        "input"
+    )
 }
 
 fn sysroot_test_with_args(expected_output: &str, args: &[&str]) {

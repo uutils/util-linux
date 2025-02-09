@@ -360,12 +360,9 @@ impl Options {
 }
 
 fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
+    let path_block_size = Path::new(&opts.sysmem).join(PATH_SUB_BLOCK_SIZE_BYTES);
     lsmem.block_size = u64::from_str_radix(
-        &read_file_content::<String>(Path::new(&format!(
-            "{}/{}",
-            opts.sysmem, PATH_SUB_BLOCK_SIZE_BYTES
-        )))
-        .unwrap(),
+        &read_file_content::<String>(path_block_size.as_path()).unwrap(),
         16,
     )
     .unwrap();
