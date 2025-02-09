@@ -130,11 +130,10 @@ fn test_split_state() {
     sysroot_test_with_args("test_lsmem_split_state.expected", &["-S", "state"]);
 }
 
-// FAILS, COMMENT FOR NOW - TODO
-// #[test]
-// fn test_split_zones() {
-//     sysroot_test_with_args("test_lsmem_split_zones.expected", &["-S", "zones"]);
-// }
+#[test]
+fn test_split_zones() {
+    sysroot_test_with_args("test_lsmem_split_zones.expected", &["-S", "zones"]);
+}
 
 #[test]
 fn test_table() {

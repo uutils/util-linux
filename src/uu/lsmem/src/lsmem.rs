@@ -154,6 +154,24 @@ enum ZoneId {
     MaxNrZones,
 }
 
+impl FromStr for ZoneId {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<ZoneId, Self::Err> {
+        match input.to_lowercase().as_str() {
+            "dma" => Ok(ZoneId::ZoneDma),
+            "dma32" => Ok(ZoneId::ZoneDma32),
+            "normal" => Ok(ZoneId::ZoneNormal),
+            "highmem" => Ok(ZoneId::ZoneHighmem),
+            "movable" => Ok(ZoneId::ZoneMovable),
+            "device" => Ok(ZoneId::ZoneDevice),
+            "none" => Ok(ZoneId::ZoneNone),
+            "unknown" => Ok(ZoneId::ZoneUnknown),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(PartialEq, Clone)]
 enum MemoryState {
     Online,
@@ -251,7 +269,7 @@ struct Options {
     split_by_removable: bool,
     split_by_state: bool,
     split_by_zones: bool,
-    /// Default to PATH_SYS_MEMORY, but a prefix can be appended
+    /// Default to PATH_SYS_MEMORY, but a prefix can be prepended
     sysmem: String,
 
     // Set by read_info
@@ -338,7 +356,7 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
 
         let mut p = path.clone();
         p.push(PATH_SUB_VALID_ZONES);
-        if fs::read_dir(p).is_ok() {
+        if fs::read(&p).is_ok() {
             opts.have_zones = true;
         }
 
@@ -401,7 +419,6 @@ fn is_mergeable(lsmem: &Lsmem, opts: &Options, blk: &MemoryBlock) -> bool {
         if curr_block.nr_zones != blk.nr_zones {
             return false;
         }
-
         for i in 0..curr_block.nr_zones {
             if curr_block.zones[i] == ZoneId::ZoneUnknown || curr_block.zones[i] != blk.zones[i] {
                 return false;
@@ -446,18 +463,16 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
 
     blk.nr_zones = 0;
     if opts.have_zones {
-        if let Ok(raw_content) = read_file_content::<String>(Path::new(&format!(
-            "{}/{}",
-            opts.sysmem.clone(),
-            PATH_SUB_VALID_ZONES
-        ))) {
+        let vz_path = path.join(PATH_SUB_VALID_ZONES);
+        if let Ok(raw_content) = read_file_content::<String>(Path::new(&vz_path)) {
             let zone_toks = raw_content.split(' ').collect::<Vec<&str>>();
             for (i, zone_tok) in zone_toks
                 .iter()
+                .map(|tok| tok.to_lowercase())
                 .enumerate()
                 .take(std::cmp::min(zone_toks.len(), ZoneId::MaxNrZones as usize))
             {
-                blk.zones[i] = serde_json::from_str(zone_tok).unwrap();
+                blk.zones[i] = ZoneId::from_str(&zone_tok).unwrap();
                 blk.nr_zones += 1;
             }
         }
@@ -691,7 +706,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let split_columns = matches
         .get_many::<String>(options::SPLIT)
         .unwrap_or_default()
-        .map(|c| c.to_owned())
+        .map(|c| c.to_uppercase())
         .collect::<Vec<String>>();
     opts.split_by_node = split_columns.contains(&Column::Node.get_name().to_string());
     opts.split_by_removable = split_columns.contains(&Column::Removable.get_name().to_string());
