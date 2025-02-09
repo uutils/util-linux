@@ -238,11 +238,6 @@ impl TableRow {
     }
 }
 
-#[derive(Serialize)]
-struct TableRowJson {
-    memory: Vec<TableRow>,
-}
-
 struct Options {
     // Set by command-line arguments
     all: bool,
@@ -575,9 +570,21 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
 }
 
 fn print_json(lsmem: &Lsmem, opts: &Options) {
-    let table_json = TableRowJson {
-        memory: create_table_rows(lsmem, opts),
-    };
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut memory_records = Vec::new();
+
+    for row in table_rows {
+        let mut record = serde_json::Map::new();
+        for column in &opts.columns {
+            record.insert(
+                column.get_name().to_lowercase(),
+                serde_json::Value::String(row.get_value(column)),
+            );
+        }
+        memory_records.push(serde_json::Value::Object(record));
+    }
+
+    let table_json = serde_json::json!({ "memory": memory_records });
 
     let mut table_json_string = serde_json::to_string_pretty(&table_json)
         .unwrap()

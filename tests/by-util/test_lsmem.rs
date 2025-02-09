@@ -26,14 +26,13 @@ fn test_invalid_arg() {
     new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
 }
 
-// FAILS, COMMENT FOR NOW - TODO
-// #[test]
-// fn test_columns_json() {
-//     sysroot_test_with_args(
-//         "test_lsmem_columns_json.expected",
-//         &["-o", "block,size", "-J"],
-//     );
-// }
+#[test]
+fn test_columns_json() {
+    sysroot_test_with_args(
+        "test_lsmem_columns_json.expected",
+        &["-o", "block,size", "-J"],
+    );
+}
 
 #[test]
 fn test_columns_pairs() {
