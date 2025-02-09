@@ -242,12 +242,6 @@ impl TableRow {
             self.range, self.size, self.state, self.removable, self.block
         )
     }
-    fn to_raw_string(&self) -> String {
-        format!(
-            r#"{} {} {} {} {}"#,
-            self.range, self.size, self.state, self.removable, self.block
-        )
-    }
 }
 
 #[derive(Serialize)]
@@ -538,7 +532,7 @@ fn print_table(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
     let mut col_widths = vec![0; opts.columns.len()];
 
-    // Initialize column widths based on column names
+    // Initialize column widths based on pre-defined width hints
     for (i, column) in opts.columns.iter().enumerate() {
         col_widths[i] = column.get_width_hint();
     }
@@ -611,19 +605,25 @@ fn print_pairs(lsmem: &Lsmem, opts: &Options) {
 }
 
 fn print_raw(lsmem: &Lsmem, opts: &Options) {
+    let table_rows = create_table_rows(lsmem, opts);
+
     if !opts.noheadings {
-        println!("RANGE SIZE STATE REMOVABLE BLOCK");
+        let headings = opts
+            .columns
+            .iter()
+            .map(|col| col.get_name().to_string())
+            .collect::<Vec<String>>();
+        println!("{}", headings.join(" "));
     }
 
-    let table_rows = create_table_rows(lsmem, opts);
-    let mut table_raw_string = String::new();
     for row in table_rows {
-        table_raw_string += &row.to_raw_string();
-        table_raw_string += "\n";
+        let columns = opts
+            .columns
+            .iter()
+            .map(|col| row.get_value(col).to_string())
+            .collect::<Vec<String>>();
+        println!("{}", columns.join(" "));
     }
-    // remove the last newline
-    table_raw_string.pop();
-    println!("{table_raw_string}");
 }
 
 fn print_summary(lsmem: &Lsmem, opts: &Options) {

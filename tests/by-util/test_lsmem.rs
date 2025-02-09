@@ -31,14 +31,13 @@ fn test_columns_table() {
     sysroot_test_with_args("test_lsmem_columns_table.expected", &["-o", "block,size"]);
 }
 
-// FAILS, COMMENT FOR NOW - TODO
-// #[test]
-// fn test_columns_raw() {
-//     sysroot_test_with_args(
-//         "test_lsmem_columns_raw.expected",
-//         &["-o", "block,size", "-r"],
-//     );
-// }
+#[test]
+fn test_columns_raw() {
+    sysroot_test_with_args(
+        "test_lsmem_columns_raw.expected",
+        &["-o", "block,size", "-r"],
+    );
+}
 
 // FAILS, COMMENT FOR NOW - TODO
 // #[test]
