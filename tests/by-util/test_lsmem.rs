@@ -65,11 +65,10 @@ fn test_json_all() {
     sysroot_test_with_args("test_lsmem_json_all.expected", &["-J", "-a"]);
 }
 
-// FAILS, COMMENT FOR NOW - TODO
-// #[test]
-// fn test_json_bytes() {
-//     sysroot_test_with_args("test_lsmem_json_bytes.expected", &["-J", "-b"]);
-// }
+#[test]
+fn test_json_bytes() {
+    sysroot_test_with_args("test_lsmem_json_bytes.expected", &["-J", "-b"]);
+}
 
 #[test]
 fn test_json_noheadings() {

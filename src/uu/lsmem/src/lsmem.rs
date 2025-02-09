@@ -578,7 +578,11 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
         for column in &opts.columns {
             record.insert(
                 column.get_name().to_lowercase(),
-                serde_json::Value::String(row.get_value(column)),
+                if column == &Column::Size && opts.bytes {
+                    serde_json::Value::Number(row.get_value(column).parse().unwrap())
+                } else {
+                    serde_json::Value::String(row.get_value(column))
+                },
             );
         }
         memory_records.push(serde_json::Value::Object(record));
