@@ -145,6 +145,41 @@ fn test_split_zones() {
 }
 
 #[test]
+fn test_summary_always() {
+    sysroot_test_with_args("test_lsmem_summary_always.expected", &["--summary=always"]);
+}
+
+#[test]
+fn test_summary_empty() {
+    sysroot_test_with_args("test_lsmem_summary_empty.expected", &["--summary"]);
+}
+
+#[test]
+fn test_summary_never() {
+    sysroot_test_with_args("test_lsmem_summary_never.expected", &["--summary=never"]);
+}
+
+#[test]
+fn test_summary_only() {
+    sysroot_test_with_args("test_lsmem_summary_only.expected", &["--summary=only"]);
+}
+
+#[test]
+fn test_summary_conflict_json() {
+    new_ucmd!().arg("--summary").arg("-J").fails().code_is(1);
+}
+
+#[test]
+fn test_summary_conflict_pairs() {
+    new_ucmd!().arg("--summary").arg("-P").fails().code_is(1);
+}
+
+#[test]
+fn test_summary_conflict_raw() {
+    new_ucmd!().arg("--summary").arg("-r").fails().code_is(1);
+}
+
+#[test]
 fn test_table() {
     sysroot_test_with_args("test_lsmem_table.expected", &[]);
 }

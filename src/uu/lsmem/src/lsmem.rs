@@ -29,6 +29,7 @@ mod options {
     pub const PAIRS: &str = "pairs";
     pub const RAW: &str = "raw";
     pub const SPLIT: &str = "split";
+    pub const SUMMARY: &str = "summary";
     pub const SYSROOT: &str = "sysroot";
 }
 
@@ -232,6 +233,27 @@ impl MemoryBlock {
             nr_zones: 0,
             zones: [ZoneId::ZoneUnknown; ZoneId::MaxNrZones as usize],
             removable: true,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum Summary {
+    Never,
+    Always,
+    Only,
+}
+
+impl ValueEnum for Summary {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Summary::Never, Summary::Always, Summary::Only]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        match self {
+            Summary::Never => Some(PossibleValue::new("never").help("never show summary")),
+            Summary::Always => Some(PossibleValue::new("always").help("always show summary")),
+            Summary::Only => Some(PossibleValue::new("only").help("show summary only")),
         }
     }
 }
@@ -750,6 +772,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if opts.json || opts.pairs || opts.raw {
         opts.want_summary = false;
     }
+    if let Some(summary) = matches.get_one::<Summary>(options::SUMMARY) {
+        match summary {
+            Summary::Never => opts.want_summary = false,
+            Summary::Only => opts.want_table = false,
+            Summary::Always => {} // Default (equivalent to if --summary wasn't provided at all)
+        }
+    }
 
     if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
         opts.sysmem = format!(
@@ -797,7 +826,7 @@ pub fn uu_app() -> Command {
                 .long("json")
                 .help("use JSON output format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::PAIRS, options::RAW]),
+                .conflicts_with_all([options::PAIRS, options::RAW, options::SUMMARY]),
         )
         .arg(
             Arg::new(options::PAIRS)
@@ -805,7 +834,7 @@ pub fn uu_app() -> Command {
                 .long("pairs")
                 .help("use key=\"value\" output format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::JSON, options::RAW]),
+                .conflicts_with_all([options::JSON, options::RAW, options::SUMMARY]),
         )
         .arg(
             Arg::new(options::ALL)
@@ -852,7 +881,7 @@ pub fn uu_app() -> Command {
                 .long("raw")
                 .help("use raw output format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::JSON, options::PAIRS]),
+                .conflicts_with_all([options::JSON, options::PAIRS, options::SUMMARY]),
         )
         .arg(
             Arg::new(options::SPLIT)
@@ -878,6 +907,19 @@ pub fn uu_app() -> Command {
                 .help("use the specified directory as system root")
                 .action(ArgAction::Set)
                 .value_name("dir"),
+        )
+        .arg(
+            Arg::new(options::SUMMARY)
+                .long("summary")
+                .help("print summary information")
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_name("when")
+                .value_delimiter(',')
+                .value_parser(EnumValueParser::<Summary>::new())
+                .conflicts_with_all([options::RAW, options::PAIRS, options::JSON])
+                .num_args(0..=1)
+                .default_missing_value("only"),
         )
         .after_help(&format!(
             "Available output columns:\n{}",
