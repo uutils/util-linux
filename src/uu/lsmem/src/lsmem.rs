@@ -348,7 +348,7 @@ impl Options {
             split_by_removable: false,
             split_by_state: false,
             split_by_zones: false,
-            sysmem: String::from(PATH_SYS_MEMORY),
+            sysmem: Path::new(PATH_SYS_MEMORY).display().to_string(),
 
             have_nodes: false,
             have_zones: false,
@@ -362,16 +362,23 @@ impl Options {
 fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
     let path_block_size = Path::new(&opts.sysmem).join(PATH_SUB_BLOCK_SIZE_BYTES);
     lsmem.block_size = u64::from_str_radix(
-        &read_file_content::<String>(path_block_size.as_path()).unwrap(),
+        &read_file_content::<String>(path_block_size.as_path())
+            .expect("Failed to read memory block size"),
         16,
     )
     .unwrap();
     lsmem.dirs = get_block_paths(opts);
     lsmem.dirs.sort_by(|a, b| {
-        let filename_a = a.to_str().unwrap().split('/').last().unwrap();
-        let filename_b = b.to_str().unwrap().split('/').last().unwrap();
-        let idx_a: u64 = filename_a[PATH_NAME_MEMORY.len()..].parse().unwrap();
-        let idx_b: u64 = filename_b[PATH_NAME_MEMORY.len()..].parse().unwrap();
+        let filename_a = a.file_name().expect("Failed parsing memory block name");
+        let filename_a = filename_a.to_str().unwrap();
+        let filename_b = b.file_name().expect("Failed parsing memory block name");
+        let filename_b = filename_b.to_str().unwrap();
+        let idx_a: u64 = filename_a[PATH_NAME_MEMORY.len()..]
+            .parse()
+            .expect("Failed to parse memory block index");
+        let idx_b: u64 = filename_b[PATH_NAME_MEMORY.len()..]
+            .parse()
+            .expect("Failed to parse memory block index");
         idx_a.cmp(&idx_b)
     });
     lsmem.ndirs = lsmem.dirs.len();
@@ -412,7 +419,7 @@ fn get_block_paths(opts: &mut Options) -> Vec<PathBuf> {
     for entry in fs::read_dir(&opts.sysmem).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        let filename = path.to_str().unwrap().split('/').last().unwrap();
+        let filename = path.file_name().unwrap().to_str().unwrap();
         if path.is_dir() && filename.starts_with(PATH_NAME_MEMORY) {
             paths.push(path);
         }
@@ -458,7 +465,7 @@ fn memory_block_get_node(path: &PathBuf) -> Result<i32, <i32 as FromStr>::Err> {
     for entry in fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        let filename = path.to_str().unwrap().split('/').last().unwrap();
+        let filename = path.file_name().unwrap().to_str().unwrap();
         if path.is_dir() && filename.starts_with(PATH_NAME_NODE) {
             return filename[PATH_NAME_NODE.len()..].parse();
         }
@@ -470,7 +477,7 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
     let mut blk = MemoryBlock::new();
     blk.count = 1;
     blk.state = MemoryState::Unknown;
-    let filename = path.to_str().unwrap().split('/').last().unwrap();
+    let filename = path.file_name().unwrap().to_str().unwrap();
     blk.index = filename[PATH_NAME_MEMORY.len()..].parse().unwrap();
 
     let mut removable_path = path.clone();
@@ -778,11 +785,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
 
     if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
-        opts.sysmem = format!(
-            "{}/{}",
-            sysroot.trim_end_matches('/'),
-            opts.sysmem.trim_start_matches('/')
-        );
+        opts.sysmem = Path::new(sysroot).join(opts.sysmem).display().to_string();
     }
 
     read_info(&mut lsmem, &mut opts);
