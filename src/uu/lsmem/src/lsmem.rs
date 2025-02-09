@@ -361,7 +361,7 @@ impl Options {
 
 fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
     lsmem.block_size = u64::from_str_radix(
-        &read_file_content::<String>(&Path::new(&format!(
+        &read_file_content::<String>(Path::new(&format!(
             "{}/{}",
             opts.sysmem, PATH_SUB_BLOCK_SIZE_BYTES
         )))
@@ -921,7 +921,7 @@ pub fn uu_app() -> Command {
                 .num_args(0..=1)
                 .default_missing_value("only"),
         )
-        .after_help(&format!(
+        .after_help(format!(
             "Available output columns:\n{}",
             Column::value_variants()
                 .iter()
