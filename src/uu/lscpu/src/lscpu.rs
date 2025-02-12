@@ -86,12 +86,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut arch_info = CpuInfo::new("Architecture", &get_architecture(), None);
 
-    let contents = match fs::read_to_string("/proc/cpuinfo") {
-        // Early return if we can't read /proc/cpuinfo for whatever reason
-        // TODO: Should this return an non-zero exit code to user, or do we just ignore it and display whatever CPU info we could find?
-        Err(_) => return Ok(()),
-        Ok(contents) => contents,
-    };
+    // TODO: We just silently ignore failures to read `/proc/cpuinfo` currently and treat it as empty
+    // Perhaps a better solution should be put in place, but what?
+    let contents = fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
 
     if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
         arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
