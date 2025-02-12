@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
-use std::fs;
+use std::{cmp, fs};
 use sysinfo::System;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -98,8 +98,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         match byte_order.trim() {
             "big" => arch_info.add_child(CpuInfo::new("Byte Order", "Big Endian", None)),
             "little" => arch_info.add_child(CpuInfo::new("Byte Order", "Little Endian", None)),
-            _ => eprintln!("Unrecognised Byte Order: {}", byte_order)
-
+            _ => eprintln!("Unrecognised Byte Order: {}", byte_order),
         }
     }
 
@@ -138,17 +137,53 @@ fn print_output(infos: CpuInfos, out_opts: OutputOptions) {
         return;
     }
 
-    // Recursive function to print nested CpuInfo entries
-    fn print_entries(entries: Vec<CpuInfo>, depth: usize, _out_opts: &OutputOptions) {
-        let indent = "  ".repeat(depth);
+    fn indentation(depth: usize) -> usize {
+        // Indentation is 2 spaces per level, used in a few places, hence its own helper function
+        depth * 2
+    }
+
+    // Recurses down the tree of entries and find the one with the "widest" field name (taking into account tree depth)
+    fn get_max_field_width(info: &CpuInfo, depth: usize) -> usize {
+        let max_child_width = info
+            .children
+            .iter()
+            .map(|entry| get_max_field_width(entry, depth + 1))
+            .max()
+            .unwrap_or_default();
+
+        let own_width = indentation(depth) + info.field.len();
+        cmp::max(own_width, max_child_width)
+    }
+
+    // Used later to align all values to the same column
+    let max_field_width = infos
+        .lscpu
+        .iter()
+        .map(|info| get_max_field_width(info, 0))
+        .max()
+        .unwrap();
+
+    fn print_entries(
+        entries: &Vec<CpuInfo>,
+        depth: usize,
+        max_field_width: usize,
+        _out_opts: &OutputOptions,
+    ) {
         for entry in entries {
-            // TODO: Align `data` values to form a column
-            println!("{}{}: {}", indent, entry.field, entry.data);
-            print_entries(entry.children, depth + 1, _out_opts);
+            let margin = indentation(depth);
+            let padding = cmp::max(max_field_width - margin - entry.field.len(), 0);
+            println!(
+                "{}{}:{} {}",
+                " ".repeat(margin),
+                entry.field,
+                " ".repeat(padding),
+                entry.data
+            );
+            print_entries(&entry.children, depth + 1, max_field_width, _out_opts);
         }
     }
 
-    print_entries(infos.lscpu, 0, &out_opts);
+    print_entries(&infos.lscpu, 0, max_field_width, &out_opts);
 }
 
 fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
