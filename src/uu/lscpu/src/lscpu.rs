@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, Command};
-use regex::Regex;
+use regex::RegexBuilder;
 use serde::Serialize;
 use std::{fs, str::FromStr};
 use sysinfo::System;
@@ -64,7 +64,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // Add more CPU information here...
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
-        let re = Regex::new(r"^model name\s+:\s+(.*)$").unwrap();
+        let re = RegexBuilder::new(r"^model name\s+:\s+(.*)$")
+            .multi_line(true)
+            .build()
+            .unwrap();
         // Assuming all CPUs have the same model name
         if let Some(cap) = re.captures_iter(&contents).next() {
             cpu_infos.push("Model name", &cap[1]);
