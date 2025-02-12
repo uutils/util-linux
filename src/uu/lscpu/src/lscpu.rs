@@ -15,6 +15,8 @@ mod options {
     pub const JSON: &str = "json";
 }
 
+mod sysfs;
+
 const ABOUT: &str = help_about!("lscpu.md");
 const USAGE: &str = help_usage!("lscpu.md");
 
@@ -124,6 +126,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             vendor_info.add_child(model_name_info);
         }
         cpu_infos.push(vendor_info);
+    }
+
+    let vulns = sysfs::read_cpu_vulnerabilities();
+    if !vulns.is_empty() {
+        let mut vuln_info = CpuInfo::new("Vulnerabilities", "", None);
+        for vuln in vulns {
+            vuln_info.add_child(CpuInfo::new(&vuln.name, &vuln.mitigation, None));
+        }
+        cpu_infos.push(vuln_info);
     }
 
     print_output(cpu_infos, output_opts);
