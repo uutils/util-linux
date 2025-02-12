@@ -27,6 +27,8 @@ struct CpuInfos {
 struct CpuInfo {
     field: String,
     data: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    children: Vec<CpuInfo>,
 }
 
 impl CpuInfos {
@@ -36,10 +38,11 @@ impl CpuInfos {
         }
     }
 
-    fn push(&mut self, field: &str, data: &str) {
+    fn push(&mut self, field: &str, data: &str, children: Option<Vec<CpuInfo>>) {
         let cpu_info = CpuInfo {
             field: String::from_str(field).unwrap(),
             data: String::from_str(data).unwrap(),
+            children: children.unwrap_or_default(),
         };
         self.lscpu.push(cpu_info);
     }
@@ -59,8 +62,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let json = matches.get_flag(options::JSON);
 
     let mut cpu_infos = CpuInfos::new();
-    cpu_infos.push("Architecture", &get_architecture());
-    cpu_infos.push("CPU(s)", &format!("{}", system.cpus().len()));
+    cpu_infos.push("Architecture", &get_architecture(), None);
+    cpu_infos.push("CPU(s)", &format!("{}", system.cpus().len()), None);
     // Add more CPU information here...
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
@@ -70,7 +73,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             .unwrap();
         // Assuming all CPUs have the same model name
         if let Some(cap) = re.captures_iter(&contents).next() {
-            cpu_infos.push("Model name", &cap[1]);
+            cpu_infos.push("Model name", &cap[1], None);
         };
     }
 
