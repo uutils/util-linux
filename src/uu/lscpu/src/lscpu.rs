@@ -94,6 +94,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
     }
 
+    if let Ok(byte_order) = fs::read_to_string("/sys/kernel/cpu_byteorder") {
+        match byte_order.trim() {
+            "big" => arch_info.add_child(CpuInfo::new("Byte Order", "Big Endian", None)),
+            "little" => arch_info.add_child(CpuInfo::new("Byte Order", "Little Endian", None)),
+            _ => eprintln!("Unrecognised Byte Order: {}", byte_order)
+
+        }
+    }
+
     cpu_infos.push(arch_info);
 
     // TODO: This is currently quite verbose and doesn't strictly respect the hierarchy of `/proc/cpuinfo` contents
