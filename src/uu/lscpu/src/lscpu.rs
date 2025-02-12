@@ -67,14 +67,21 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // Add more CPU information here...
 
     if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
-        let re = RegexBuilder::new(r"^model name\s+:\s+(.*)$")
-            .multi_line(true)
-            .build()
-            .unwrap();
-        // Assuming all CPUs have the same model name
-        if let Some(cap) = re.captures_iter(&contents).next() {
-            cpu_infos.push("Model name", &cap[1], None);
-        };
+        if let Some(cpu_model) = find_cpuinfo_value(&contents, "model name") {
+            if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
+                cpu_infos.push(
+                    "Model name",
+                    cpu_model.as_str(),
+                    Some(vec![CpuInfo {
+                        field: "Address sizes".to_string(),
+                        data: addr_sizes,
+                        children: vec![],
+                    }]),
+                );
+            } else {
+                cpu_infos.push("Model name", cpu_model.as_str(), None);
+            }
+        }
     }
 
     if json {
@@ -85,6 +92,20 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         }
     }
     Ok(())
+}
+
+fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
+    let pattern = format!(r"^{}\s+:\s+(.*)$", key);
+    let re = RegexBuilder::new(pattern.as_str())
+        .multi_line(true)
+        .build()
+        .unwrap();
+
+    if let Some(cap) = re.captures_iter(contents).next() {
+        return Some(cap[1].to_string());
+    };
+
+    None
 }
 
 fn get_architecture() -> String {
