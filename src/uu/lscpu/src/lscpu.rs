@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
-use std::{fs, str::FromStr};
+use std::fs;
 use sysinfo::System;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -31,6 +31,20 @@ struct CpuInfo {
     children: Vec<CpuInfo>,
 }
 
+impl CpuInfo {
+    fn new(field: &str, data: &str, children: Option<Vec<CpuInfo>>) -> Self {
+        Self {
+            field: field.to_string(),
+            data: data.to_string(),
+            children: children.unwrap_or_default(),
+        }
+    }
+
+    fn add_child(&mut self, child: Self) {
+        self.children.push(child);
+    }
+}
+
 impl CpuInfos {
     fn new() -> CpuInfos {
         CpuInfos {
@@ -38,12 +52,7 @@ impl CpuInfos {
         }
     }
 
-    fn push(&mut self, field: &str, data: &str, children: Option<Vec<CpuInfo>>) {
-        let cpu_info = CpuInfo {
-            field: String::from_str(field).unwrap(),
-            data: String::from_str(data).unwrap(),
-            children: children.unwrap_or_default(),
-        };
+    fn push(&mut self, cpu_info: CpuInfo) {
         self.lscpu.push(cpu_info);
     }
 
@@ -69,8 +78,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     };
 
     let mut cpu_infos = CpuInfos::new();
-    cpu_infos.push("CPU(s)", &format!("{}", system.cpus().len()), None);
-    // Add more CPU information here...
+    cpu_infos.push(CpuInfo::new(
+        "CPU(s)",
+        &format!("{}", system.cpus().len()),
+        None,
+    ));
+
+    let mut arch_info = CpuInfo::new("Architecture", &get_architecture(), None);
 
     let contents = match fs::read_to_string("/proc/cpuinfo") {
         // Early return if we can't read /proc/cpuinfo for whatever reason
@@ -79,50 +93,32 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         Ok(contents) => contents,
     };
 
-    let mut arch_children: Vec<CpuInfo> = vec![];
-
     if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
-        arch_children.push(CpuInfo {
-            field: "Address sizes".to_string(),
-            data: addr_sizes,
-            children: vec![],
-        })
+        arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
     }
 
-    cpu_infos.push("Architecture", &get_architecture(), Some(arch_children));
+    cpu_infos.push(arch_info);
 
     // TODO: This is currently quite verbose and doesn't strictly respect the hierarchy of `/proc/cpuinfo` contents
     // ie. the file might contain multiple sections, each with their own vendor_id/model name etc. but right now
     // we're just taking whatever our regex matches first and using that
     if let Some(vendor) = find_cpuinfo_value(&contents, "vendor_id") {
-        let mut vendor_children: Vec<CpuInfo> = vec![];
+        let mut vendor_info = CpuInfo::new("Vendor ID", &vendor, None);
 
         if let Some(model_name) = find_cpuinfo_value(&contents, "model name") {
-            let mut model_children: Vec<CpuInfo> = vec![];
+            let mut model_name_info = CpuInfo::new("Model name", &model_name, None);
 
             if let Some(family) = find_cpuinfo_value(&contents, "cpu family") {
-                model_children.push(CpuInfo {
-                    field: "CPU Family".to_string(),
-                    data: family,
-                    children: vec![],
-                });
+                model_name_info.add_child(CpuInfo::new("CPU Family", &family, None));
             }
 
             if let Some(model) = find_cpuinfo_value(&contents, "model") {
-                model_children.push(CpuInfo {
-                    field: "Model".to_string(),
-                    data: model,
-                    children: vec![],
-                });
+                model_name_info.add_child(CpuInfo::new("Model", &model, None));
             }
 
-            vendor_children.push(CpuInfo {
-                field: "Model name".to_string(),
-                data: model_name,
-                children: model_children,
-            });
+            vendor_info.add_child(model_name_info);
         }
-        cpu_infos.push("Vendor ID", vendor.as_str(), Some(vendor_children));
+        cpu_infos.push(vendor_info);
     }
 
     print_output(cpu_infos, output_opts);
