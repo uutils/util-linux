@@ -78,11 +78,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     };
 
     let mut cpu_infos = CpuInfos::new();
-    cpu_infos.push(CpuInfo::new(
-        "CPU(s)",
-        &format!("{}", system.cpus().len()),
-        None,
-    ));
 
     let mut arch_info = CpuInfo::new("Architecture", &get_architecture(), None);
 
@@ -103,6 +98,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
 
     cpu_infos.push(arch_info);
+    cpu_infos.push(CpuInfo::new(
+        "CPU(s)",
+        &format!("{}", system.cpus().len()),
+        None,
+    ));
 
     // TODO: This is currently quite verbose and doesn't strictly respect the hierarchy of `/proc/cpuinfo` contents
     // ie. the file might contain multiple sections, each with their own vendor_id/model name etc. but right now
@@ -155,14 +155,6 @@ fn print_output(infos: CpuInfos, out_opts: OutputOptions) {
         cmp::max(own_width, max_child_width)
     }
 
-    // Used later to align all values to the same column
-    let max_field_width = infos
-        .lscpu
-        .iter()
-        .map(|info| get_max_field_width(info, 0))
-        .max()
-        .unwrap();
-
     fn print_entries(
         entries: &Vec<CpuInfo>,
         depth: usize,
@@ -182,6 +174,14 @@ fn print_output(infos: CpuInfos, out_opts: OutputOptions) {
             print_entries(&entry.children, depth + 1, max_field_width, _out_opts);
         }
     }
+
+    // Used to align all values to the same column
+    let max_field_width = infos
+        .lscpu
+        .iter()
+        .map(|info| get_max_field_width(info, 0))
+        .max()
+        .unwrap();
 
     print_entries(&infos.lscpu, 0, max_field_width, &out_opts);
 }
