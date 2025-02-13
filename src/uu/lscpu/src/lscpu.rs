@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
-use std::{fs, str::FromStr};
+use std::{cmp, fs};
 use sysinfo::System;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -27,6 +27,22 @@ struct CpuInfos {
 struct CpuInfo {
     field: String,
     data: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    children: Vec<CpuInfo>,
+}
+
+impl CpuInfo {
+    fn new(field: &str, data: &str, children: Option<Vec<CpuInfo>>) -> Self {
+        Self {
+            field: field.to_string(),
+            data: data.to_string(),
+            children: children.unwrap_or_default(),
+        }
+    }
+
+    fn add_child(&mut self, child: Self) {
+        self.children.push(child);
+    }
 }
 
 impl CpuInfos {
@@ -36,11 +52,7 @@ impl CpuInfos {
         }
     }
 
-    fn push(&mut self, field: &str, data: &str) {
-        let cpu_info = CpuInfo {
-            field: String::from_str(field).unwrap(),
-            data: String::from_str(data).unwrap(),
-        };
+    fn push(&mut self, cpu_info: CpuInfo) {
         self.lscpu.push(cpu_info);
     }
 
@@ -49,39 +61,143 @@ impl CpuInfos {
     }
 }
 
+struct OutputOptions {
+    json: bool,
+    _hex: bool,
+}
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
 
     let system = System::new_all();
 
-    let _hex = matches.get_flag(options::HEX);
-    let json = matches.get_flag(options::JSON);
+    let output_opts = OutputOptions {
+        _hex: matches.get_flag(options::HEX),
+        json: matches.get_flag(options::JSON),
+    };
 
     let mut cpu_infos = CpuInfos::new();
-    cpu_infos.push("Architecture", &get_architecture());
-    cpu_infos.push("CPU(s)", &format!("{}", system.cpus().len()));
-    // Add more CPU information here...
 
-    if let Ok(contents) = fs::read_to_string("/proc/cpuinfo") {
-        let re = RegexBuilder::new(r"^model name\s+:\s+(.*)$")
-            .multi_line(true)
-            .build()
-            .unwrap();
-        // Assuming all CPUs have the same model name
-        if let Some(cap) = re.captures_iter(&contents).next() {
-            cpu_infos.push("Model name", &cap[1]);
-        };
+    let mut arch_info = CpuInfo::new("Architecture", &get_architecture(), None);
+
+    // TODO: We just silently ignore failures to read `/proc/cpuinfo` currently and treat it as empty
+    // Perhaps a better solution should be put in place, but what?
+    let contents = fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
+
+    if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
+        arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
     }
 
-    if json {
-        println!("{}", cpu_infos.to_json());
-    } else {
-        for elt in cpu_infos.lscpu {
-            println!("{}: {}", elt.field, elt.data);
+    if let Ok(byte_order) = fs::read_to_string("/sys/kernel/cpu_byteorder") {
+        match byte_order.trim() {
+            "big" => arch_info.add_child(CpuInfo::new("Byte Order", "Big Endian", None)),
+            "little" => arch_info.add_child(CpuInfo::new("Byte Order", "Little Endian", None)),
+            _ => eprintln!("Unrecognised Byte Order: {}", byte_order),
         }
     }
+
+    cpu_infos.push(arch_info);
+    cpu_infos.push(CpuInfo::new(
+        "CPU(s)",
+        &format!("{}", system.cpus().len()),
+        None,
+    ));
+
+    // TODO: This is currently quite verbose and doesn't strictly respect the hierarchy of `/proc/cpuinfo` contents
+    // ie. the file might contain multiple sections, each with their own vendor_id/model name etc. but right now
+    // we're just taking whatever our regex matches first and using that
+    if let Some(vendor) = find_cpuinfo_value(&contents, "vendor_id") {
+        let mut vendor_info = CpuInfo::new("Vendor ID", &vendor, None);
+
+        if let Some(model_name) = find_cpuinfo_value(&contents, "model name") {
+            let mut model_name_info = CpuInfo::new("Model name", &model_name, None);
+
+            if let Some(family) = find_cpuinfo_value(&contents, "cpu family") {
+                model_name_info.add_child(CpuInfo::new("CPU Family", &family, None));
+            }
+
+            if let Some(model) = find_cpuinfo_value(&contents, "model") {
+                model_name_info.add_child(CpuInfo::new("Model", &model, None));
+            }
+
+            vendor_info.add_child(model_name_info);
+        }
+        cpu_infos.push(vendor_info);
+    }
+
+    print_output(cpu_infos, output_opts);
+
     Ok(())
+}
+
+fn print_output(infos: CpuInfos, out_opts: OutputOptions) {
+    if out_opts.json {
+        println!("{}", infos.to_json());
+        return;
+    }
+
+    fn indentation(depth: usize) -> usize {
+        // Indentation is 2 spaces per level, used in a few places, hence its own helper function
+        depth * 2
+    }
+
+    // Recurses down the tree of entries and find the one with the "widest" field name (taking into account tree depth)
+    fn get_max_field_width(info: &CpuInfo, depth: usize) -> usize {
+        let max_child_width = info
+            .children
+            .iter()
+            .map(|entry| get_max_field_width(entry, depth + 1))
+            .max()
+            .unwrap_or_default();
+
+        let own_width = indentation(depth) + info.field.len();
+        cmp::max(own_width, max_child_width)
+    }
+
+    fn print_entries(
+        entries: &Vec<CpuInfo>,
+        depth: usize,
+        max_field_width: usize,
+        _out_opts: &OutputOptions,
+    ) {
+        for entry in entries {
+            let margin = indentation(depth);
+            let padding = cmp::max(max_field_width - margin - entry.field.len(), 0);
+            println!(
+                "{}{}:{} {}",
+                " ".repeat(margin),
+                entry.field,
+                " ".repeat(padding),
+                entry.data
+            );
+            print_entries(&entry.children, depth + 1, max_field_width, _out_opts);
+        }
+    }
+
+    // Used to align all values to the same column
+    let max_field_width = infos
+        .lscpu
+        .iter()
+        .map(|info| get_max_field_width(info, 0))
+        .max()
+        .unwrap();
+
+    print_entries(&infos.lscpu, 0, max_field_width, &out_opts);
+}
+
+fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
+    let pattern = format!(r"^{}\s+:\s+(.*)$", key);
+    let re = RegexBuilder::new(pattern.as_str())
+        .multi_line(true)
+        .build()
+        .unwrap();
+
+    let value = re
+        .captures_iter(contents)
+        .next()
+        .map(|cap| cap[1].to_string());
+    value
 }
 
 fn get_architecture() -> String {
@@ -113,6 +229,7 @@ pub fn uu_app() -> Command {
         )
         .arg(
             Arg::new(options::JSON)
+                .short('J')
                 .long("json")
                 .help(
                     "Use JSON output format for the default summary or extended output \

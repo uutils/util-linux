@@ -17,12 +17,33 @@ fn test_hex() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_json() {
-    new_ucmd!()
-        .arg("--json")
-        .succeeds()
-        // ensure some fields are there, non-exhausting
-        .stdout_contains("\"lscpu\": [")
+    let res = new_ucmd!().arg("--json").succeeds();
+
+    let stdout = res.no_stderr().stdout_str();
+    assert!(stdout.starts_with("{"));
+    assert!(stdout.ends_with("}\n"));
+
+    res.stdout_contains("\"lscpu\": [")
         .stdout_contains("\"field\": \"Architecture\"")
-        .stdout_contains("\"field\": \"CPU(s)\"");
+        .stdout_contains("\"field\": \"CPU(s)\"")
+        .stdout_contains("\"children\": [");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_output() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // Non-exhaustive list of fields we expect
+    // This also checks that fields which should be indented, are indeed indented as excepted
+    assert!(stdout.contains("Architecture:"));
+    assert!(stdout.contains("\n  Address sizes:"));
+    assert!(stdout.contains("\n  Byte Order:"));
+    assert!(stdout.contains("\nCPU(s):"));
+    assert!(stdout.contains("\nVendor ID:"));
+    assert!(stdout.contains("\n  Model name:"));
+    assert!(stdout.contains("\n    CPU Family:"));
 }
