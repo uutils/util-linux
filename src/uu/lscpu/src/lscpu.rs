@@ -7,7 +7,6 @@ use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
 use std::{cmp, fs};
-use sysinfo::System;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod options {
@@ -72,8 +71,6 @@ struct OutputOptions {
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
 
-    let system = System::new_all();
-
     let output_opts = OutputOptions {
         _hex: matches.get_flag(options::HEX),
         json: matches.get_flag(options::JSON),
@@ -91,18 +88,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
     }
 
-    if let Ok(byte_order) = fs::read_to_string("/sys/kernel/cpu_byteorder") {
-        match byte_order.trim() {
-            "big" => arch_info.add_child(CpuInfo::new("Byte Order", "Big Endian", None)),
-            "little" => arch_info.add_child(CpuInfo::new("Byte Order", "Little Endian", None)),
-            _ => eprintln!("Unrecognised Byte Order: {}", byte_order),
-        }
+    if let Some(byte_order) = sysfs::read_cpu_byte_order() {
+        arch_info.add_child(CpuInfo::new("Byte Order", byte_order, None));
     }
+
+    let cpu_topology = sysfs::read_cpu_topology();
 
     cpu_infos.push(arch_info);
     cpu_infos.push(CpuInfo::new(
         "CPU(s)",
-        &format!("{}", system.cpus().len()),
+        &format!("{}", cpu_topology.cpus.len()),
         None,
     ));
 
@@ -121,6 +116,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
             if let Some(model) = find_cpuinfo_value(&contents, "model") {
                 model_name_info.add_child(CpuInfo::new("Model", &model, None));
+            }
+
+            if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state() {
+                let s = if freq_boost_enabled {
+                    "enabled"
+                } else {
+                    "disabled"
+                };
+                model_name_info.add_child(CpuInfo::new("Frequency boost", s, None));
             }
 
             vendor_info.add_child(model_name_info);
@@ -211,6 +215,8 @@ fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
     value
 }
 
+// TODO: This is non-exhaustive and assumes that compile-time arch is the same as runtime
+// This is not always guaranteed to be the case, ie. you can run a x86 binary on a x86_64 machine
 fn get_architecture() -> String {
     if cfg!(target_arch = "x86") {
         "x86".to_string()
