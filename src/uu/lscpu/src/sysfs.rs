@@ -14,6 +14,7 @@ pub struct CpuTopology {
 pub struct Cpu {
     _index: usize,
     pub pkg_id: usize,
+    pub core_id: usize,
     pub caches: Vec<CpuCache>,
 }
 
@@ -41,7 +42,13 @@ impl CpuTopology {
         for cpu_index in online_cpus {
             let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{}/", cpu_index));
 
-            let physical_pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
+            let pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
+                .unwrap()
+                .trim()
+                .parse::<usize>()
+                .unwrap();
+
+            let core_id = fs::read_to_string(cpu_dir.join("topology/core_id"))
                 .unwrap()
                 .trim()
                 .parse::<usize>()
@@ -51,7 +58,8 @@ impl CpuTopology {
 
             out.push(Cpu {
                 _index: cpu_index,
-                pkg_id: physical_pkg_id,
+                pkg_id,
+                core_id,
                 caches,
             })
         }
@@ -61,9 +69,14 @@ impl CpuTopology {
     pub fn socket_count(&self) -> usize {
         // Each physical socket is represented as its own package_id, so amount of unique pkg_ids = sockets
         // https://www.kernel.org/doc/html/latest/admin-guide/abi-stable.html#abi-sys-devices-system-cpu-cpux-topology-physical-package-id
-        let physical_sockets: HashSet<usize> = self.cpus.iter().map(|cpu| cpu.pkg_id).collect();
+        let physical_sockets: HashSet<_> = self.cpus.iter().map(|cpu| cpu.pkg_id).collect();
 
         physical_sockets.len()
+    }
+
+    pub fn core_count(&self) -> usize {
+        let core_ids: HashSet<_> = self.cpus.iter().map(|cpu| cpu.core_id).collect();
+        core_ids.len()
     }
 }
 

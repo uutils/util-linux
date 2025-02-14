@@ -122,6 +122,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 model_name_info.add_child(CpuInfo::new("Model", &model, None));
             }
 
+            let socket_count = &cpu_topology.socket_count();
+            let core_count = &cpu_topology.core_count();
+            model_name_info.add_child(CpuInfo::new(
+                "Core(s) per socket",
+                &(core_count / socket_count).to_string(),
+                None,
+            ));
+            model_name_info.add_child(CpuInfo::new("Socket(s)", &socket_count.to_string(), None));
+
             if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state() {
                 let s = if freq_boost_enabled {
                     "enabled"
@@ -130,12 +139,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 };
                 model_name_info.add_child(CpuInfo::new("Frequency boost", s, None));
             }
-
-            model_name_info.add_child(CpuInfo::new(
-                "Socket(s)",
-                &cpu_topology.socket_count().to_string(),
-                None,
-            ));
 
             vendor_info.add_child(model_name_info);
         }
