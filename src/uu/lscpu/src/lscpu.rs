@@ -94,7 +94,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     cpu_infos.push(arch_info);
 
-    let cpu_topology = sysfs::read_cpu_topology();
+    let cpu_topology = sysfs::CpuTopology::new();
     let mut cores_info = CpuInfo::new("CPU(s)", &format!("{}", cpu_topology.cpus.len()), None);
 
     cores_info.add_child(CpuInfo::new(
@@ -131,8 +131,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 model_name_info.add_child(CpuInfo::new("Frequency boost", s, None));
             }
 
+            model_name_info.add_child(CpuInfo::new(
+                "Socket(s)",
+                &cpu_topology.socket_count().to_string(),
+                None,
+            ));
+
             vendor_info.add_child(model_name_info);
         }
+
         cpu_infos.push(vendor_info);
     }
 

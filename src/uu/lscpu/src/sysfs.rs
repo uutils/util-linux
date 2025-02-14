@@ -1,5 +1,5 @@
 use parse_size::parse_size;
-use std::{fs, path::PathBuf};
+use std::{collections::HashSet, fs, path::PathBuf};
 
 pub struct CpuVulnerability {
     pub name: String,
@@ -13,7 +13,7 @@ pub struct CpuTopology {
 #[derive(Debug)]
 pub struct Cpu {
     _index: usize,
-    pub _pkg_id: usize,
+    pub pkg_id: usize,
     pub caches: Vec<CpuCache>,
 }
 
@@ -32,60 +32,47 @@ pub enum CacheType {
     Unified,
 }
 
+impl CpuTopology {
+    pub fn new() -> Self {
+        let mut out: Vec<Cpu> = vec![];
+
+        let online_cpus = parse_cpu_list(&read_online_cpus());
+
+        for cpu_index in online_cpus {
+            let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{}/", cpu_index));
+
+            let physical_pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
+                .unwrap()
+                .trim()
+                .parse::<usize>()
+                .unwrap();
+
+            let caches = read_cpu_caches(cpu_index);
+
+            out.push(Cpu {
+                _index: cpu_index,
+                pkg_id: physical_pkg_id,
+                caches,
+            })
+        }
+        Self { cpus: out }
+    }
+
+    pub fn socket_count(&self) -> usize {
+        // Each physical socket is represented as its own package_id, so amount of unique pkg_ids = sockets
+        // https://www.kernel.org/doc/html/latest/admin-guide/abi-stable.html#abi-sys-devices-system-cpu-cpux-topology-physical-package-id
+        let physical_sockets: HashSet<usize> = self.cpus.iter().map(|cpu| cpu.pkg_id).collect();
+
+        physical_sockets.len()
+    }
+}
+
 // TODO: respect `--hex` option and output the bitmask instead of human-readable range
 pub fn read_online_cpus() -> String {
     fs::read_to_string("/sys/devices/system/cpu/online")
         .expect("Could not read sysfs")
         .trim()
         .to_string()
-}
-
-// Takes in a human-readable list of CPUs, and returns a list of indices parsed from that list
-// These can come in the form of a plain range like `X-Y`, or a comma-separated ranges and indices ie. `1,3-4,7-8,10`
-// Kernel docs with examples: https://www.kernel.org/doc/html/latest/admin-guide/cputopology.html
-fn parse_cpu_list(list: &str) -> Vec<usize> {
-    let mut out: Vec<usize> = vec![];
-
-    for part in list.trim().split(",") {
-        if part.contains("-") {
-            let bounds: Vec<_> = part.split("-").flat_map(|x| x.parse::<usize>()).collect();
-            assert_eq!(bounds.len(), 2);
-            for idx in bounds[0]..bounds[1] + 1 {
-                out.push(idx)
-            }
-        } else {
-            let idx = part.parse::<usize>().expect("Invalid CPU index value");
-            out.push(idx);
-        }
-    }
-
-    out
-}
-
-pub fn read_cpu_topology() -> CpuTopology {
-    let mut out: Vec<Cpu> = vec![];
-
-    let online_cpus = parse_cpu_list(&read_online_cpus());
-
-    for cpu_index in online_cpus {
-        let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{}/", cpu_index));
-
-        let physical_pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
-            .unwrap()
-            .trim()
-            .parse::<usize>()
-            .unwrap();
-
-        let caches = read_cpu_caches(cpu_index);
-
-        out.push(Cpu {
-            _index: cpu_index,
-            _pkg_id: physical_pkg_id,
-            caches,
-        })
-    }
-
-    CpuTopology { cpus: out }
 }
 
 fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
@@ -174,4 +161,45 @@ pub fn read_cpu_byte_order() -> Option<&'static str> {
         }
     }
     None
+}
+
+// Takes in a human-readable list of CPUs, and returns a list of indices parsed from that list
+// These can come in the form of a plain range like `X-Y`, or a comma-separated ranges and indices ie. `1,3-4,7-8,10`
+// Kernel docs with examples: https://www.kernel.org/doc/html/latest/admin-guide/cputopology.html
+fn parse_cpu_list(list: &str) -> Vec<usize> {
+    let mut out: Vec<usize> = vec![];
+
+    if list.is_empty() {
+        return out;
+    }
+
+    for part in list.trim().split(",") {
+        if part.contains("-") {
+            let bounds: Vec<_> = part.split("-").flat_map(|x| x.parse::<usize>()).collect();
+            assert_eq!(bounds.len(), 2);
+            for idx in bounds[0]..bounds[1] + 1 {
+                out.push(idx)
+            }
+        } else {
+            let idx = part.parse::<usize>().expect("Invalid CPU index value");
+            out.push(idx);
+        }
+    }
+
+    out
+}
+
+#[test]
+fn test_parse_cpu_list() {
+    assert_eq!(parse_cpu_list(""), Vec::<usize>::new());
+    assert_eq!(parse_cpu_list("1-3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(parse_cpu_list("1,2,3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(
+        parse_cpu_list("1,3-6,8"),
+        Vec::<usize>::from([1, 3, 4, 5, 6, 8])
+    );
+    assert_eq!(
+        parse_cpu_list("1-2,3-5,7"),
+        Vec::<usize>::from([1, 2, 3, 4, 5, 7])
+    );
 }
