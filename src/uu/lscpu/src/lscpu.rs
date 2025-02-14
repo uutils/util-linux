@@ -125,6 +125,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
             let socket_count = &cpu_topology.socket_count();
             let core_count = &cpu_topology.core_count();
+
+            model_name_info.add_child(CpuInfo::new(
+                "Thread(s) per core",
+                &(cpu_topology.cpus.len() / core_count).to_string(),
+                None,
+            ));
+
             model_name_info.add_child(CpuInfo::new(
                 "Core(s) per socket",
                 &(core_count / socket_count).to_string(),
