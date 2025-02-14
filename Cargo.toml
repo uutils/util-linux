@@ -46,7 +46,6 @@ dns-lookup = "2.0.4"
 libc = "0.2.152"
 linux-raw-sys = { version = "0.7.0", features = ["ioctl"] }
 nix = { version = "0.29", default-features = false }
-parse-size = "1.1.0"
 phf = "0.11.2"
 phf_codegen = "0.11.2"
 rand = { version = "0.9.0", features = ["small_rng"] }

@@ -1,4 +1,3 @@
-use parse_size::parse_size;
 use std::{collections::HashSet, fs, path::PathBuf};
 
 pub struct CpuVulnerability {
@@ -113,7 +112,7 @@ fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
             .unwrap();
 
         let size_string = fs::read_to_string(cache_path.join("size")).unwrap();
-        let c_size = parse_size(size_string.trim()).unwrap();
+        let c_size = parse_cache_size(size_string.trim());
 
         let shared_cpu_map = fs::read_to_string(cache_path.join("shared_cpu_map"))
             .unwrap()
@@ -200,6 +199,42 @@ fn parse_cpu_list(list: &str) -> Vec<usize> {
     }
 
     out
+}
+
+fn parse_cache_size(s: &str) -> u64 {
+    // Yes, this will break if we ever reach a point where caches exceed terabytes in size...
+    const EXPONENTS: [(char, u32); 4] = [('K', 1), ('M', 2), ('G', 3), ('T', 4)];
+
+    // If we only have numbers, treat it as a raw amount of bytes and parse as-is
+    if s.chars().all(|c| c.is_numeric()) {
+        return s.parse::<u64>().expect("Could not parse cache size");
+    };
+
+    for (suffix, exponent) in EXPONENTS {
+        if s.ends_with(suffix) {
+            let nums = s.strip_suffix(suffix).unwrap();
+            let value = nums.parse::<u64>().expect("Could not parse cache size");
+            let multiplier = 1024_u64.pow(exponent);
+
+            return value * multiplier;
+        }
+    }
+
+    panic!("No known suffix in cache size string");
+}
+
+#[test]
+fn test_parse_cache_size() {
+    assert_eq!(parse_cache_size("512"), 512);
+
+    assert_eq!(parse_cache_size("1K"), 1024);
+    assert_eq!(parse_cache_size("1M"), 1024 * 1024);
+    assert_eq!(parse_cache_size("1G"), 1024 * 1024 * 1024);
+    assert_eq!(parse_cache_size("1T"), 1024 * 1024 * 1024 * 1024);
+
+    assert_eq!(parse_cache_size("123K"), 123 * 1024);
+    assert_eq!(parse_cache_size("32M"), 32 * 1024 * 1024);
+    assert_eq!(parse_cache_size("345G"), 345 * 1024 * 1024 * 1024);
 }
 
 #[test]
