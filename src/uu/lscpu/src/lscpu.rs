@@ -7,6 +7,7 @@ use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
 use std::{cmp, collections::HashMap, fs};
+use sysfs::CacheSize;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod options {
@@ -196,11 +197,17 @@ fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>) -> Option<CpuInfo> {
         caches.dedup_by_key(|c| &c.shared_cpu_map);
 
         let count = caches.len();
-        let size_total = caches.iter().fold(0_u64, |acc, c| acc + c.size);
+        let size_total = caches
+            .iter()
+            .fold(0_u64, |acc, c| acc + c.size.size_bytes());
+
         cache_info.add_child(CpuInfo::new(
             level,
-            // TODO: Format sizes using `KiB`, `MiB` etc.
-            &format!("{} bytes ({} instances)", size_total, count),
+            &format!(
+                "{} ({} instances)",
+                CacheSize::new(size_total).human_readable(),
+                count
+            ),
             None,
         ));
     }

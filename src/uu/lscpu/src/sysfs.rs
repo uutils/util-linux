@@ -21,9 +21,12 @@ pub struct Cpu {
 pub struct CpuCache {
     pub typ: CacheType,
     pub level: usize,
-    pub size: u64,
+    pub size: CacheSize,
     pub shared_cpu_map: String,
 }
+
+#[derive(Debug)]
+pub struct CacheSize(u64);
 
 #[derive(Debug)]
 pub enum CacheType {
@@ -79,6 +82,51 @@ impl CpuTopology {
     }
 }
 
+impl CacheSize {
+    pub fn new(size: u64) -> Self {
+        Self(size)
+    }
+
+    fn parse(s: &str) -> Self {
+        // Yes, this will break if we ever reach a point where caches exceed terabytes in size...
+        const EXPONENTS: [(char, u32); 4] = [('K', 1), ('M', 2), ('G', 3), ('T', 4)];
+
+        // If we only have numbers, treat it as a raw amount of bytes and parse as-is
+        if s.chars().all(|c| c.is_numeric()) {
+            return Self(s.parse::<u64>().expect("Could not parse cache size"));
+        };
+
+        for (suffix, exponent) in EXPONENTS {
+            if s.ends_with(suffix) {
+                let nums = s.strip_suffix(suffix).unwrap();
+                let value = nums.parse::<u64>().expect("Could not parse cache size");
+                let multiplier = 1024_u64.pow(exponent);
+
+                return Self(value * multiplier);
+            }
+        }
+
+        panic!("No known suffix in cache size string");
+    }
+
+    pub fn size_bytes(&self) -> u64 {
+        self.0
+    }
+
+    pub fn human_readable(&self) -> String {
+        let (unit, denominator) = match self.0 {
+            x if x < 1024_u64.pow(1) => ("B", 1024_u64.pow(0)),
+            x if x < 1024_u64.pow(2) => ("KiB", 1024_u64.pow(1)),
+            x if x < 1024_u64.pow(3) => ("MiB", 1024_u64.pow(2)),
+            x if x < 1024_u64.pow(4) => ("GiB", 1024_u64.pow(3)),
+            x if x < 1024_u64.pow(5) => ("TiB", 1024_u64.pow(4)),
+            _ => return format!("{} bytes", self.0),
+        };
+        let scaled_size = self.0 / denominator;
+        format!("{} {}", scaled_size, unit)
+    }
+}
+
 // TODO: respect `--hex` option and output the bitmask instead of human-readable range
 pub fn read_online_cpus() -> String {
     fs::read_to_string("/sys/devices/system/cpu/online")
@@ -112,7 +160,7 @@ fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
             .unwrap();
 
         let size_string = fs::read_to_string(cache_path.join("size")).unwrap();
-        let c_size = parse_cache_size(size_string.trim());
+        let c_size = CacheSize::parse(size_string.trim());
 
         let shared_cpu_map = fs::read_to_string(cache_path.join("shared_cpu_map"))
             .unwrap()
@@ -201,40 +249,36 @@ fn parse_cpu_list(list: &str) -> Vec<usize> {
     out
 }
 
-fn parse_cache_size(s: &str) -> u64 {
-    // Yes, this will break if we ever reach a point where caches exceed terabytes in size...
-    const EXPONENTS: [(char, u32); 4] = [('K', 1), ('M', 2), ('G', 3), ('T', 4)];
-
-    // If we only have numbers, treat it as a raw amount of bytes and parse as-is
-    if s.chars().all(|c| c.is_numeric()) {
-        return s.parse::<u64>().expect("Could not parse cache size");
-    };
-
-    for (suffix, exponent) in EXPONENTS {
-        if s.ends_with(suffix) {
-            let nums = s.strip_suffix(suffix).unwrap();
-            let value = nums.parse::<u64>().expect("Could not parse cache size");
-            let multiplier = 1024_u64.pow(exponent);
-
-            return value * multiplier;
-        }
-    }
-
-    panic!("No known suffix in cache size string");
+#[test]
+fn test_parse_cache_size() {
+    assert_eq!(CacheSize::parse("512").size_bytes(), 512);
+    assert_eq!(CacheSize::parse("1K").size_bytes(), 1024);
+    assert_eq!(CacheSize::parse("1M").size_bytes(), 1024 * 1024);
+    assert_eq!(CacheSize::parse("1G").size_bytes(), 1024 * 1024 * 1024);
+    assert_eq!(
+        CacheSize::parse("1T").size_bytes(),
+        1024 * 1024 * 1024 * 1024
+    );
+    assert_eq!(CacheSize::parse("123K").size_bytes(), 123 * 1024);
+    assert_eq!(CacheSize::parse("32M").size_bytes(), 32 * 1024 * 1024);
+    assert_eq!(
+        CacheSize::parse("345G").size_bytes(),
+        345 * 1024 * 1024 * 1024
+    );
 }
 
 #[test]
-fn test_parse_cache_size() {
-    assert_eq!(parse_cache_size("512"), 512);
+fn test_print_cache_size() {
+    assert_eq!(CacheSize::new(1023).human_readable(), "1023 B");
+    assert_eq!(CacheSize::new(1024).human_readable(), "1 KiB");
+    assert_eq!(CacheSize::new(1024 * 1024).human_readable(), "1 MiB");
+    assert_eq!(CacheSize::new(1024 * 1024 * 1024).human_readable(), "1 GiB");
 
-    assert_eq!(parse_cache_size("1K"), 1024);
-    assert_eq!(parse_cache_size("1M"), 1024 * 1024);
-    assert_eq!(parse_cache_size("1G"), 1024 * 1024 * 1024);
-    assert_eq!(parse_cache_size("1T"), 1024 * 1024 * 1024 * 1024);
-
-    assert_eq!(parse_cache_size("123K"), 123 * 1024);
-    assert_eq!(parse_cache_size("32M"), 32 * 1024 * 1024);
-    assert_eq!(parse_cache_size("345G"), 345 * 1024 * 1024 * 1024);
+    assert_eq!(CacheSize::new(3 * 1024).human_readable(), "3 KiB");
+    assert_eq!(
+        CacheSize::new((7.6 * 1024.0 * 1024.0) as u64).human_readable(),
+        "7 MiB"
+    );
 }
 
 #[test]
