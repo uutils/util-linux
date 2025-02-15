@@ -271,7 +271,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -404,9 +404,9 @@ checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51bafc0bb5cbecb9ed381e75b803040302fd678b5d9faa04f01eaa280bc8c029"
+checksum = "8bbbb933f93c53df320d2bb19124961a8e91fad88d2dd6f4f40e85ab13d4bb5e"
 
 [[package]]
 name = "log"
@@ -783,7 +783,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -923,7 +923,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix 0.38.44",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1061,7 +1061,7 @@ name = "uu_blockdev"
 version = "0.0.1"
 dependencies = [
  "clap",
- "linux-raw-sys 0.7.0",
+ "linux-raw-sys 0.8.0",
  "regex",
  "sysinfo",
  "uucore",
@@ -1093,7 +1093,7 @@ name = "uu_fsfreeze"
 version = "0.0.1"
 dependencies = [
  "clap",
- "linux-raw-sys 0.7.0",
+ "linux-raw-sys 0.8.0",
  "regex",
  "sysinfo",
  "uucore",
