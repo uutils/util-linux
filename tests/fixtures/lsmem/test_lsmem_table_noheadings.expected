@@ -1,0 +1,6 @@
+0x0000000000000000-0x0000000037ffffff  896M online       yes    0-6
+0x0000000100000000-0x00000004afffffff 14.8G online       yes 32-149
+
+Memory block size:       128M
+Total online memory:    15.6G
+Total offline memory:      0B
