@@ -106,12 +106,10 @@ impl Column {
         }
     }
 
-    #[allow(dead_code)]
     fn get_float_right(&self) -> bool {
         self != &Column::Range
     }
 
-    #[allow(dead_code)]
     fn get_width_hint(&self) -> usize {
         if self == &Column::Size {
             5
