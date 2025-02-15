@@ -1,0 +1,15 @@
+[package]
+name = "uu_findmnt"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/findmnt.rs"
+
+[[bin]]
+name = "findmnt"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }

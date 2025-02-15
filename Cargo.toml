@@ -29,6 +29,7 @@ feat_common_core = [
   "blockdev",
   "ctrlaltdel",
   "dmesg",
+  "findmnt",
   "fsfreeze",
   "last",
   "lscpu",
@@ -37,6 +38,9 @@ feat_common_core = [
   "rev",
   "setsid",
 ]
+
+[workspace]
+members = ["src/uu/findmnt"]
 
 [workspace.dependencies]
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
@@ -73,6 +77,7 @@ uucore = { workspace = true }
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
+findmnt = { optional = true, version = "0.0.1", package = "uu_findmnt", path = "src/uu/findmnt" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
