@@ -969,6 +969,7 @@ dependencies = [
  "tempfile",
  "textwrap",
  "uu_blockdev",
+ "uu_chcpu",
  "uu_ctrlaltdel",
  "uu_dmesg",
  "uu_fsfreeze",
@@ -992,6 +993,14 @@ dependencies = [
  "linux-raw-sys 0.9.2",
  "regex",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_chcpu"
+version = "0.0.1"
+dependencies = [
+ "clap",
  "uucore",
 ]
 
