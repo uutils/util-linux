@@ -1037,6 +1037,8 @@ name = "uu_findmnt"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "serde",
+ "serde_json",
  "uucore",
 ]
 
