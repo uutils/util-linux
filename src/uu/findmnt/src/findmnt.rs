@@ -5,11 +5,11 @@
 
 use std::{collections::HashMap, fs};
 
-use clap::{crate_version, Command};
+use clap::{crate_version, Arg, ArgAction, Command};
 use serde::Serialize;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct MountData {
     filesystems: Vec<Mount>,
 }
@@ -140,7 +140,13 @@ fn read_mounts() -> Vec<Mount> {
         .collect()
 }
 
-fn print_output(fs: MountData) {
+fn print_output(fs: MountData, options: OutputOptions) {
+    if options.json {
+        let json = serde_json::to_string_pretty(&fs).unwrap();
+        println!("{}", json);
+        return;
+    }
+
     fn indent(depth: usize) -> usize {
         depth * 2
     }
@@ -164,13 +170,23 @@ fn print_output(fs: MountData) {
     }
 }
 
+struct OutputOptions {
+    json: bool,
+}
+
 #[uucore::main]
-pub fn uumain(_args: impl uucore::Args) -> UResult<()> {
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    let output_opts = OutputOptions {
+        json: matches.get_flag(options::JSON),
+    };
+
     let fs = MountData {
         filesystems: read_mounts(),
     };
 
-    print_output(fs);
+    print_output(fs, output_opts);
 
     Ok(())
 }
@@ -178,10 +194,21 @@ pub fn uumain(_args: impl uucore::Args) -> UResult<()> {
 const ABOUT: &str = help_about!("findmnt.md");
 const USAGE: &str = help_usage!("findmnt.md");
 
+mod options {
+    pub const JSON: &str = "json";
+}
+
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())
         .version(crate_version!())
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+        .arg(
+            Arg::new(options::JSON)
+                .short('J')
+                .long("json")
+                .help("Use JSON output format")
+                .action(ArgAction::SetTrue),
+        )
 }
