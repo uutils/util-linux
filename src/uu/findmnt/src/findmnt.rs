@@ -3,27 +3,11 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, string};
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use serde::Serialize;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
-
-#[derive(Debug, Serialize)]
-struct MountData {
-    filesystems: Vec<Mount>,
-}
-
-#[derive(Debug, Serialize, Clone)]
-struct Mount {
-    target: String,
-    source: String,
-    fstype: String,
-    options: String,
-
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    children: Vec<Mount>,
-}
 
 // Flat mount information structure as described in:
 // https://www.man7.org/linux/man-pages/man5/proc_pid_mountinfo.5.html
@@ -77,6 +61,38 @@ impl MountEntry {
             target,
             fstype,
             options,
+        }
+    }
+}
+
+// Data structures used for the final output
+#[derive(Debug, Serialize)]
+struct MountData {
+    filesystems: Vec<Mount>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct Mount {
+    target: String,
+    source: String,
+    fstype: String,
+    options: String,
+
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    children: Vec<Mount>,
+}
+
+impl Mount {
+    fn get_value(&self, field: &Column) -> String {
+        match field {
+            Column::FsRoot => todo!(),
+            Column::FsType => self.fstype.clone(),
+            Column::FsOptions => todo!(),
+            Column::Id => todo!(),
+            Column::Options => self.options.clone(),
+            Column::Parent => todo!(),
+            Column::Source => self.source.clone(),
+            Column::Target => self.target.clone(),
         }
     }
 }
@@ -140,6 +156,66 @@ fn read_mounts() -> Vec<Mount> {
         .collect()
 }
 
+// TODO: Add the remaining columns supported by `findmnt`
+#[derive(Debug, Clone)]
+enum Column {
+    FsRoot,
+    FsType,
+    FsOptions,
+    Id,
+    Options,
+    Parent,
+    Source,
+    Target,
+}
+
+impl Column {
+    fn header_text(&self) -> &'static str {
+        match self {
+            Column::FsRoot => "FSROOT",
+            Column::FsType => "FSTYPE",
+            Column::FsOptions => "FS-OPTIONS",
+            Column::Id => "ID",
+            Column::Options => "OPTIONS",
+            Column::Parent => "PARENT",
+            Column::Source => "SOURCE",
+            Column::Target => "TARGET",
+        }
+    }
+
+    fn header_width(&self) -> usize {
+        self.header_text().len()
+    }
+}
+
+const DEFAULT_COLS: &[Column] = &[
+    Column::Target,
+    Column::Source,
+    Column::FsType,
+    Column::Options,
+];
+
+struct OutputOptions {
+    json: bool,
+    cols: Vec<Column>,
+}
+
+fn get_column_widths(cols: &Vec<Column>, rows: &Vec<Mount>) -> Vec<usize> {
+    // Initialize max_widths with the width of the column headers
+    let mut max_widths: Vec<_> = cols.iter().map(|col| col.header_width()).collect();
+
+    // Go through all table rows, and check if any values are wider than the header text
+    // Set that as the new max_width for that column
+    for row in rows {
+        for (i, col) in cols.iter().enumerate() {
+            let value_width = row.get_value(col).len();
+            max_widths[i] = max_widths[i].max(value_width);
+        }
+    }
+
+    max_widths
+}
+
 fn print_output(fs: MountData, options: OutputOptions) {
     if options.json {
         let json = serde_json::to_string_pretty(&fs).unwrap();
@@ -147,31 +223,40 @@ fn print_output(fs: MountData, options: OutputOptions) {
         return;
     }
 
-    fn indent(depth: usize) -> usize {
-        depth * 2
-    }
+    // Before printing, the mount tree needs to be flatten into a single vector of rows
+    let mut flattened_mounts: Vec<Mount> = vec![];
 
-    fn print_mount(mount: Mount, depth: usize) {
-        println!(
-            "{}{}\t{}\t{}\t{}",
-            " ".repeat(indent(depth)),
-            mount.target,
-            mount.source,
-            mount.fstype,
-            mount.options
-        );
-        for child in mount.children {
-            print_mount(child, depth + 1)
+    fn flatten(mnt: &Mount, acc: &mut Vec<Mount>) {
+        acc.push(mnt.clone());
+        for child in &mnt.children {
+            flatten(&child, acc);
         }
     }
 
-    for mount in fs.filesystems {
-        print_mount(mount, 0);
+    for rootfs in &fs.filesystems {
+        flatten(rootfs, &mut flattened_mounts);
     }
-}
 
-struct OutputOptions {
-    json: bool,
+    let col_widths = get_column_widths(&options.cols, &flattened_mounts);
+
+    // Print headers
+    let headers: Vec<_> = options
+        .cols
+        .iter()
+        .enumerate()
+        .map(|(i, col)| format!("{:<width$}", col.header_text(), width = col_widths[i]))
+        .collect();
+    println!("{}", headers.join(" "));
+
+    for row in flattened_mounts {
+        let values: Vec<_> = options
+            .cols
+            .iter()
+            .enumerate()
+            .map(|(i, col)| format!("{:<width$}", row.get_value(col), width = col_widths[i]))
+            .collect();
+        println!("{}", values.join(" "));
+    }
 }
 
 #[uucore::main]
@@ -180,6 +265,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let output_opts = OutputOptions {
         json: matches.get_flag(options::JSON),
+
+        // TODO: Use arguments to control which cols are printed out
+        cols: Vec::from(DEFAULT_COLS),
     };
 
     let fs = MountData {
