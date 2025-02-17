@@ -34,11 +34,11 @@ struct CpuInfo {
 }
 
 impl CpuInfo {
-    fn new(field: &str, data: &str, children: Option<Vec<CpuInfo>>) -> Self {
+    fn new(field: &str, data: &str) -> Self {
         Self {
             field: field.to_string(),
             data: data.to_string(),
-            children: children.unwrap_or_default(),
+            children: Vec::new(),
         }
     }
 
@@ -79,29 +79,28 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut cpu_infos = CpuInfos::new();
 
-    let mut arch_info = CpuInfo::new("Architecture", &get_architecture(), None);
+    let mut arch_info = CpuInfo::new("Architecture", &get_architecture());
 
     // TODO: We just silently ignore failures to read `/proc/cpuinfo` currently and treat it as empty
     // Perhaps a better solution should be put in place, but what?
     let contents = fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
 
     if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
-        arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes, None))
+        arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes))
     }
 
     if let Some(byte_order) = sysfs::read_cpu_byte_order() {
-        arch_info.add_child(CpuInfo::new("Byte Order", byte_order, None));
+        arch_info.add_child(CpuInfo::new("Byte Order", byte_order));
     }
 
     cpu_infos.push(arch_info);
 
     let cpu_topology = sysfs::CpuTopology::new();
-    let mut cores_info = CpuInfo::new("CPU(s)", &format!("{}", cpu_topology.cpus.len()), None);
+    let mut cores_info = CpuInfo::new("CPU(s)", &format!("{}", cpu_topology.cpus.len()));
 
     cores_info.add_child(CpuInfo::new(
         "On-line CPU(s) list",
         &sysfs::read_online_cpus(),
-        None,
     ));
 
     cpu_infos.push(cores_info);
@@ -110,17 +109,17 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // ie. the file might contain multiple sections, each with their own vendor_id/model name etc. but right now
     // we're just taking whatever our regex matches first and using that
     if let Some(vendor) = find_cpuinfo_value(&contents, "vendor_id") {
-        let mut vendor_info = CpuInfo::new("Vendor ID", &vendor, None);
+        let mut vendor_info = CpuInfo::new("Vendor ID", &vendor);
 
         if let Some(model_name) = find_cpuinfo_value(&contents, "model name") {
-            let mut model_name_info = CpuInfo::new("Model name", &model_name, None);
+            let mut model_name_info = CpuInfo::new("Model name", &model_name);
 
             if let Some(family) = find_cpuinfo_value(&contents, "cpu family") {
-                model_name_info.add_child(CpuInfo::new("CPU Family", &family, None));
+                model_name_info.add_child(CpuInfo::new("CPU Family", &family));
             }
 
             if let Some(model) = find_cpuinfo_value(&contents, "model") {
-                model_name_info.add_child(CpuInfo::new("Model", &model, None));
+                model_name_info.add_child(CpuInfo::new("Model", &model));
             }
 
             let socket_count = &cpu_topology.socket_count();
@@ -129,15 +128,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             model_name_info.add_child(CpuInfo::new(
                 "Thread(s) per core",
                 &(cpu_topology.cpus.len() / core_count).to_string(),
-                None,
             ));
 
             model_name_info.add_child(CpuInfo::new(
                 "Core(s) per socket",
                 &(core_count / socket_count).to_string(),
-                None,
             ));
-            model_name_info.add_child(CpuInfo::new("Socket(s)", &socket_count.to_string(), None));
+            model_name_info.add_child(CpuInfo::new("Socket(s)", &socket_count.to_string()));
 
             if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state() {
                 let s = if freq_boost_enabled {
@@ -145,7 +142,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 } else {
                     "disabled"
                 };
-                model_name_info.add_child(CpuInfo::new("Frequency boost", s, None));
+                model_name_info.add_child(CpuInfo::new("Frequency boost", s));
             }
 
             vendor_info.add_child(model_name_info);
@@ -160,9 +157,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let vulns = sysfs::read_cpu_vulnerabilities();
     if !vulns.is_empty() {
-        let mut vuln_info = CpuInfo::new("Vulnerabilities", "", None);
+        let mut vuln_info = CpuInfo::new("Vulnerabilities", "");
         for vuln in vulns {
-            vuln_info.add_child(CpuInfo::new(&vuln.name, &vuln.mitigation, None));
+            vuln_info.add_child(CpuInfo::new(&vuln.name, &vuln.mitigation));
         }
         cpu_infos.push(vuln_info);
     }
@@ -195,7 +192,7 @@ fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>) -> Option<CpuInfo> {
         }
     }
 
-    let mut cache_info = CpuInfo::new("Caches (sum of all)", "", None);
+    let mut cache_info = CpuInfo::new("Caches (sum of all)", "");
 
     for (level, caches) in by_levels.iter_mut() {
         // Cache instances that are shared across multiple CPUs should have the same `shared_cpu_map` value
@@ -215,7 +212,6 @@ fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>) -> Option<CpuInfo> {
                 CacheSize::new(size_total).human_readable(),
                 count
             ),
-            None,
         ));
     }
 
