@@ -37,27 +37,20 @@ fn parse_cpu_list(list: &str) -> Vec<usize> {
     out
 }
 
-#[test]
-fn test_parse_cpu_list() {
-    assert_eq!(parse_cpu_list(""), Vec::<usize>::new());
-    assert_eq!(parse_cpu_list("1-3"), Vec::<usize>::from([1, 2, 3]));
-    assert_eq!(parse_cpu_list("1,2,3"), Vec::<usize>::from([1, 2, 3]));
-    assert_eq!(
-        parse_cpu_list("1,3-6,8"),
-        Vec::<usize>::from([1, 3, 4, 5, 6, 8])
-    );
-    assert_eq!(
-        parse_cpu_list("1-2,3-5,7"),
-        Vec::<usize>::from([1, 2, 3, 4, 5, 7])
-    );
-}
-
 #[derive(Debug)]
 struct Cpu(usize);
 
 impl Cpu {
     fn get_path(&self) -> PathBuf {
         PathBuf::from(format!("/sys/devices/system/cpu/cpu{}", self.0))
+    }
+
+    fn write_to_cpu_file(&self, file: &str, value: &[u8]) -> std::io::Result<()> {
+        File::create(self.get_path().join(file)).and_then(|mut f| f.write_all(value))
+    }
+
+    fn read_cpu_file(&self, file: &str) -> String {
+        fs::read_to_string(self.get_path().join(file)).unwrap()
     }
 
     fn ensure_exists(&self) -> bool {
@@ -74,18 +67,16 @@ impl Cpu {
     }
 
     fn is_online(&self) -> bool {
-        if let Ok(state) = fs::read_to_string(self.get_path().join("online")) {
-            match state.trim() {
-                "0" => return false,
-                "1" => return true,
+        fs::read_to_string(self.get_path().join("online"))
+            .map(|content| match content.trim() {
+                "0" => false,
+                "1" => true,
                 other => panic!("Unrecognized CPU online state: {}", other),
-            }
-        };
-
-        // Just in case the caller forgot to check `is_hotpluggable` first,
-        // instead of panicing that the file doesn't exist, return true
-        // This is because a non-hotpluggable CPU is assumed to be always online
-        true
+            })
+            // Just in case the caller forgot to check `is_hotpluggable` first,
+            // instead of panicing that the file doesn't exist, return true
+            // This is because a non-hotpluggable CPU is assumed to be always online
+            .unwrap_or(true)
     }
 
     fn enable(&self) {
@@ -99,9 +90,7 @@ impl Cpu {
             return;
         }
 
-        let result =
-            File::create(self.get_path().join("online")).and_then(|mut f| f.write_all(b"1"));
-        match result {
+        match self.write_to_cpu_file("online", b"1") {
             Ok(_) => println!("CPU {} enabled", self.0),
             Err(e) => println!("CPU {} enable failed: {}", self.0, e.kind()),
         }
@@ -123,9 +112,7 @@ impl Cpu {
             return;
         }
 
-        let result =
-            File::create(self.get_path().join("online")).and_then(|mut f| f.write_all(b"0"));
-        match result {
+        match self.write_to_cpu_file("online", b"0") {
             Ok(_) => println!("CPU {} disabled", self.0),
             Err(e) => println!("CPU {} disable failed: {}", self.0, e.kind()),
         }
@@ -141,16 +128,13 @@ impl Cpu {
             return;
         }
 
-        let cfg_path = self.get_path().join("configure");
-
-        let configured = fs::read_to_string(&cfg_path).unwrap();
+        let configured = self.read_cpu_file("configure");
         if configured.trim() == "1" {
             println!("CPU {} is already configured", self.0);
             return;
         };
 
-        let result = File::create(cfg_path).and_then(|mut f| f.write_all(b"1"));
-        match result {
+        match self.write_to_cpu_file("configure", b"1") {
             Ok(_) => println!("CPU {} configured", self.0),
             Err(e) => println!("CPU {} configure failed: {}", self.0, e.kind()),
         };
@@ -162,9 +146,7 @@ impl Cpu {
             return;
         }
 
-        let cfg_path = self.get_path().join("configure");
-
-        let configured = fs::read_to_string(&cfg_path).unwrap();
+        let configured = self.read_cpu_file("configure");
         if configured.trim() == "0" {
             println!("CPU {} is already deconfigured", self.0);
             return;
@@ -175,8 +157,7 @@ impl Cpu {
             return;
         }
 
-        let result = File::create(cfg_path).and_then(|mut f| f.write_all(b"0"));
-        match result {
+        match self.write_to_cpu_file("configure", b"0") {
             Ok(_) => println!("CPU {} deconfigured", self.0),
             Err(e) => println!("CPU {} deconfigure failed: {}", self.0, e.kind()),
         };
@@ -206,42 +187,28 @@ fn trigger_rescan() {
     };
 }
 
-fn enable_cpus(cpu_list: &str) {
-    let to_enable = parse_cpu_list(cpu_list).into_iter().map(Cpu);
+fn process_cpus(cpu_list: &str, action: impl Fn(&Cpu)) {
+    parse_cpu_list(cpu_list)
+        .into_iter()
+        .map(Cpu)
+        .filter(Cpu::ensure_exists)
+        .for_each(|cpu| action(&cpu));
+}
 
-    for cpu in to_enable {
-        if cpu.ensure_exists() {
-            cpu.enable();
-        };
-    }
+fn enable_cpus(cpu_list: &str) {
+    process_cpus(cpu_list, Cpu::enable);
 }
 
 fn disable_cpus(cpu_list: &str) {
-    let to_disable = parse_cpu_list(cpu_list).into_iter().map(Cpu);
-
-    for cpu in to_disable {
-        if cpu.ensure_exists() {
-            cpu.disable();
-        }
-    }
+    process_cpus(cpu_list, Cpu::disable);
 }
 
 fn configure_cpus(cpu_list: &str) {
-    let to_configure = parse_cpu_list(cpu_list).into_iter().map(Cpu);
-    for cpu in to_configure {
-        if cpu.ensure_exists() {
-            cpu.configure();
-        }
-    }
+    process_cpus(cpu_list, Cpu::configure);
 }
 
 fn deconfigure_cpus(cpu_list: &str) {
-    let to_deconfigure = parse_cpu_list(cpu_list).into_iter().map(Cpu);
-    for cpu in to_deconfigure {
-        if cpu.ensure_exists() {
-            cpu.deconfigure();
-        }
-    }
+    process_cpus(cpu_list, Cpu::deconfigure);
 }
 
 fn set_dispatch_mode(mode: &str) {
@@ -376,4 +343,19 @@ pub fn uu_app() -> Command {
                 .long("rescan")
                 .action(ArgAction::SetTrue),
         )
+}
+
+#[test]
+fn test_parse_cpu_list() {
+    assert_eq!(parse_cpu_list(""), Vec::<usize>::new());
+    assert_eq!(parse_cpu_list("1-3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(parse_cpu_list("1,2,3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(
+        parse_cpu_list("1,3-6,8"),
+        Vec::<usize>::from([1, 3, 4, 5, 6, 8])
+    );
+    assert_eq!(
+        parse_cpu_list("1-2,3-5,7"),
+        Vec::<usize>::from([1, 2, 3, 4, 5, 7])
+    );
 }
