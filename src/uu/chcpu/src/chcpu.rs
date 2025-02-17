@@ -55,8 +55,7 @@ impl Cpu {
 
     // CPUs which are not hot-pluggable will not have the `/online` file in their directory
     fn is_hotpluggable(&self) -> bool {
-        let path = self.get_path().join("online");
-        path.exists()
+        self.get_path().join("online").exists()
     }
 
     fn is_online(&self) -> bool {
@@ -89,7 +88,7 @@ impl Cpu {
             File::create(self.get_path().join("online")).and_then(|mut f| f.write_all(b"1"));
         match result {
             Ok(_) => println!("CPU {} enabled", self.0),
-            Err(e) => println!("CPU {} enable failed: {:#}", self.0, e.kind()),
+            Err(e) => println!("CPU {} enable failed: {}", self.0, e.kind()),
         }
     }
 
@@ -113,13 +112,60 @@ impl Cpu {
             File::create(self.get_path().join("online")).and_then(|mut f| f.write_all(b"0"));
         match result {
             Ok(_) => println!("CPU {} disabled", self.0),
-            Err(e) => println!("CPU {} disable failed: {:#}", self.0, e.kind()),
+            Err(e) => println!("CPU {} disable failed: {}", self.0, e.kind()),
         }
     }
 
-    fn configure(&self) {}
+    fn is_configurable(&self) -> bool {
+        self.get_path().join("configure").exists()
+    }
 
-    fn deconfigure(&self) {}
+    fn configure(&self) {
+        if !self.is_configurable() {
+            println!("CPU {} is not configurable", self.0);
+            return;
+        }
+
+        let cfg_path = self.get_path().join("configure");
+
+        let configured = fs::read_to_string(&cfg_path).unwrap();
+        if configured.trim() == "1" {
+            println!("CPU {} is already configured", self.0);
+            return;
+        };
+
+        let result = File::create(cfg_path).and_then(|mut f| f.write_all(b"1"));
+        match result {
+            Ok(_) => println!("CPU {} configured", self.0),
+            Err(e) => println!("CPU {} configure failed: {}", self.0, e.kind()),
+        };
+    }
+
+    fn deconfigure(&self) {
+        if !self.is_configurable() {
+            println!("CPU {} is not configurable", self.0);
+            return;
+        }
+
+        let cfg_path = self.get_path().join("configure");
+
+        let configured = fs::read_to_string(&cfg_path).unwrap();
+        if configured.trim() == "0" {
+            println!("CPU {} is already deconfigured", self.0);
+            return;
+        };
+
+        if self.is_online() {
+            println!("CPU {} deconfigure failed (CPU is enabled)", self.0);
+            return;
+        }
+
+        let result = File::create(cfg_path).and_then(|mut f| f.write_all(b"0"));
+        match result {
+            Ok(_) => println!("CPU {} deconfigured", self.0),
+            Err(e) => println!("CPU {} deconfigure failed: {}", self.0, e.kind()),
+        };
+    }
 }
 
 fn get_online_cpus() -> Vec<Cpu> {
