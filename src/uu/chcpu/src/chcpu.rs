@@ -173,6 +173,24 @@ fn get_online_cpus() -> Vec<Cpu> {
     parse_cpu_list(&cpu_list).iter().map(|n| Cpu(*n)).collect()
 }
 
+fn trigger_rescan() {
+    let path = PathBuf::from("/sys/devices/system/cpu/rescan");
+
+    if !path.exists() {
+        // TODO: This should exit gracefully with a ExitCode::FAILURE instead of quietly returning
+        println!("This system does not support rescanning of CPUs");
+        return;
+    }
+
+    let result = File::create(path).and_then(|mut f| f.write_all(b"1"));
+    match result {
+        Ok(_) => println!("Triggered rescan of CPUs"),
+
+        // TODO: This needs to exit with ExitCode::FAILURE
+        Err(e) => println!("Failed to trigger rescan of CPUs: {}", e.kind()),
+    };
+}
+
 fn enable_cpus(cpu_list: &str) {
     let to_enable = parse_cpu_list(cpu_list).into_iter().map(Cpu);
 
@@ -219,6 +237,10 @@ fn set_dispatch_mode(mode: &str) {
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
 
+    if matches.get_flag(options::RESCAN) {
+        trigger_rescan();
+    }
+
     if let Some(cpu_list) = matches.get_one::<String>(options::ENABLE) {
         enable_cpus(cpu_list);
     }
@@ -248,6 +270,7 @@ mod options {
     pub const CONFIGURE: &str = "configure";
     pub const DECONFIGURE: &str = "deconfigure";
     pub const DISPATCH: &str = "dispatch";
+    pub const RESCAN: &str = "rescan";
 }
 
 const ABOUT: &str = help_about!("chcpu.md");
@@ -304,6 +327,11 @@ pub fn uu_app() -> Command {
                     options::DISPATCH,
                 ])
                 .multiple(false) // These 5 are mutually exclusive
-                .required(true),
+        )
+        .arg(
+            Arg::new(options::RESCAN)
+                .short('r')
+                .long("rescan")
+                .action(ArgAction::SetTrue),
         )
 }
