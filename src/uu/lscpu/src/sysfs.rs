@@ -1,3 +1,8 @@
+// This file is part of the uutils util-linux package.
+//
+// For the full copyright and license information, please view the LICENSE
+// file that was distributed with this source code.
+
 use std::{collections::HashSet, fs, path::PathBuf};
 
 pub struct CpuVulnerability {
@@ -92,7 +97,7 @@ impl CacheSize {
         const EXPONENTS: [(char, u32); 4] = [('K', 1), ('M', 2), ('G', 3), ('T', 4)];
 
         // If we only have numbers, treat it as a raw amount of bytes and parse as-is
-        if s.chars().all(|c| c.is_numeric()) {
+        if s.chars().all(char::is_numeric) {
             return Self(s.parse::<u64>().expect("Could not parse cache size"));
         };
 
