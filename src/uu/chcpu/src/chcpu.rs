@@ -37,6 +37,21 @@ fn parse_cpu_list(list: &str) -> Vec<usize> {
     out
 }
 
+#[test]
+fn test_parse_cpu_list() {
+    assert_eq!(parse_cpu_list(""), Vec::<usize>::new());
+    assert_eq!(parse_cpu_list("1-3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(parse_cpu_list("1,2,3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(
+        parse_cpu_list("1,3-6,8"),
+        Vec::<usize>::from([1, 3, 4, 5, 6, 8])
+    );
+    assert_eq!(
+        parse_cpu_list("1-2,3-5,7"),
+        Vec::<usize>::from([1, 2, 3, 4, 5, 7])
+    );
+}
+
 #[derive(Debug)]
 struct Cpu(usize);
 
