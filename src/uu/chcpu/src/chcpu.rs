@@ -45,6 +45,14 @@ impl Cpu {
         PathBuf::from(format!("/sys/devices/system/cpu/cpu{}", self.0))
     }
 
+    fn ensure_exists(&self) -> bool {
+        if !self.get_path().exists() {
+            println!("CPU {} does not exist", self.0);
+            return false;
+        };
+        true
+    }
+
     // CPUs which are not hot-pluggable will not have the `/online` file in their directory
     fn is_hotpluggable(&self) -> bool {
         let path = self.get_path().join("online");
@@ -108,6 +116,10 @@ impl Cpu {
             Err(e) => println!("CPU {} disable failed: {:#}", self.0, e.kind()),
         }
     }
+
+    fn configure(&self) {}
+
+    fn deconfigure(&self) {}
 }
 
 fn get_online_cpus() -> Vec<Cpu> {
@@ -119,7 +131,9 @@ fn enable_cpus(cpu_list: &str) {
     let to_enable = parse_cpu_list(cpu_list).into_iter().map(Cpu);
 
     for cpu in to_enable {
-        cpu.enable();
+        if cpu.ensure_exists() {
+            cpu.enable();
+        };
     }
 }
 
@@ -127,16 +141,28 @@ fn disable_cpus(cpu_list: &str) {
     let to_disable = parse_cpu_list(cpu_list).into_iter().map(Cpu);
 
     for cpu in to_disable {
-        cpu.disable();
+        if cpu.ensure_exists() {
+            cpu.disable();
+        }
     }
 }
 
 fn configure_cpus(cpu_list: &str) {
-    todo!("Configuring CPUs: {}", cpu_list);
+    let to_configure = parse_cpu_list(cpu_list).into_iter().map(Cpu);
+    for cpu in to_configure {
+        if cpu.ensure_exists() {
+            cpu.configure();
+        }
+    }
 }
 
 fn deconfigure_cpus(cpu_list: &str) {
-    todo!("Deconfiguring CPUs: {}", cpu_list);
+    let to_deconfigure = parse_cpu_list(cpu_list).into_iter().map(Cpu);
+    for cpu in to_deconfigure {
+        if cpu.ensure_exists() {
+            cpu.deconfigure();
+        }
+    }
 }
 
 fn set_dispatch_mode(mode: &str) {
