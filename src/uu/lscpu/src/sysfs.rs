@@ -184,10 +184,9 @@ fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
 }
 
 pub fn read_freq_boost_state() -> Option<bool> {
-    match fs::read_to_string("/sys/devices/system/cpu/cpufreq/boost") {
-        Ok(content) => Some(content.trim() == "1"),
-        Err(_) => None,
-    }
+    fs::read_to_string("/sys/devices/system/cpu/cpufreq/boost")
+        .map(|content| content.trim() == "1")
+        .ok()
 }
 
 pub fn read_cpu_vulnerabilities() -> Vec<CpuVulnerability> {
