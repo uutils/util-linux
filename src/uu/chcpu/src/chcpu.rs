@@ -230,7 +230,34 @@ fn deconfigure_cpus(cpu_list: &str) {
 }
 
 fn set_dispatch_mode(mode: &str) {
-    todo!("Setting dispatch mode to: {}", mode);
+    let mode_num: u8 = match mode {
+        "horizontal" => 0,
+        "vertical" => 1,
+        _ => {
+            // TODO: Maybe `clap` could validate this argument automatically for us?
+            println!(
+                "Unsupported dispatching mode: '{}'. Must be either 'horizontal' or 'vertical'",
+                mode
+            );
+            return;
+        }
+    };
+
+    let path = PathBuf::from("/sys/devices/system/cpu/dispatching");
+
+    if !path.exists() {
+        // TODO: This should exit gracefully with a ExitCode::FAILURE instead of quietly returning
+        println!("This system does not support setting the dispatching mode of CPUs");
+        return;
+    }
+
+    let result = File::create(path).and_then(|mut f| f.write_all(&[mode_num]));
+    match result {
+        Ok(_) => println!("Successfully set {} dispatching mode", mode),
+
+        // TODO: This needs to exit with ExitCode::FAILURE
+        Err(e) => println!("Failed to set {} dispatching mode: {}", mode, e.kind()),
+    };
 }
 
 #[uucore::main]
@@ -326,7 +353,7 @@ pub fn uu_app() -> Command {
                     options::DECONFIGURE,
                     options::DISPATCH,
                 ])
-                .multiple(false) // These 5 are mutually exclusive
+                .multiple(false), // These 5 are mutually exclusive
         )
         .arg(
             Arg::new(options::RESCAN)
