@@ -32,11 +32,15 @@ feat_common_core = [
   "fsfreeze",
   "last",
   "lscpu",
+  "lslocks",
   "lsmem",
   "mountpoint",
   "rev",
   "setsid",
 ]
+
+[workspace]
+members = ["src/uu/lslocks"]
 
 [workspace.dependencies]
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
@@ -76,6 +80,7 @@ dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
+lslocks = { optional = true, version = "0.0.1", package = "uu_lslocks", path = "src/uu/lslocks" }
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }

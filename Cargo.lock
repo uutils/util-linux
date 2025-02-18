@@ -984,6 +984,7 @@ dependencies = [
  "uu_fsfreeze",
  "uu_last",
  "uu_lscpu",
+ "uu_lslocks",
  "uu_lsmem",
  "uu_mountpoint",
  "uu_rev",
@@ -1053,6 +1054,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_lslocks"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
  "uucore",
 ]
 
