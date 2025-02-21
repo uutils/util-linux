@@ -39,9 +39,6 @@ feat_common_core = [
   "setsid",
 ]
 
-[workspace]
-members = ["src/uu/lslocks"]
-
 [workspace.dependencies]
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
 clap_complete = "4.4"

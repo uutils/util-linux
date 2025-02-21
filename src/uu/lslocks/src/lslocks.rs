@@ -33,7 +33,7 @@ impl Lock {
             Column::Type => self.lock_type.to_string(),
             Column::Size => todo!(),
             Column::Inode => self.inode.to_string(),
-            Column::MajMin => self.major_minor.clone(),
+            Column::MajorMinor => self.major_minor.clone(),
             Column::Mode => self.mode.to_string(),
             Column::Mandatory => {
                 if self.mandatory {
@@ -94,10 +94,10 @@ impl FromStr for Lock {
         };
 
         // This field has a format of MAJOR:MINOR:INODE
-        let maj_min_inode: Vec<_> = parts.next().unwrap().split(":").collect();
-        assert_eq!(maj_min_inode.len(), 3);
-        let major_minor = [maj_min_inode[0], maj_min_inode[1]].join(":");
-        let inode = maj_min_inode[2].parse::<usize>().unwrap();
+        let major_minor_inode: Vec<_> = parts.next().unwrap().split(":").collect();
+        assert_eq!(major_minor_inode.len(), 3);
+        let major_minor = [major_minor_inode[0], major_minor_inode[1]].join(":");
+        let inode = major_minor_inode[2].parse::<usize>().unwrap();
 
         let start_offset = parts.next().unwrap().parse::<usize>().unwrap();
         let end_offset: Option<usize> = parts.next().and_then(|offset_str| match offset_str {
@@ -184,7 +184,7 @@ enum Column {
     Type,
     Size,
     Inode,
-    MajMin,
+    MajorMinor,
     Mode,
     Mandatory,
     Start,
@@ -202,7 +202,7 @@ impl Column {
             Self::Type => "TYPE",
             Self::Size => "SIZE",
             Self::Inode => "INODE",
-            Self::MajMin => "MAJ:MIN",
+            Self::MajorMinor => "MAJ:MIN",
             Self::Mode => "MODE",
             Self::Mandatory => "M",
             Self::Start => "START",
