@@ -11,6 +11,7 @@ use sysfs::CacheSize;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod options {
+    pub const BYTES: &str = "bytes";
     pub const HEX: &str = "hex";
     pub const JSON: &str = "json";
 }
@@ -64,6 +65,7 @@ impl CpuInfos {
 }
 
 struct OutputOptions {
+    bytes: bool,
     json: bool,
     _hex: bool,
 }
@@ -73,6 +75,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
 
     let output_opts = OutputOptions {
+        bytes: matches.get_flag(options::BYTES),
         _hex: matches.get_flag(options::HEX),
         json: matches.get_flag(options::JSON),
     };
@@ -151,7 +154,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         cpu_infos.push(vendor_info);
     }
 
-    if let Some(cache_info) = calculate_cache_totals(cpu_topology.cpus) {
+    if let Some(cache_info) = calculate_cache_totals(cpu_topology.cpus, &output_opts) {
         cpu_infos.push(cache_info);
     }
 
@@ -169,7 +172,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     Ok(())
 }
 
-fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>) -> Option<CpuInfo> {
+fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>, out_opts: &OutputOptions) -> Option<CpuInfo> {
     let mut by_levels: HashMap<String, Vec<&sysfs::CpuCache>> = HashMap::new();
     let all_caches: Vec<_> = cpus.iter().flat_map(|cpu| &cpu.caches).collect();
 
@@ -205,11 +208,16 @@ fn calculate_cache_totals(cpus: Vec<sysfs::Cpu>) -> Option<CpuInfo> {
             .iter()
             .fold(0_u64, |acc, c| acc + c.size.size_bytes());
 
+        let size = CacheSize::new(size_total);
         cache_info.add_child(CpuInfo::new(
             level,
             &format!(
                 "{} ({} instances)",
-                CacheSize::new(size_total).human_readable(),
+                if out_opts.bytes {
+                    size.raw()
+                } else {
+                    size.human_readable()
+                },
                 count
             ),
         ));
@@ -330,5 +338,16 @@ pub fn uu_app() -> Command {
                     subsections are missing. See also --hierarchic.",
                 )
                 .action(ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new(options::BYTES)
+                .short('B')
+                .long("bytes")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Print the sizes in bytes rather than in a human-readable format. \
+                    The default is to print sizes in human-readable format (for example '512 KiB'). \
+                    Setting this flag instead prints the decimal amount of bytes with no suffix.",
+                ),
         )
 }

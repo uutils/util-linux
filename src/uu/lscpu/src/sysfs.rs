@@ -118,6 +118,10 @@ impl CacheSize {
         self.0
     }
 
+    pub fn raw(&self) -> String {
+        format!("{}", self.0)
+    }
+
     pub fn human_readable(&self) -> String {
         let (unit, denominator) = match self.0 {
             x if x < 1024_u64.pow(1) => ("B", 1024_u64.pow(0)),
@@ -277,6 +281,10 @@ fn test_print_cache_size() {
     assert_eq!(CacheSize::new(1024).human_readable(), "1 KiB");
     assert_eq!(CacheSize::new(1024 * 1024).human_readable(), "1 MiB");
     assert_eq!(CacheSize::new(1024 * 1024 * 1024).human_readable(), "1 GiB");
+
+    assert_eq!(CacheSize::new(1023).raw(), "1023");
+    assert_eq!(CacheSize::new(1024 * 1024).raw(), "1048576");
+    assert_eq!(CacheSize::new(1024 * 1024 * 1024).raw(), "1073741824");
 
     assert_eq!(CacheSize::new(3 * 1024).human_readable(), "3 KiB");
     assert_eq!(
