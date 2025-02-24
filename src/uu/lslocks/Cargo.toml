@@ -1,0 +1,17 @@
+[package]
+name = "uu_lslocks"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/lslocks.rs"
+
+[[bin]]
+name = "lslocks"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

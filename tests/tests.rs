@@ -13,6 +13,10 @@ mod test_lscpu;
 #[path = "by-util/test_lsmem.rs"]
 mod test_lsmem;
 
+#[cfg(feature = "lslocks")]
+#[path = "by-util/test_lslocks.rs"]
+mod test_lslocks;
+
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
