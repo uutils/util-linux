@@ -27,6 +27,7 @@ uudoc = []
 
 feat_common_core = [
   "blockdev",
+  "chcpu",
   "ctrlaltdel",
   "dmesg",
   "fsfreeze",
@@ -62,6 +63,7 @@ tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 uucore = "0.0.30"
 xattr = "1.3.1"
+rangemap = "1.5.1"
 
 [dependencies]
 clap = { workspace = true }
@@ -76,6 +78,7 @@ uucore = { workspace = true }
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
+chcpu = { optional = true, version = "0.0.1", package = "uu_chcpu", path = "src/uu/chcpu" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
