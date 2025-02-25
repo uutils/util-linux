@@ -4,15 +4,16 @@
 // file that was distributed with this source code.
 
 mod errors;
+mod sysfs;
 
+use core::str;
 use std::str::FromStr;
 
 use clap::builder::{EnumValueParser, PossibleValue};
 use clap::{Arg, ArgAction, ArgGroup, Command, ValueEnum, crate_version};
-use rangemap::RangeInclusiveSet;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
-use crate::errors::ChCpuError;
+use crate::sysfs::{CpuList, DispatchMode};
 
 mod options {
     pub static ENABLE: &str = "enable";
@@ -28,10 +29,65 @@ mod options {
 const ABOUT: &str = help_about!("chcpu.md");
 const USAGE: &str = help_usage!("chcpu.md");
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum DispatchMode {
-    Horizontal,
-    Vertical,
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let args = uu_app().try_get_matches_from_mut(args)?;
+
+    let sysfs_cpu = sysfs::SysFSCpu::open()?;
+
+    if args.contains_id(options::ENABLE) {
+        let cpu_list = args
+            .get_one::<CpuList>(options::ENABLE)
+            .expect("cpu-list is required");
+
+        let mut enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
+
+        cpu_list.run(&mut move |cpu_index| {
+            sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, true)
+        })?;
+    } else if args.contains_id(options::DISABLE) {
+        let cpu_list = args
+            .get_one::<CpuList>(options::DISABLE)
+            .expect("cpu-list is required");
+
+        let mut enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
+
+        cpu_list.run(&mut move |cpu_index| {
+            sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, false)
+        })?;
+    } else if args.contains_id(options::CONFIGURE) {
+        let cpu_list = args
+            .get_one::<CpuList>(options::CONFIGURE)
+            .expect("cpu-list is required");
+
+        let enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
+
+        cpu_list.run(&mut move |cpu_index| {
+            sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, true)
+        })?;
+    } else if args.contains_id(options::DECONFIGURE) {
+        let cpu_list = args
+            .get_one::<CpuList>(options::DECONFIGURE)
+            .expect("cpu-list is required");
+
+        let enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
+
+        cpu_list.run(&mut move |cpu_index| {
+            sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, false)
+        })?;
+    } else if args.contains_id(options::DISPATCH) {
+        let dispatch_mode = args
+            .get_one::<DispatchMode>(options::DISPATCH)
+            .expect("mode is required");
+
+        sysfs_cpu.set_dispatch_mode(*dispatch_mode)?;
+    } else if args.get_flag(options::RESCAN) {
+        sysfs_cpu.rescan_cpus()?;
+    } else {
+        unimplemented!();
+    }
+
+    Ok(())
 }
 
 impl ValueEnum for DispatchMode {
@@ -48,121 +104,6 @@ impl ValueEnum for DispatchMode {
                 PossibleValue::new("vertical").help("workload concentrated on few CPUs")
             }
         })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct CpuList(RangeInclusiveSet<usize>);
-
-impl FromStr for CpuList {
-    type Err = ChCpuError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let set: RangeInclusiveSet<usize> = s
-            .split(',')
-            .map(|element| {
-                // Parsing: ...,element,...
-                let mut iter = element.splitn(2, '-').map(str::trim);
-                let first = iter.next();
-                (first, iter.next())
-            })
-            .map(|(first, last)| {
-                let first: usize = first
-                    .ok_or(ChCpuError::EmptyCpuList)?
-                    .parse()
-                    .map_err(|_r| ChCpuError::CpuSpecNotPositiveInteger)?;
-
-                if let Some(last) = last {
-                    // Parsing: ...,first-last,...
-                    let last =
-                        str::parse(last).map_err(|_r| ChCpuError::CpuSpecNotPositiveInteger)?;
-
-                    if first <= last {
-                        Ok(first..=last)
-                    } else {
-                        Err(ChCpuError::CpuSpecFirstAfterLast)
-                    }
-                } else {
-                    Ok(first..=first) // Parsing: ...,first,...
-                }
-            })
-            .collect::<Result<_, _>>()?;
-
-        if set.is_empty() {
-            Err(ChCpuError::EmptyCpuList)
-        } else {
-            Ok(Self(set))
-        }
-    }
-}
-
-fn enable_cpu_list(_cpu_list: &CpuList) -> UResult<()> {
-    dbg!(_cpu_list);
-    todo!()
-}
-
-fn disable_cpu_list(_cpu_list: &CpuList) -> UResult<()> {
-    dbg!(_cpu_list);
-    todo!()
-}
-
-fn configure_cpu_list(_cpu_list: &CpuList) -> UResult<()> {
-    dbg!(_cpu_list);
-    todo!()
-}
-
-fn deconfigure_cpu_list(_cpu_list: &CpuList) -> UResult<()> {
-    dbg!(_cpu_list);
-    todo!()
-}
-
-fn set_dispatch_mode(_mode: DispatchMode) -> UResult<()> {
-    dbg!(_mode);
-    todo!()
-}
-
-fn rescan_cpus() -> UResult<()> {
-    todo!()
-}
-
-#[uucore::main]
-pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let args = uu_app().try_get_matches_from_mut(args)?;
-
-    if args.contains_id(options::ENABLE) {
-        let cpu_list = args
-            .get_one::<CpuList>(options::ENABLE)
-            .expect("cpu-list is required");
-
-        enable_cpu_list(cpu_list)
-    } else if args.contains_id(options::DISABLE) {
-        let cpu_list = args
-            .get_one::<CpuList>(options::DISABLE)
-            .expect("cpu-list is required");
-
-        disable_cpu_list(cpu_list)
-    } else if args.contains_id(options::CONFIGURE) {
-        let cpu_list = args
-            .get_one::<CpuList>(options::CONFIGURE)
-            .expect("cpu-list is required");
-
-        configure_cpu_list(cpu_list)
-    } else if args.contains_id(options::DECONFIGURE) {
-        let cpu_list = args
-            .get_one::<CpuList>(options::DECONFIGURE)
-            .expect("cpu-list is required");
-
-        deconfigure_cpu_list(cpu_list)
-    } else if args.contains_id(options::DISPATCH) {
-        let dispatch_mode = args
-            .get_one::<DispatchMode>(options::DISPATCH)
-            .expect("mode is required");
-
-        set_dispatch_mode(*dispatch_mode)
-    } else if args.get_flag(options::RESCAN) {
-        rescan_cpus()
-    } else {
-        unimplemented!();
     }
 }
 

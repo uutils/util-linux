@@ -847,6 +847,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "syscall-numbers"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e88dcf8be2fd556b3cebd02689c424dced834317c7e38328eadfcfcab00b785"
+
+[[package]]
 name = "sysinfo"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1016,7 +1022,9 @@ name = "uu_chcpu"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "libc",
  "rangemap",
+ "syscall-numbers",
  "uucore",
 ]
 
