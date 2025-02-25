@@ -889,6 +889,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "syscall-numbers"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e88dcf8be2fd556b3cebd02689c424dced834317c7e38328eadfcfcab00b785"
+
+[[package]]
 name = "sysinfo"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -935,6 +941,26 @@ dependencies = [
  "terminal_size",
  "unicode-linebreak",
  "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "thiserror"
+version = "2.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "2.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1062,7 +1088,10 @@ name = "uu_chcpu"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "libc",
  "rangemap",
+ "syscall-numbers",
+ "thiserror",
  "uucore",
 ]
 

@@ -1,5 +1,5 @@
 [package]
-name = "uu_chcpu"
+name    = "uu_chcpu"
 version = "0.0.1"
 edition = "2024"
 
@@ -11,6 +11,9 @@ name = "chcpu"
 path = "src/main.rs"
 
 [dependencies]
-uucore = { workspace = true }
-clap = { workspace = true }
-rangemap = { workspace = true }
+clap            = { workspace = true }
+libc            = { workspace = true }
+rangemap        = { workspace = true }
+syscall-numbers = { workspace = true }
+thiserror       = { workspace = true }
+uucore          = { workspace = true }
