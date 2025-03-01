@@ -976,6 +976,7 @@ dependencies = [
  "uu_lscpu",
  "uu_lslocks",
  "uu_lsmem",
+ "uu_mesg",
  "uu_mountpoint",
  "uu_rev",
  "uu_setsid",
@@ -1064,6 +1065,15 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "uucore",
+]
+
+[[package]]
+name = "uu_mesg"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "nix",
  "uucore",
 ]
 
