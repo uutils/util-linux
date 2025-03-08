@@ -520,8 +520,8 @@ impl Last {
             write!(buf, " {host_to_print:<16}").unwrap_or_default();
         }
 
-        let end_time_delta = format!("{end_time:<6} {delta}");
         if self.time_format != "notime" {
+            let end_time_delta = format!("{end_time:<6} {delta}");
             write!(buf, " {time:<12}").unwrap_or_default();
             write!(buf, " {end_time_delta:<18}").unwrap_or_default();
         }
