@@ -520,16 +520,15 @@ impl Last {
             write!(buf, " {host_to_print:<16}").unwrap_or_default();
         }
 
-        let time_size = 3 + 2 + 2 + 1 + 2;
-        if self.host_last && !self.no_host && self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap_or_default();
-            write!(buf, " {end_time:<8}").unwrap_or_default();
-            write!(buf, " {host_to_print}").unwrap_or_default();
-        } else if self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap_or_default();
-            write!(buf, " {end_time:<8}").unwrap_or_default();
+        let end_time_delta = format!("{end_time:<6} {delta}");
+        if self.time_format != "notime" {
+            write!(buf, " {time:<12}").unwrap_or_default();
+            write!(buf, " {end_time_delta:<18}").unwrap_or_default();
         }
-        write!(buf, " {delta:^6}").unwrap_or_default();
+
+        if self.host_last && !self.no_host {
+            write!(buf, " {host_to_print:<16}").unwrap_or_default();
+        }
         println!("{}", buf.trim_end());
     }
 }
