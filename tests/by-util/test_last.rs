@@ -108,3 +108,30 @@ fn test_short_invalid_utmp_file() {
         .succeeds()
         .stdout_matches(&regex);
 }
+
+#[test]
+#[cfg(unix)]
+fn test_display_hostname_last_column() {
+    let output_expected = vec![
+        "ferris   tty2         Sat Mar  8 16:29   still logged in  :0",
+        "ferris   tty2         Sat Mar  8 16:24 - 16:29 (00:04)    :0",
+        "reboot   system boot  Sat Mar  8 16:24   still running    6.8.0-55-generic",
+    ];
+
+    let hostlast_arg = "--hostlast";
+    let result = new_ucmd!()
+        .arg("--file")
+        .arg("last.input.bin")
+        .arg(hostlast_arg)
+        .arg("-n")
+        .arg("3")
+        .succeeds();
+
+    let ouput =
+        String::from_utf8(result.stdout().to_vec()).unwrap_or("Failed to convert output to string".to_string());
+    let mut output_result: Vec<&str> = ouput.split('\n').collect();
+    // Remove the last 3 lines to compare easier with the expected output (so without the information about the begin of file)
+    output_result.truncate(output_result.len() - 3);
+
+    assert_eq!(output_expected, output_result);
+}
