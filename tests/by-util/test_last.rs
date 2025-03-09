@@ -121,14 +121,14 @@ fn test_display_hostname_last_column() {
     let hostlast_arg = "--hostlast";
     let result = new_ucmd!()
         .arg("--file")
-        .arg("last.input.bin")
+        .arg("last.input.1")
         .arg(hostlast_arg)
         .arg("-n")
         .arg("3")
         .succeeds();
 
-    let ouput =
-        String::from_utf8(result.stdout().to_vec()).unwrap_or("Failed to convert output to string".to_string());
+    let ouput = String::from_utf8(result.stdout().to_vec())
+        .unwrap_or("Failed to convert output to string".to_string());
     let mut output_result: Vec<&str> = ouput.split('\n').collect();
     // Remove the last 3 lines to compare easier with the expected output (so without the information about the begin of file)
     output_result.truncate(output_result.len() - 3);
