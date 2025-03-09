@@ -10,22 +10,30 @@ use std::{
 };
 
 use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
-use uucore::{error::UResult, format_usage, help_about, help_usage};
+use uucore::{
+    error::{UResult, USimpleError},
+    format_usage, help_about, help_usage,
+};
 
 // Takes in a human-readable list of CPUs, and returns a list of indices parsed from that list
 // These can come in the form of a plain range like `X-Y`, or a comma-separated ranges and indices ie. `1,3-4,7-8,10`
 // Kernel docs with examples: https://www.kernel.org/doc/html/latest/admin-guide/cputopology.html
-fn parse_cpu_list(list: &str) -> Vec<usize> {
+// TODO: Move function to uucore
+fn parse_cpu_list(list: &str) -> UResult<Vec<usize>> {
     let mut out: Vec<usize> = vec![];
 
     if list.is_empty() {
-        return out;
+        return Ok(out);
     }
 
     for part in list.trim().split(",") {
         if part.contains("-") {
             let bounds: Vec<_> = part.split("-").flat_map(|x| x.parse::<usize>()).collect();
-            assert_eq!(bounds.len(), 2);
+
+            if bounds.len() != 2 {
+                return Err(USimpleError::new(1, format!("Invalid CPU range: {}", part)));
+            }
+
             for idx in bounds[0]..bounds[1] + 1 {
                 out.push(idx)
             }
@@ -34,7 +42,7 @@ fn parse_cpu_list(list: &str) -> Vec<usize> {
             out.push(idx);
         }
     }
-    out
+    Ok(out)
 }
 
 #[derive(Debug)]
@@ -79,167 +87,228 @@ impl Cpu {
             .unwrap_or(true)
     }
 
-    fn enable(&self) {
+    fn enable(&self) -> UResult<()> {
         if !self.is_hotpluggable() {
-            println!("CPU {} is not hot-pluggable", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is not hot-pluggable", self.0),
+            ));
         }
 
         if self.is_online() {
-            println!("CPU {} is already enabled", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is already enabled", self.0),
+            ));
         }
 
         match self.write_to_cpu_file("online", b"1") {
             Ok(_) => println!("CPU {} enabled", self.0),
-            Err(e) => println!("CPU {} enable failed: {}", self.0, e.kind()),
-        }
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("CPU {} enable failed: {}", self.0, e.kind()),
+                ))
+            }
+        };
+        Ok(())
     }
 
-    fn disable(&self) {
+    fn disable(&self) -> UResult<()> {
         if !self.is_hotpluggable() {
-            println!("CPU {} is not hot-pluggable", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is not hot-pluggable", self.0),
+            ));
         }
 
         if !self.is_online() {
-            println!("CPU {} is already disabled", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is already disabled", self.0),
+            ));
         }
 
-        if get_online_cpus().len() == 1 {
-            println!("CPU {} disable failed (last enabled CPU)", self.0);
-            return;
+        if get_online_cpus()?.len() == 1 {
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} disable failed (last enabled CPU)", self.0),
+            ));
         }
 
         match self.write_to_cpu_file("online", b"0") {
             Ok(_) => println!("CPU {} disabled", self.0),
-            Err(e) => println!("CPU {} disable failed: {}", self.0, e.kind()),
-        }
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("CPU {} disable failed: {}", self.0, e.kind()),
+                ))
+            }
+        };
+
+        Ok(())
     }
 
     fn is_configurable(&self) -> bool {
         self.get_path().join("configure").exists()
     }
 
-    fn configure(&self) {
+    fn configure(&self) -> UResult<()> {
         if !self.is_configurable() {
-            println!("CPU {} is not configurable", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is not configurable", self.0),
+            ));
         }
 
         let configured = self.read_cpu_file("configure");
         if configured.trim() == "1" {
-            println!("CPU {} is already configured", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is already configured", self.0),
+            ));
         };
 
         match self.write_to_cpu_file("configure", b"1") {
             Ok(_) => println!("CPU {} configured", self.0),
-            Err(e) => println!("CPU {} configure failed: {}", self.0, e.kind()),
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("CPU {} configure failed: {}", self.0, e.kind()),
+                ))
+            }
         };
+        Ok(())
     }
 
-    fn deconfigure(&self) {
+    fn deconfigure(&self) -> UResult<()> {
         if !self.is_configurable() {
-            println!("CPU {} is not configurable", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is not configurable", self.0),
+            ));
         }
 
         let configured = self.read_cpu_file("configure");
         if configured.trim() == "0" {
-            println!("CPU {} is already deconfigured", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} is already deconfigured", self.0),
+            ));
         };
 
         if self.is_online() {
-            println!("CPU {} deconfigure failed (CPU is enabled)", self.0);
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} deconfigure failed (CPU is enabled)", self.0),
+            ));
         }
 
         match self.write_to_cpu_file("configure", b"0") {
             Ok(_) => println!("CPU {} deconfigured", self.0),
-            Err(e) => println!("CPU {} deconfigure failed: {}", self.0, e.kind()),
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("CPU {} deconfigure failed: {}", self.0, e.kind()),
+                ))
+            }
         };
+
+        Ok(())
     }
 }
 
-fn get_online_cpus() -> Vec<Cpu> {
-    let cpu_list = fs::read_to_string("/sys/devices/system/cpu/online").unwrap();
-    parse_cpu_list(&cpu_list).iter().map(|n| Cpu(*n)).collect()
+fn get_online_cpus() -> UResult<Vec<Cpu>> {
+    let cpu_list = fs::read_to_string("/sys/devices/system/cpu/online")?;
+    let cpus = parse_cpu_list(&cpu_list)?.iter().map(|n| Cpu(*n)).collect();
+    Ok(cpus)
 }
 
-fn trigger_rescan() {
+fn trigger_rescan() -> UResult<()> {
     let path = PathBuf::from("/sys/devices/system/cpu/rescan");
 
     if !path.exists() {
-        // TODO: This should exit gracefully with a ExitCode::FAILURE instead of quietly returning
-        println!("This system does not support rescanning of CPUs");
-        return;
+        return Err(USimpleError::new(
+            1,
+            "This system does not support rescanning of CPUs",
+        ));
     }
 
     let result = File::create(path).and_then(|mut f| f.write_all(b"1"));
     match result {
         Ok(_) => println!("Triggered rescan of CPUs"),
-
-        // TODO: This needs to exit with ExitCode::FAILURE
-        Err(e) => println!("Failed to trigger rescan of CPUs: {}", e.kind()),
+        Err(e) => {
+            return Err(USimpleError::new(
+                1,
+                format!("Failed to trigger rescan of CPUs: {}", e.kind()),
+            ))
+        }
     };
+
+    Ok(())
 }
 
-fn process_cpus(cpu_list: &str, action: impl Fn(&Cpu)) {
-    parse_cpu_list(cpu_list)
+fn process_cpus(cpu_list: &str, action: impl Fn(&Cpu) -> UResult<()>) -> UResult<()> {
+    parse_cpu_list(cpu_list)?
         .into_iter()
         .map(Cpu)
         .filter(Cpu::ensure_exists)
-        .for_each(|cpu| action(&cpu));
+        .try_for_each(|cpu| action(&cpu))?;
+    Ok(())
 }
 
-fn enable_cpus(cpu_list: &str) {
-    process_cpus(cpu_list, Cpu::enable);
+fn enable_cpus(cpu_list: &str) -> UResult<()> {
+    process_cpus(cpu_list, Cpu::enable)
 }
 
-fn disable_cpus(cpu_list: &str) {
-    process_cpus(cpu_list, Cpu::disable);
+fn disable_cpus(cpu_list: &str) -> UResult<()> {
+    process_cpus(cpu_list, Cpu::disable)
 }
 
-fn configure_cpus(cpu_list: &str) {
-    process_cpus(cpu_list, Cpu::configure);
+fn configure_cpus(cpu_list: &str) -> UResult<()> {
+    process_cpus(cpu_list, Cpu::configure)
 }
 
-fn deconfigure_cpus(cpu_list: &str) {
-    process_cpus(cpu_list, Cpu::deconfigure);
+fn deconfigure_cpus(cpu_list: &str) -> UResult<()> {
+    process_cpus(cpu_list, Cpu::deconfigure)
 }
 
-fn set_dispatch_mode(mode: &str) {
+fn set_dispatch_mode(mode: &str) -> UResult<()> {
     let mode_num: u8 = match mode {
         "horizontal" => 0,
         "vertical" => 1,
         _ => {
-            // TODO: Maybe `clap` could validate this argument automatically for us?
-            println!(
-                "Unsupported dispatching mode: '{}'. Must be either 'horizontal' or 'vertical'",
-                mode
-            );
-            return;
+            return Err(USimpleError::new(
+                1,
+                format!(
+                    "Unsupported dispatching mode: '{}'. Must be either 'horizontal' or 'vertical'",
+                    mode
+                ),
+            ))
         }
     };
 
     let path = PathBuf::from("/sys/devices/system/cpu/dispatching");
 
     if !path.exists() {
-        // TODO: This should exit gracefully with a ExitCode::FAILURE instead of quietly returning
-        println!("This system does not support setting the dispatching mode of CPUs");
-        return;
+        return Err(USimpleError::new(
+            1,
+            "This system does not support setting the dispatching mode of CPUs",
+        ));
     }
 
     let result = File::create(path).and_then(|mut f| f.write_all(&[mode_num]));
     match result {
         Ok(_) => println!("Successfully set {} dispatching mode", mode),
-
-        // TODO: This needs to exit with ExitCode::FAILURE
-        Err(e) => println!("Failed to set {} dispatching mode: {}", mode, e.kind()),
+        Err(e) => {
+            return Err(USimpleError::new(
+                1,
+                format!("Failed to set {} dispatching mode: {}", mode, e.kind()),
+            ))
+        }
     };
+
+    Ok(())
 }
 
 #[uucore::main]
@@ -247,27 +316,27 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
 
     if matches.get_flag(options::RESCAN) {
-        trigger_rescan();
+        trigger_rescan()?;
     }
 
     if let Some(cpu_list) = matches.get_one::<String>(options::ENABLE) {
-        enable_cpus(cpu_list);
+        enable_cpus(cpu_list)?;
     }
 
     if let Some(cpu_list) = matches.get_one::<String>(options::DISABLE) {
-        disable_cpus(cpu_list);
+        disable_cpus(cpu_list)?;
     }
 
     if let Some(cpu_list) = matches.get_one::<String>(options::CONFIGURE) {
-        configure_cpus(cpu_list);
+        configure_cpus(cpu_list)?;
     }
 
     if let Some(cpu_list) = matches.get_one::<String>(options::DECONFIGURE) {
-        deconfigure_cpus(cpu_list);
+        deconfigure_cpus(cpu_list)?;
     }
 
     if let Some(mode) = matches.get_one::<String>(options::DISPATCH) {
-        set_dispatch_mode(mode);
+        set_dispatch_mode(mode)?;
     }
 
     Ok(())
@@ -347,15 +416,21 @@ pub fn uu_app() -> Command {
 
 #[test]
 fn test_parse_cpu_list() {
-    assert_eq!(parse_cpu_list(""), Vec::<usize>::new());
-    assert_eq!(parse_cpu_list("1-3"), Vec::<usize>::from([1, 2, 3]));
-    assert_eq!(parse_cpu_list("1,2,3"), Vec::<usize>::from([1, 2, 3]));
+    assert_eq!(parse_cpu_list("").unwrap(), Vec::<usize>::new());
     assert_eq!(
-        parse_cpu_list("1,3-6,8"),
+        parse_cpu_list("1-3").unwrap(),
+        Vec::<usize>::from([1, 2, 3])
+    );
+    assert_eq!(
+        parse_cpu_list("1,2,3").unwrap(),
+        Vec::<usize>::from([1, 2, 3])
+    );
+    assert_eq!(
+        parse_cpu_list("1,3-6,8").unwrap(),
         Vec::<usize>::from([1, 3, 4, 5, 6, 8])
     );
     assert_eq!(
-        parse_cpu_list("1-2,3-5,7"),
+        parse_cpu_list("1-2,3-5,7").unwrap(),
         Vec::<usize>::from([1, 2, 3, 4, 5, 7])
     );
 }
