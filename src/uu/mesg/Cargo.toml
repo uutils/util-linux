@@ -1,0 +1,16 @@
+[package]
+name = "uu_mesg"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/mesg.rs"
+
+[[bin]]
+name = "mesg"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+nix = { workspace = true }
+uucore = { workspace = true }
