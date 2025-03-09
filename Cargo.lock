@@ -136,6 +136,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "chrono-tz"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c6ac4f2c0bf0f44e9161aec9675e1050aa4a530663c4a9e37e108fa948bca9f"
+dependencies = [
+ "chrono",
+ "chrono-tz-build",
+ "phf",
+]
+
+[[package]]
+name = "chrono-tz-build"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e94fea34d77a245229e7746bd2beb786cd2a896f306ff491fb8cecb3074b10a7"
+dependencies = [
+ "parse-zoneinfo",
+ "phf_codegen",
+]
+
+[[package]]
 name = "clap"
 version = "4.5.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -265,7 +286,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -358,12 +379,6 @@ dependencies = [
  "once_cell",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "lazy_static"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "libc"
@@ -468,6 +483,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a6229bad892b46b0dcfaaeb18ad0d2e56400f5aaea05b768bde96e73676cf75"
 dependencies = [
  "unicode-width 0.1.14",
+]
+
+[[package]]
+name = "parse-zoneinfo"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f2a05b18d44e2957b88f96ba460715e295bc1d7510468a2f3d3b44535d26c24"
+dependencies = [
+ "regex",
 ]
 
 [[package]]
@@ -704,7 +728,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -717,7 +741,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.9.2",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -835,7 +859,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix 1.0.0",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1070,18 +1094,19 @@ dependencies = [
 
 [[package]]
 name = "uucore"
-version = "0.0.29"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50e0dc1598d959a08f24cea4d9e992f7ca874bd4ac80746683272afd37603b5e"
+checksum = "71f4e82877d06de779c611a3d54720f56f1e68b228fb30a5b6c66ef07e68263d"
 dependencies = [
+ "chrono",
+ "chrono-tz",
  "clap",
  "dns-lookup",
  "glob",
- "lazy_static",
+ "iana-time-zone",
  "libc",
  "nix",
  "number_prefix",
- "once_cell",
  "os_display",
  "time",
  "uucore_procs",
@@ -1090,9 +1115,9 @@ dependencies = [
 
 [[package]]
 name = "uucore_procs"
-version = "0.0.29"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27d3de33ab2b56c0437cca084a2aeb1d46c56d138ab6341c009a90018a9a1c5f"
+checksum = "c72435859e812e602e225dea48d014abb6b1072220a8d44f2fe0565553b1f7e4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1101,9 +1126,9 @@ dependencies = [
 
 [[package]]
 name = "uuhelp_parser"
-version = "0.0.29"
+version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cf4c8b31abfb5dc79940d6ca8000a1a6aa42f38711cdeaacb95850c69924cbc"
+checksum = "0bb6d972f580f8223cb7052d8580aea2b7061e368cf476de32ea9457b19459ed"
 
 [[package]]
 name = "wasi"
