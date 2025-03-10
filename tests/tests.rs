@@ -17,6 +17,10 @@ mod test_lsmem;
 #[path = "by-util/test_lslocks.rs"]
 mod test_lslocks;
 
+#[cfg(feature = "mesg")]
+#[path = "by-util/test_mesg.rs"]
+mod test_mesg;
+
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
