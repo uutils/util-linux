@@ -971,6 +971,7 @@ dependencies = [
  "uu_blockdev",
  "uu_ctrlaltdel",
  "uu_dmesg",
+ "uu_findmnt",
  "uu_fsfreeze",
  "uu_last",
  "uu_lscpu",
@@ -1012,6 +1013,15 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "uucore",
+]
+
+[[package]]
+name = "uu_findmnt"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "tabled",
  "uucore",
 ]
 
