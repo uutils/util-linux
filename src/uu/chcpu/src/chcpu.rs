@@ -61,12 +61,14 @@ impl Cpu {
         fs::read_to_string(self.get_path().join(file)).unwrap()
     }
 
-    fn ensure_exists(&self) -> bool {
+    fn ensure_exists(&self) -> UResult<bool> {
         if !self.get_path().exists() {
-            println!("CPU {} does not exist", self.0);
-            return false;
+            return Err(USimpleError::new(
+                1,
+                format!("CPU {} does not exist", self.0),
+            ));
         };
-        true
+        Ok(true)
     }
 
     // CPUs which are not hot-pluggable will not have the `/online` file in their directory
@@ -252,8 +254,7 @@ fn process_cpus(cpu_list: &str, action: impl Fn(&Cpu) -> UResult<()>) -> UResult
     parse_cpu_list(cpu_list)?
         .into_iter()
         .map(Cpu)
-        .filter(Cpu::ensure_exists)
-        .try_for_each(|cpu| action(&cpu))?;
+        .try_for_each(|cpu| cpu.ensure_exists().and_then(|_| action(&cpu)))?;
     Ok(())
 }
 
