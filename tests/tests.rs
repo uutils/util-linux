@@ -52,3 +52,7 @@ mod test_dmesg;
 #[cfg(feature = "fsfreeze")]
 #[path = "by-util/test_fsfreeze.rs"]
 mod test_fsfreeze;
+
+#[cfg(feature = "chcpu")]
+#[path = "by-util/test_chcpu.rs"]
+mod test_chcpu;
