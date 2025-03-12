@@ -978,6 +978,7 @@ dependencies = [
  "uu_lsmem",
  "uu_mesg",
  "uu_mountpoint",
+ "uu_renice",
  "uu_rev",
  "uu_setsid",
  "uucore",
@@ -1082,6 +1083,15 @@ name = "uu_mountpoint"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_renice"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
  "uucore",
 ]
 

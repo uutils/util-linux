@@ -33,6 +33,10 @@ mod test_blockdev;
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
 
+#[cfg(feature = "renice")]
+#[path = "by-util/test_renice.rs"]
+mod test_renice;
+
 #[cfg(feature = "rev")]
 #[path = "by-util/test_rev.rs"]
 mod test_rev;

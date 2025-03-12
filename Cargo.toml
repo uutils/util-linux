@@ -36,6 +36,7 @@ feat_common_core = [
   "lsmem",
   "mesg",
   "mountpoint",
+  "renice",
   "rev",
   "setsid",
 ]
@@ -82,6 +83,7 @@ lslocks = { optional = true, version = "0.0.1", package = "uu_lslocks", path = "
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
+renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
 
