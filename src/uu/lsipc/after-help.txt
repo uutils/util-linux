@@ -1,0 +1,43 @@
+Generic columns:
+   KEY  Resource key
+    ID  Resource ID
+ OWNER  Owner's username or UID
+ PERMS  Permissions
+  CUID  Creator UID
+ CUSER  Creator user
+  CGID  Creator GID
+CGROUP  Creator group
+   UID  User ID
+  USER  User name
+   GID  Group ID
+ GROUP  Group name
+ CTIME  Time of the last change
+
+Shared-memory columns (--shmems):
+   SIZE  Segment size
+ NATTCH  Number of attached processes
+ STATUS  Status
+ ATTACH  Attach time
+ DETACH  Detach time
+COMMAND  Creator command line
+   CPID  PID of the creator
+   LPID  PID of last user
+
+Message-queue columns (--queues):
+USEDBYTES  Bytes used
+     MSGS  Number of messages
+     SEND  Time of last msg sent
+     RECV  Time of last msg received
+    LSPID  PID of the last msg sender
+    LRPID  PID of the last msg receiver
+
+Semaphore columns (--semaphores):
+NSEMS  Number of semaphores
+OTIME  Time of the last operation
+
+Summary columns (--global):
+   RESOURCE  Resource name
+DESCRIPTION  Resource description
+      LIMIT  System-wide limit
+       USED  Currently used
+       USE%  Currently use percentage
