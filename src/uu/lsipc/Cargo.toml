@@ -1,0 +1,18 @@
+[package]
+name    = "uu_lsipc"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+path = "src/lsipc.rs"
+
+[[bin]]
+name = "lsipc"
+path = "src/main.rs"
+
+[dependencies]
+uucore        = { workspace = true }
+clap          = { workspace = true }
+libc          = { workspace = true }
+errno         = { workspace = true }
+smartcols-sys = { workspace = true }
