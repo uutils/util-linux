@@ -1,0 +1,13 @@
+COMMAND <string> command\x20of\x20the\x20process\x20holding\x20the\x20lock
+PID <integer> PID\x20of\x20the\x20process\x20holding\x20the\x20lock
+TYPE <string> kind\x20of\x20lock
+SIZE <string|number> size\x20of\x20the\x20lock,\x20use\x20<number>\x20if\x20--bytes\x20is\x20given
+INODE <integer> inode\x20number
+MAJ:MIN <string> major:minor\x20device\x20number
+MODE <string> lock\x20access\x20mode
+M <boolean> mandatory\x20state\x20of\x20the\x20lock:\x200\x20(none),\x201\x20(set)
+START <integer> relative\x20byte\x20offset\x20of\x20the\x20lock
+END <integer> ending\x20offset\x20of\x20the\x20lock
+PATH <string> path\x20of\x20the\x20locked\x20file
+BLOCKER <integer> PID\x20of\x20the\x20process\x20blocking\x20the\x20lock
+HOLDERS <string> holders\x20of\x20the\x20lock
