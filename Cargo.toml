@@ -34,6 +34,7 @@ feat_common_core = [
   "lscpu",
   "lslocks",
   "lsmem",
+  "mcookie",
   "mesg",
   "mountpoint",
   "renice",
@@ -48,6 +49,7 @@ clap_mangen = "0.2"
 dns-lookup = "2.0.4"
 libc = "0.2.152"
 linux-raw-sys = { version = "0.9.0", features = ["ioctl"] }
+md-5 = "0.10.6"
 nix = { version = "0.29", default-features = false }
 phf = "0.11.2"
 phf_codegen = "0.11.2"
@@ -81,6 +83,7 @@ last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
 lslocks = { optional = true, version = "0.0.1", package = "uu_lslocks", path = "src/uu/lslocks" }
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
+mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "src/uu/mcookie" }
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
