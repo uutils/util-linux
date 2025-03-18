@@ -33,6 +33,10 @@ mod test_blockdev;
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
 
+#[cfg(feature = "renice")]
+#[path = "by-util/test_renice.rs"]
+mod test_renice;
+
 #[cfg(feature = "rev")]
 #[path = "by-util/test_rev.rs"]
 mod test_rev;
@@ -56,3 +60,7 @@ mod test_fsfreeze;
 #[cfg(feature = "chcpu")]
 #[path = "by-util/test_chcpu.rs"]
 mod test_chcpu;
+
+#[cfg(feature = "mcookie")]
+#[path = "by-util/test_mcookie.rs"]
+mod test_mcookie;
