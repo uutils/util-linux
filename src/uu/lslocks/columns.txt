@@ -1,0 +1,13 @@
+COMMAND <string>        command of the process holding the lock
+    PID <integer>       PID of the process holding the lock
+   TYPE <string>        kind of lock
+   SIZE <string|number> size of the lock, use <number> if --bytes is given
+  INODE <integer>       inode number
+MAJ:MIN <string>        major:minor device number
+   MODE <string>        lock access mode
+      M <boolean>       mandatory state of the lock: 0 (none), 1 (set)
+  START <integer>       relative byte offset of the lock
+    END <integer>       ending offset of the lock
+   PATH <string>        path of the locked file
+BLOCKER <integer>       PID of the process blocking the lock
+HOLDERS <string>        holders of the lock
