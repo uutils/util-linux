@@ -1,0 +1,21 @@
+[package]
+name = "uu_script"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+libc = { workspace = true }
+nix = { workspace = true, features = ["term"] }
+
+
+[lib]
+path = "src/script.rs"
+
+[[bin]]
+name = "script"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile.workspace = true

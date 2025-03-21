@@ -60,3 +60,7 @@ mod test_fsfreeze;
 #[cfg(feature = "mcookie")]
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;
+
+#[cfg(feature = "script")]
+#[path = "by-util/test_script.rs"]
+mod test_script;
