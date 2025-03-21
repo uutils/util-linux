@@ -5,7 +5,7 @@
 
 use std::io::Write;
 
-use tempfile::{NamedTempFile, TempDir};
+use tempfile::NamedTempFile;
 
 use crate::common::util::TestScenario;
 
