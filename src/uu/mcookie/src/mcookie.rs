@@ -108,7 +108,7 @@ pub fn uu_app() -> Command {
                 .long("max-size")
                 .value_name("num")
                 .action(ArgAction::Set)
-                .help("limit how much is read from seed files (supports units like KiB, MiB)"),
+                .help("limit how much is read from seed files (supports B suffix or binary units: KiB, MiB, GiB, TiB)"),
         )
         .arg(
             Arg::new(options::VERBOSE)
