@@ -60,3 +60,7 @@ mod test_fsfreeze;
 #[cfg(feature = "mcookie")]
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;
+
+#[cfg(feature = "getopt")]
+#[path = "by-util/test_getopt.rs"]
+mod test_getopt;

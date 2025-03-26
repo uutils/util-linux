@@ -404,6 +404,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1026,6 +1035,7 @@ dependencies = [
  "uu_ctrlaltdel",
  "uu_dmesg",
  "uu_fsfreeze",
+ "uu_getopt",
  "uu_last",
  "uu_lscpu",
  "uu_lslocks",
@@ -1080,6 +1090,14 @@ dependencies = [
  "linux-raw-sys 0.9.3",
  "regex",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_getopt"
+version = "0.0.1"
+dependencies = [
+ "clap",
  "uucore",
 ]
 
@@ -1189,6 +1207,7 @@ dependencies = [
  "dns-lookup",
  "glob",
  "iana-time-zone",
+ "itertools",
  "libc",
  "nix",
  "number_prefix",

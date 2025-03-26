@@ -1,0 +1,15 @@
+[package]
+name = "uu_getopt"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+path = "src/getopt.rs"
+
+[[bin]]
+name = "getopt"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.3", features = ["cargo"] }
+uucore = { version = ">=0.0.18", features = ["format"] }

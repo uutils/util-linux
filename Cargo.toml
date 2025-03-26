@@ -40,7 +40,11 @@ feat_common_core = [
   "renice",
   "rev",
   "setsid",
+  "getopt",
 ]
+
+[workspace]
+members = ["src/uu/getopt"]
 
 [workspace.dependencies]
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
@@ -70,7 +74,7 @@ clap_mangen = { workspace = true }
 dns-lookup = { workspace = true }
 phf = { workspace = true }
 serde = { workspace = true }
-serde_json  = { workspace = true }
+serde_json = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
 
@@ -88,11 +92,14 @@ mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
-setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
+setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path = "src/uu/setsid" }
+getopt = { optional = true, version = "0.0.1", package = "uu_getopt", path = "src/uu/getopt" }
 
 [dev-dependencies]
 # dmesg test require fixed-boot-time feature turned on.
-dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = ["fixed-boot-time"] }
+dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = [
+  "fixed-boot-time",
+] }
 libc = { workspace = true }
 pretty_assertions = "1"
 rand = { workspace = true }
