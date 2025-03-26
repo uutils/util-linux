@@ -39,7 +39,10 @@ mod tests {
         assert_eq!(Size::parse("1K").unwrap().size_bytes(), 1024);
         assert_eq!(Size::parse("1M").unwrap().size_bytes(), 1024 * 1024);
         assert_eq!(Size::parse("1G").unwrap().size_bytes(), 1024 * 1024 * 1024);
-        assert_eq!(Size::parse("1T").unwrap().size_bytes(), 1024 * 1024 * 1024 * 1024);
+        assert_eq!(
+            Size::parse("1T").unwrap().size_bytes(),
+            1024 * 1024 * 1024 * 1024
+        );
     }
 
     #[test]
