@@ -15,9 +15,8 @@ fn test_column_headers() {
     let header_line = stdout.lines().next().unwrap();
     let cols: Vec<_> = header_line.split_whitespace().collect();
 
-    assert_eq!(cols.len(), 7);
     assert_eq!(
         cols,
-        vec!["COMMAND", "PID", "TYPE", "MODE", "M", "START", "END"]
+        ["COMMAND", "PID", "TYPE", "SIZE", "MODE", "M", "START", "END", "PATH"]
     );
 }
