@@ -33,6 +33,7 @@ feat_common_core = [
   "fsfreeze",
   "last",
   "lscpu",
+  "lsipc",
   "lslocks",
   "lsmem",
   "mcookie",
@@ -48,24 +49,26 @@ clap = { version = "4.4", features = ["wrap_help", "cargo"] }
 clap_complete = "4.4"
 clap_mangen = "0.2"
 dns-lookup = "2.0.4"
-libc = "0.2.152"
+errno = "0.3"
+libc = "0.2.171"
 linux-raw-sys = { version = "0.9.0", features = ["ioctl"] }
 md-5 = "0.10.6"
 nix = { version = "0.29", default-features = false }
 phf = "0.11.2"
 phf_codegen = "0.11.2"
 rand = { version = "0.9.0", features = ["small_rng"] }
+rangemap = "1.5.1"
 regex = "1.10.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.122", features = ["preserve_order"] }
+smartcols-sys = "0.1"
+syscall-numbers = "4.0.2"
 sysinfo = "0.34"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
 uucore = "0.0.30"
 xattr = "1.3.1"
-rangemap = "1.5.1"
-syscall-numbers = "4.0.2"
 
 [dependencies]
 clap = { workspace = true }
@@ -86,6 +89,7 @@ dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
+lsipc = { optional = true, version = "0.0.1", package = "uu_lsipc", path = "src/uu/lsipc" }
 lslocks = { optional = true, version = "0.0.1", package = "uu_lslocks", path = "src/uu/lslocks" }
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
 mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "src/uu/mcookie" }
