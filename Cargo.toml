@@ -56,6 +56,7 @@ libmount-sys = "0.1.1"
 linux-raw-sys = { version = "0.10.0", features = ["ioctl"] }
 md-5 = "0.10.6"
 nix = { version = "0.30", default-features = false }
+parse_datetime = "0.11.0"
 phf = "0.12.0"
 phf_codegen = "0.12.1"
 rand = { version = "0.9.0", features = ["small_rng"] }
@@ -71,21 +72,21 @@ textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
 uucore = "0.1.0"
 uuid = { version = "1.16.0", features = ["rng-rand"] }
+uutests = "0.1.0"
 windows = { version = "0.61.1" }
 xattr = "1.3.1"
-parse_datetime = "0.11.0"
 
 [dependencies]
 clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_mangen = { workspace = true }
 dns-lookup = { workspace = true }
+parse_datetime = {workspace = true}
 phf = { workspace = true }
 serde = { workspace = true }
 serde_json  = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
-parse_datetime = {workspace = true}
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
@@ -107,6 +108,7 @@ setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src
 uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
 
 [dev-dependencies]
+ctor = "0.4.1"
 # dmesg test require fixed-boot-time feature turned on.
 dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = ["fixed-boot-time"] }
 libc = { workspace = true }
@@ -114,6 +116,7 @@ pretty_assertions = "1"
 rand = { workspace = true }
 regex = { workspace = true }
 tempfile = { workspace = true }
+uutests = { workspace = true }
 uucore = { workspace = true, features = ["entries", "process", "signals"] }
 uuid = { workspace = true }
 
