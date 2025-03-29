@@ -1,0 +1,8 @@
+ BLOCK  SIZE  ZONES NODE
+     0  128M   None    0
+   1-6  768M  DMA32    0
+32-149 14.8G Normal    0
+
+Memory block size:       128M
+Total online memory:    15.6G
+Total offline memory:      0B

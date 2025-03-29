@@ -1,0 +1,17 @@
+[package]
+name = "uu_mcookie"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/mcookie.rs"
+
+[[bin]]
+name = "mcookie"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+md-5 = { workspace = true }
+rand = { workspace = true }

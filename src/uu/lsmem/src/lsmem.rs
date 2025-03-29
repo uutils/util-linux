@@ -5,54 +5,44 @@
 
 mod utils;
 
-use clap::{crate_version, Command};
+use clap::builder::{EnumValueParser, PossibleValue, PossibleValuesParser};
+use clap::{crate_version, Command, ValueEnum};
 use clap::{Arg, ArgAction};
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, MAIN_SEPARATOR};
 use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
-
-use tabled::{
-    settings::{
-        location::ByColumnName,
-        object::{self, Rows},
-        Alignment, Modify, Remove, Style,
-    },
-    Table, Tabled,
-};
 
 const ABOUT: &str = help_about!("lsmem.md");
 const USAGE: &str = help_usage!("lsmem.md");
 
 mod options {
+    pub const ALL: &str = "all";
     pub const BYTES: &str = "bytes";
-    pub const NOHEADINGS: &str = "noheadings";
     pub const JSON: &str = "json";
+    pub const NOHEADINGS: &str = "noheadings";
+    pub const OUTPUT: &str = "output";
+    pub const OUTPUT_ALL: &str = "output-all";
     pub const PAIRS: &str = "pairs";
     pub const RAW: &str = "raw";
+    pub const SPLIT: &str = "split";
+    pub const SUMMARY: &str = "summary";
+    pub const SYSROOT: &str = "sysroot";
 }
 
-// const BUFSIZ: usize = 1024;
-
-const PATH_SYS_MEMORY: &str = "/sys/devices/system/memory";
-const PATH_BLOCK_SIZE_BYTES: &str = "/sys/devices/system/memory/block_size_bytes";
-const PATH_VALID_ZONES: &str = "/sys/devices/system/memory/valid_zones";
+const PATH_NAME_MEMORY: &str = "memory";
+const PATH_NAME_NODE: &str = "node";
+const PATH_SUB_BLOCK_SIZE_BYTES: &str = "block_size_bytes";
 const PATH_SUB_REMOVABLE: &str = "removable";
 const PATH_SUB_STATE: &str = "state";
-const NAME_MEMORY: &str = "memory";
+const PATH_SUB_VALID_ZONES: &str = "valid_zones";
+const PATH_SYS_MEMORY: &str = "/sys/devices/system/memory";
 
-// struct ColDesc {
-//     name: &'static str, // Rust's equivalent to `const char *`
-//     whint: f64,         // Rust uses `f64` for double precision floating-point numbers
-//     flags: i32,         // Using `i32` for integers
-//     help: &'static str, // Rust's equivalent to `const char *`
-// }
-
-#[derive(Debug, Deserialize)]
-enum Columns {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+enum Column {
     #[serde(rename = "RANGE")]
     Range,
     #[serde(rename = "SIZE")]
@@ -68,73 +58,124 @@ enum Columns {
     #[serde(rename = "ZONES")]
     Zones,
 }
-// const SCOLS_FL_RIGHT: i32 = 1;
 
-// static COLDESCS: [ColDesc; 7] = [
-//     ColDesc {
-//         name: "RANGE",
-//         whint: 0.0,
-//         flags: 0,
-//         help: "start and end address of the memory range",
-//     },
-//     ColDesc {
-//         name: "SIZE",
-//         whint: 5.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "size of the memory range",
-//     },
-//     ColDesc {
-//         name: "STATE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "online status of the memory range",
-//     },
-//     ColDesc {
-//         name: "REMOVABLE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "memory is removable",
-//     },
-//     ColDesc {
-//         name: "BLOCK",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "memory block number or blocks range",
-//     },
-//     ColDesc {
-//         name: "NODE",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "numa node of memory",
-//     },
-//     ColDesc {
-//         name: "ZONES",
-//         whint: 0.0,
-//         flags: SCOLS_FL_RIGHT,
-//         help: "valid zones for the memory range",
-//     },
-// ];
+impl ValueEnum for Column {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            Column::Range,
+            Column::Size,
+            Column::State,
+            Column::Removable,
+            Column::Block,
+            Column::Node,
+            Column::Zones,
+        ]
+    }
 
-#[derive(Debug, Deserialize, PartialEq, Clone, Copy)]
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(PossibleValue::new(self.get_name()))
+    }
+}
+
+/// Default columns to display if none are explicitly specified.
+const DEFAULT_COLUMNS: &[Column] = &[
+    Column::Range,
+    Column::Size,
+    Column::State,
+    Column::Removable,
+    Column::Block,
+];
+/// Which columns (attributes) are possible to split memory blocks to ranges on.
+const SPLIT_COLUMNS: &[Column] = &[
+    Column::State,
+    Column::Removable,
+    Column::Node,
+    Column::Zones,
+];
+
+impl Column {
+    fn get_name(&self) -> &'static str {
+        match self {
+            Column::Range => "RANGE",
+            Column::Size => "SIZE",
+            Column::State => "STATE",
+            Column::Removable => "REMOVABLE",
+            Column::Block => "BLOCK",
+            Column::Node => "NODE",
+            Column::Zones => "ZONES",
+        }
+    }
+
+    fn get_float_right(&self) -> bool {
+        self != &Column::Range
+    }
+
+    fn get_width_hint(&self) -> usize {
+        if self == &Column::Size {
+            5
+        } else {
+            self.get_name().len()
+        }
+    }
+
+    fn get_help(&self) -> &'static str {
+        match self {
+            Column::Range => "start and end address of the memory range",
+            Column::Size => "size of the memory range",
+            Column::State => "online status of the memory range",
+            Column::Removable => "memory is removable",
+            Column::Block => "memory block number or blocks range",
+            Column::Node => "numa node of memory",
+            Column::Zones => "valid zones for the memory range",
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
 enum ZoneId {
-    #[serde(rename = "ZONE_DMA")]
+    #[serde(rename = "DMA")]
     ZoneDma,
-    #[serde(rename = "ZONE_DMA32")]
+    #[serde(rename = "DMA32")]
     ZoneDma32,
-    #[serde(rename = "ZONE_NORMAL")]
+    #[serde(rename = "Normal")]
     ZoneNormal,
-    #[serde(rename = "ZONE_HIGHMEM")]
+    #[serde(rename = "Highmem")]
     ZoneHighmem,
-    #[serde(rename = "ZONE_MOVABLE")]
+    #[serde(rename = "Movable")]
     ZoneMovable,
-    #[serde(rename = "ZONE_DEVICE")]
+    #[serde(rename = "Device")]
     ZoneDevice,
-    #[serde(rename = "ZONE_NONE")]
+    #[serde(rename = "None")]
     ZoneNone,
-    #[serde(rename = "ZONE_UNKNOWN")]
+    #[serde(rename = "Unknown")]
     ZoneUnknown,
     #[serde(rename = "MAX_NR_ZONES")]
     MaxNrZones,
+}
+
+impl core::fmt::Display for ZoneId {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let value = serde_json::to_string(self).unwrap().replace("\"", "");
+        write!(f, "{}", value)
+    }
+}
+
+impl FromStr for ZoneId {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<ZoneId, Self::Err> {
+        match input.to_lowercase().as_str() {
+            "dma" => Ok(ZoneId::ZoneDma),
+            "dma32" => Ok(ZoneId::ZoneDma32),
+            "normal" => Ok(ZoneId::ZoneNormal),
+            "highmem" => Ok(ZoneId::ZoneHighmem),
+            "movable" => Ok(ZoneId::ZoneMovable),
+            "device" => Ok(ZoneId::ZoneDevice),
+            "none" => Ok(ZoneId::ZoneNone),
+            "unknown" => Ok(ZoneId::ZoneUnknown),
+            _ => Err(()),
+        }
+    }
 }
 
 #[derive(PartialEq, Clone)]
@@ -194,61 +235,77 @@ impl MemoryBlock {
     }
 }
 
-#[derive(Tabled, Default, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
+enum Summary {
+    Never,
+    Always,
+    Only,
+}
+
+impl ValueEnum for Summary {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Summary::Never, Summary::Always, Summary::Only]
+    }
+
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        match self {
+            Summary::Never => Some(PossibleValue::new("never").help("never show summary")),
+            Summary::Always => Some(PossibleValue::new("always").help("always show summary")),
+            Summary::Only => Some(PossibleValue::new("only").help("show summary only")),
+        }
+    }
+}
+
+#[derive(Default, Serialize)]
 struct TableRow {
-    #[tabled(rename = "RANGE")]
     range: String,
-    #[tabled(rename = "SIZE")]
     size: String,
-    #[tabled(rename = "STATE")]
     state: String,
-    #[tabled(rename = "REMOVABLE")]
     removable: String,
-    #[tabled(rename = "BLOCK")]
     block: String,
-    #[tabled(rename = "NODE")]
     #[serde(skip_serializing)]
     node: String,
-    #[tabled(rename = "ZONES")]
     #[serde(skip_serializing)]
     zones: String,
 }
 
 impl TableRow {
-    fn to_pairs_string(&self) -> String {
-        format!(
-            r#"RANGE="{}" SIZE="{}" STATE="{}" REMOVABLE="{}" BLOCK="{}""#,
-            self.range, self.size, self.state, self.removable, self.block
-        )
+    fn get_value(&self, column: &Column) -> String {
+        match column {
+            Column::Range => self.range.clone(),
+            Column::Size => self.size.clone(),
+            Column::State => self.state.clone(),
+            Column::Removable => self.removable.clone(),
+            Column::Block => self.block.clone(),
+            Column::Node => self.node.clone(),
+            Column::Zones => self.zones.clone(),
+        }
     }
-    fn to_raw_string(&self) -> String {
-        format!(
-            r#"{} {} {} {} {}"#,
-            self.range, self.size, self.state, self.removable, self.block
-        )
-    }
-}
-
-#[derive(Serialize)]
-struct TableRowJson {
-    memory: Vec<TableRow>,
 }
 
 struct Options {
-    have_nodes: bool,
-    raw: bool,
-    export: bool,
-    json: bool,
-    noheadings: bool,
-    list_all: bool,
+    // Set by command-line arguments
+    all: bool,
     bytes: bool,
+    columns: Vec<Column>,
+    noheadings: bool,
+    json: bool,
+    pairs: bool,
+    raw: bool,
+    split_by_node: bool,
+    split_by_removable: bool,
+    split_by_state: bool,
+    split_by_zones: bool,
+    /// Default to PATH_SYS_MEMORY, but a prefix can be prepended
+    sysmem: String,
+
+    // Set by read_info
+    have_nodes: bool,
+    have_zones: bool,
+
+    // Computed from flags above
     want_summary: bool,
     want_table: bool,
-    split_by_node: bool,
-    split_by_state: bool,
-    split_by_removable: bool,
-    split_by_zones: bool,
-    have_zones: bool,
 }
 
 struct Lsmem {
@@ -278,36 +335,48 @@ impl Lsmem {
 impl Options {
     fn new() -> Options {
         Options {
-            have_nodes: false,
-            raw: false,
-            export: false,
-            json: false,
-            noheadings: false,
-            list_all: false,
+            all: false,
             bytes: false,
+            columns: Vec::default(),
+            noheadings: false,
+            json: false,
+            pairs: false,
+            raw: false,
+            split_by_node: false,
+            split_by_removable: false,
+            split_by_state: false,
+            split_by_zones: false,
+            sysmem: Path::new(PATH_SYS_MEMORY).display().to_string(),
+
+            have_nodes: false,
+            have_zones: false,
+
             want_summary: true, // default true
             want_table: true,   // default true
-            split_by_node: false,
-            split_by_state: false,
-            split_by_removable: false,
-            split_by_zones: false,
-            have_zones: false,
         }
     }
 }
 
 fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
+    let path_block_size = Path::new(&opts.sysmem).join(PATH_SUB_BLOCK_SIZE_BYTES);
     lsmem.block_size = u64::from_str_radix(
-        &read_file_content::<String>(Path::new(PATH_BLOCK_SIZE_BYTES)).unwrap(),
+        &read_file_content::<String>(path_block_size.as_path())
+            .expect("Failed to read memory block size"),
         16,
     )
     .unwrap();
-    lsmem.dirs = get_block_paths();
+    lsmem.dirs = get_block_paths(opts);
     lsmem.dirs.sort_by(|a, b| {
-        let filename_a = a.to_str().unwrap().split('/').last().unwrap();
-        let filename_b = b.to_str().unwrap().split('/').last().unwrap();
-        let idx_a: u64 = filename_a[NAME_MEMORY.len()..].parse().unwrap();
-        let idx_b: u64 = filename_b[NAME_MEMORY.len()..].parse().unwrap();
+        let filename_a = a.file_name().expect("Failed parsing memory block name");
+        let filename_a = filename_a.to_str().unwrap();
+        let filename_b = b.file_name().expect("Failed parsing memory block name");
+        let filename_b = filename_b.to_str().unwrap();
+        let idx_a: u64 = filename_a[PATH_NAME_MEMORY.len()..]
+            .parse()
+            .expect("Failed to parse memory block index");
+        let idx_b: u64 = filename_b[PATH_NAME_MEMORY.len()..]
+            .parse()
+            .expect("Failed to parse memory block index");
         idx_a.cmp(&idx_b)
     });
     lsmem.ndirs = lsmem.dirs.len();
@@ -317,8 +386,8 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
         }
 
         let mut p = path.clone();
-        p.push("valid_zones");
-        if fs::read_dir(p).is_ok() {
+        p.push(PATH_SUB_VALID_ZONES);
+        if fs::read(&p).is_ok() {
             opts.have_zones = true;
         }
 
@@ -343,13 +412,13 @@ fn read_info(lsmem: &mut Lsmem, opts: &mut Options) {
     }
 }
 
-fn get_block_paths() -> Vec<PathBuf> {
+fn get_block_paths(opts: &mut Options) -> Vec<PathBuf> {
     let mut paths = Vec::<PathBuf>::new();
-    for entry in fs::read_dir(PATH_SYS_MEMORY).unwrap() {
+    for entry in fs::read_dir(&opts.sysmem).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        let filename = path.to_str().unwrap().split('/').last().unwrap();
-        if path.is_dir() && filename.starts_with(NAME_MEMORY) {
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        if path.is_dir() && filename.starts_with(PATH_NAME_MEMORY) {
             paths.push(path);
         }
     }
@@ -362,7 +431,7 @@ fn is_mergeable(lsmem: &Lsmem, opts: &Options, blk: &MemoryBlock) -> bool {
     }
 
     let curr_block = &lsmem.blocks[lsmem.nblocks - 1];
-    if opts.list_all {
+    if opts.all {
         return false;
     }
     if curr_block.index + curr_block.count != blk.index {
@@ -381,7 +450,6 @@ fn is_mergeable(lsmem: &Lsmem, opts: &Options, blk: &MemoryBlock) -> bool {
         if curr_block.nr_zones != blk.nr_zones {
             return false;
         }
-
         for i in 0..curr_block.nr_zones {
             if curr_block.zones[i] == ZoneId::ZoneUnknown || curr_block.zones[i] != blk.zones[i] {
                 return false;
@@ -395,9 +463,9 @@ fn memory_block_get_node(path: &PathBuf) -> Result<i32, <i32 as FromStr>::Err> {
     for entry in fs::read_dir(path).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        let filename = path.to_str().unwrap().split('/').last().unwrap();
-        if path.is_dir() && filename.starts_with("node") {
-            return filename["node".len()..].parse();
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        if path.is_dir() && filename.starts_with(PATH_NAME_NODE) {
+            return filename[PATH_NAME_NODE.len()..].parse();
         }
     }
     Ok(-1)
@@ -407,8 +475,8 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
     let mut blk = MemoryBlock::new();
     blk.count = 1;
     blk.state = MemoryState::Unknown;
-    let filename = path.to_str().unwrap().split('/').last().unwrap();
-    blk.index = filename[NAME_MEMORY.len()..].parse().unwrap();
+    let filename = path.file_name().unwrap().to_str().unwrap();
+    blk.index = filename[PATH_NAME_MEMORY.len()..].parse().unwrap();
 
     let mut removable_path = path.clone();
     removable_path.push(PATH_SUB_REMOVABLE);
@@ -426,14 +494,16 @@ fn memory_block_read_attrs(opts: &Options, path: &PathBuf) -> MemoryBlock {
 
     blk.nr_zones = 0;
     if opts.have_zones {
-        if let Ok(raw_content) = read_file_content::<String>(Path::new(PATH_VALID_ZONES)) {
+        let vz_path = path.join(PATH_SUB_VALID_ZONES);
+        if let Ok(raw_content) = read_file_content::<String>(Path::new(&vz_path)) {
             let zone_toks = raw_content.split(' ').collect::<Vec<&str>>();
             for (i, zone_tok) in zone_toks
                 .iter()
+                .map(|tok| tok.to_lowercase())
                 .enumerate()
                 .take(std::cmp::min(zone_toks.len(), ZoneId::MaxNrZones as usize))
             {
-                blk.zones[i] = serde_json::from_str(zone_tok).unwrap();
+                blk.zones[i] = ZoneId::from_str(&zone_tok).unwrap();
                 blk.nr_zones += 1;
             }
         }
@@ -488,34 +558,99 @@ fn create_table_rows(lsmem: &Lsmem, opts: &Options) -> Vec<TableRow> {
             row.node = format!("{}", blk.node);
         }
 
+        // Zones
+        if opts.have_zones {
+            row.zones = blk
+                .zones
+                .iter()
+                .filter(|zone| **zone != ZoneId::ZoneUnknown)
+                .map(|zone| zone.to_string())
+                .collect::<Vec<String>>()
+                .join("/");
+        }
+
         table_rows.push(row);
     }
     table_rows
 }
 
 fn print_table(lsmem: &Lsmem, opts: &Options) {
-    let mut table = Table::new(create_table_rows(lsmem, opts));
-    table
-        .with(Style::blank())
-        .with(Modify::new(object::Columns::new(1..)).with(Alignment::right()));
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut col_widths = vec![0; opts.columns.len()];
 
-    // the default version
-    table.with(Remove::column(ByColumnName::new("NODE")));
-    table.with(Remove::column(ByColumnName::new("ZONES")));
-
-    if opts.noheadings {
-        table.with(Remove::row(Rows::first()));
+    // Initialize column widths based on pre-defined width hints
+    for (i, column) in opts.columns.iter().enumerate() {
+        col_widths[i] = column.get_width_hint();
     }
 
-    println!("{table}");
+    // Calculate minimum column widths based on the actual data
+    for row in &table_rows {
+        for (i, column) in opts.columns.iter().enumerate() {
+            let width = match column {
+                Column::Range => row.range.len(),
+                Column::Size => row.size.len(),
+                Column::State => row.state.len(),
+                Column::Removable => row.removable.len(),
+                Column::Block => row.block.len(),
+                Column::Node => row.node.len(),
+                Column::Zones => row.zones.len(),
+            };
+            col_widths[i] = col_widths[i].max(width);
+        }
+    }
+
+    if !opts.noheadings {
+        let mut column_names = vec![];
+        for (i, column) in opts.columns.iter().enumerate() {
+            let formatted = if column.get_float_right() {
+                format!("{:>width$}", column.get_name(), width = col_widths[i])
+            } else {
+                format!("{:<width$}", column.get_name(), width = col_widths[i])
+            };
+            column_names.push(formatted);
+        }
+        println!("{}", column_names.join(" "));
+    }
+
+    for row in table_rows {
+        let mut column_values = vec![];
+        for (i, column) in opts.columns.iter().enumerate() {
+            let formatted = if column.get_float_right() {
+                format!("{:>width$}", row.get_value(column), width = col_widths[i])
+            } else {
+                format!("{:<width$}", row.get_value(column), width = col_widths[i])
+            };
+            column_values.push(formatted);
+        }
+        println!("{}", column_values.join(" "));
+    }
 }
 
 fn print_json(lsmem: &Lsmem, opts: &Options) {
-    let table_json = TableRowJson {
-        memory: create_table_rows(lsmem, opts),
-    };
+    let table_rows = create_table_rows(lsmem, opts);
+    let mut memory_records = Vec::new();
 
-    let mut table_json_string = serde_json::to_string_pretty(&table_json).unwrap();
+    for row in table_rows {
+        let mut record = serde_json::Map::new();
+        for column in &opts.columns {
+            record.insert(
+                column.get_name().to_lowercase(),
+                if column == &Column::Size && opts.bytes {
+                    serde_json::Value::Number(row.get_value(column).parse().unwrap())
+                } else {
+                    serde_json::Value::String(row.get_value(column))
+                },
+            );
+        }
+        memory_records.push(serde_json::Value::Object(record));
+    }
+
+    let table_json = serde_json::json!({ "memory": memory_records });
+
+    let mut table_json_string = serde_json::to_string_pretty(&table_json)
+        .unwrap()
+        .replace("  ", "   ") // Ident 3 spaces
+        .replace("},\n      {", "},{"); // Remove newlines between '}, {'
     table_json_string = table_json_string.replace("\"yes\"", "true");
     table_json_string = table_json_string.replace("\"no\"", "false");
     println!("{table_json_string}");
@@ -523,25 +658,36 @@ fn print_json(lsmem: &Lsmem, opts: &Options) {
 
 fn print_pairs(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
-    let table_pairs_string = table_rows
-        .into_iter()
-        .map(|row| row.to_pairs_string())
-        .collect::<Vec<_>>()
-        .join("\n");
-    println!("{table_pairs_string}");
+
+    for row in table_rows {
+        let mut pairs = Vec::new();
+        for col in &opts.columns {
+            pairs.push(format!("{}=\"{}\"", col.get_name(), row.get_value(col)));
+        }
+        println!("{}", pairs.join(" "));
+    }
 }
 
 fn print_raw(lsmem: &Lsmem, opts: &Options) {
     let table_rows = create_table_rows(lsmem, opts);
-    let mut table_raw_string = String::new();
-    for row in table_rows {
-        table_raw_string += &row.to_raw_string();
-        table_raw_string += "\n";
+
+    if !opts.noheadings {
+        let column_names = opts
+            .columns
+            .iter()
+            .map(|col| col.get_name().to_string())
+            .collect::<Vec<String>>();
+        println!("{}", column_names.join(" "));
     }
-    // remove the last newline
-    table_raw_string.pop();
-    println!("RANGE SIZE STATE REMOVABLE BLOCK");
-    println!("{table_raw_string}");
+
+    for row in table_rows {
+        let column_values = opts
+            .columns
+            .iter()
+            .map(|col| row.get_value(col).to_string())
+            .collect::<Vec<String>>();
+        println!("{}", column_values.join(" "));
+    }
 }
 
 fn print_summary(lsmem: &Lsmem, opts: &Options) {
@@ -550,21 +696,13 @@ fn print_summary(lsmem: &Lsmem, opts: &Options) {
         println!("{:<23} {:>15}", "Total online memory:", lsmem.mem_online);
         println!("{:<23} {:>15}", "Total offline memory:", lsmem.mem_offline);
     } else {
-        println!(
-            "{:<23} {:>15}",
-            "Memory block size:",
-            utils::size_to_human_string(lsmem.block_size)
-        );
-        println!(
-            "{:<23} {:>15}",
-            "Total online memory:",
-            utils::size_to_human_string(lsmem.mem_online)
-        );
-        println!(
-            "{:<23} {:>15}",
-            "Total offline memory:",
-            utils::size_to_human_string(lsmem.mem_offline)
-        );
+        let block_size_str = utils::size_to_human_string(lsmem.block_size);
+        let mem_online_str = utils::size_to_human_string(lsmem.mem_online);
+        let mem_offline_str = utils::size_to_human_string(lsmem.mem_offline);
+
+        println!("{:<23} {:>5}", "Memory block size:", block_size_str);
+        println!("{:<23} {:>5}", "Total online memory:", mem_online_str);
+        println!("{:<23} {:>5}", "Total offline memory:", mem_offline_str);
     }
 }
 
@@ -572,11 +710,15 @@ fn read_file_content<T: core::str::FromStr>(path: &Path) -> io::Result<T>
 where
     T::Err: std::fmt::Debug, // Required to unwrap the result of T::from_str
 {
-    let file = fs::File::open(path)?;
+    let file = fs::File::open(path).expect("Failed to open file");
     let mut reader = BufReader::new(file);
     let mut content = String::new();
-    reader.read_line(&mut content)?;
-    Ok(content.trim().to_string().parse().unwrap())
+    reader.read_line(&mut content).expect("Failed to read line");
+    content
+        .trim()
+        .to_string()
+        .parse()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse content"))
 }
 
 #[uucore::main]
@@ -585,14 +727,68 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut lsmem = Lsmem::new();
     let mut opts = Options::new();
+    opts.all = matches.get_flag(options::ALL);
     opts.bytes = matches.get_flag(options::BYTES);
     opts.noheadings = matches.get_flag(options::NOHEADINGS);
     opts.json = matches.get_flag(options::JSON);
-    opts.export = matches.get_flag(options::PAIRS);
+    opts.pairs = matches.get_flag(options::PAIRS);
     opts.raw = matches.get_flag(options::RAW);
+    opts.columns = matches
+        .get_many::<Column>(options::OUTPUT)
+        .unwrap_or_default()
+        .map(|c| c.to_owned())
+        .collect::<Vec<Column>>();
 
-    if opts.json || opts.export || opts.raw {
+    // Only respect --output-all if no column list were provided.
+    // --output takes priority over --output-all.
+    if opts.columns.is_empty() {
+        if matches.get_flag(options::OUTPUT_ALL) {
+            opts.columns = Column::value_variants().to_vec();
+        } else {
+            opts.columns = DEFAULT_COLUMNS.to_vec();
+        }
+    }
+
+    let mut split_columns = matches
+        .get_many::<String>(options::SPLIT)
+        .unwrap_or_default()
+        .map(|c| c.to_uppercase())
+        .collect::<Vec<String>>();
+
+    // This seems like a bug in util-linux, but effectively, if split_columns is empty,
+    // then DEFAULT it to the value of custom columns. Becase "zones" is not one of the
+    // default columns, that means we just happen to not split on it most of the time.
+    if split_columns.is_empty() {
+        split_columns = opts
+            .columns
+            .iter()
+            .map(|c| c.get_name().to_string())
+            .collect();
+    }
+
+    opts.split_by_node = split_columns.contains(&Column::Node.get_name().to_string());
+    opts.split_by_removable = split_columns.contains(&Column::Removable.get_name().to_string());
+    opts.split_by_state = split_columns.contains(&Column::State.get_name().to_string());
+    opts.split_by_zones = split_columns.contains(&Column::Zones.get_name().to_string());
+
+    if opts.json || opts.pairs || opts.raw {
         opts.want_summary = false;
+    }
+    if let Some(summary) = matches.get_one::<Summary>(options::SUMMARY) {
+        match summary {
+            Summary::Never => opts.want_summary = false,
+            Summary::Only => opts.want_table = false,
+            Summary::Always => {} // Default (equivalent to if --summary wasn't provided at all)
+        }
+    }
+
+    if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
+        opts.sysmem = format!(
+            "{}{}{}",
+            sysroot.trim_end_matches(MAIN_SEPARATOR),
+            MAIN_SEPARATOR,
+            opts.sysmem.trim_start_matches(MAIN_SEPARATOR)
+        );
     }
 
     read_info(&mut lsmem, &mut opts);
@@ -600,13 +796,18 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if opts.want_table {
         if opts.json {
             print_json(&lsmem, &opts);
-        } else if opts.export {
+        } else if opts.pairs {
             print_pairs(&lsmem, &opts);
         } else if opts.raw {
             print_raw(&lsmem, &opts);
         } else {
             print_table(&lsmem, &opts);
         }
+    }
+
+    // Padding line between table and summary if both are shown
+    if opts.want_table && opts.want_summary {
+        println!();
     }
 
     if opts.want_summary {
@@ -623,6 +824,30 @@ pub fn uu_app() -> Command {
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
         .arg(
+            Arg::new(options::JSON)
+                .short('J')
+                .long("json")
+                .help("use JSON output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::PAIRS, options::RAW, options::SUMMARY]),
+        )
+        .arg(
+            Arg::new(options::PAIRS)
+                .short('P')
+                .long("pairs")
+                .help("use key=\"value\" output format")
+                .action(ArgAction::SetTrue)
+                .conflicts_with_all([options::JSON, options::RAW, options::SUMMARY]),
+        )
+        .arg(
+            Arg::new(options::ALL)
+                .short('a')
+                .long("all")
+                .help("list each individual memory block")
+                .action(ArgAction::SetTrue)
+                .conflicts_with(options::SPLIT),
+        )
+        .arg(
             Arg::new(options::BYTES)
                 .short('b')
                 .long("bytes")
@@ -637,20 +862,21 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(options::JSON)
-                .short('J')
-                .long("json")
-                .help("use JSON output format")
-                .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::PAIRS, options::RAW]),
+            Arg::new(options::OUTPUT)
+                .short('o')
+                .long("output")
+                .help("output columns")
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_name("list")
+                .value_delimiter(',')
+                .value_parser(EnumValueParser::<Column>::new()),
         )
         .arg(
-            Arg::new(options::PAIRS)
-                .short('P')
-                .long("pairs")
-                .help("use key=\"value\" output format")
-                .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::JSON, options::RAW]),
+            Arg::new(options::OUTPUT_ALL)
+                .long("output-all")
+                .help("output all columns")
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new(options::RAW)
@@ -658,6 +884,52 @@ pub fn uu_app() -> Command {
                 .long("raw")
                 .help("use raw output format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all([options::JSON, options::PAIRS]),
+                .conflicts_with_all([options::JSON, options::PAIRS, options::SUMMARY]),
         )
+        .arg(
+            Arg::new(options::SPLIT)
+                .short('S')
+                .long("split")
+                .help("split ranges by specified columns")
+                .conflicts_with(options::ALL)
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_name("list")
+                .value_delimiter(',')
+                .value_parser(PossibleValuesParser::new(
+                    SPLIT_COLUMNS
+                        .iter()
+                        .map(|col| col.to_possible_value().unwrap())
+                        .collect::<Vec<_>>(),
+                )),
+        )
+        .arg(
+            Arg::new(options::SYSROOT)
+                .short('s')
+                .long("sysroot")
+                .help("use the specified directory as system root")
+                .action(ArgAction::Set)
+                .value_name("dir"),
+        )
+        .arg(
+            Arg::new(options::SUMMARY)
+                .long("summary")
+                .help("print summary information")
+                .ignore_case(true)
+                .action(ArgAction::Set)
+                .value_name("when")
+                .value_delimiter(',')
+                .value_parser(EnumValueParser::<Summary>::new())
+                .conflicts_with_all([options::RAW, options::PAIRS, options::JSON])
+                .num_args(0..=1)
+                .default_missing_value("only"),
+        )
+        .after_help(format!(
+            "Available output columns:\n{}",
+            Column::value_variants()
+                .iter()
+                .map(|col| format!("{:>11}  {}", col.get_name(), col.get_help()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ))
 }

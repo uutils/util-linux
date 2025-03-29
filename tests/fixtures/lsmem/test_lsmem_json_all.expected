@@ -1,0 +1,755 @@
+{
+   "memory": [
+      {
+         "range": "0x0000000000000000-0x0000000007ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "0"
+      },{
+         "range": "0x0000000008000000-0x000000000fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "1"
+      },{
+         "range": "0x0000000010000000-0x0000000017ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "2"
+      },{
+         "range": "0x0000000018000000-0x000000001fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "3"
+      },{
+         "range": "0x0000000020000000-0x0000000027ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "4"
+      },{
+         "range": "0x0000000028000000-0x000000002fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "5"
+      },{
+         "range": "0x0000000030000000-0x0000000037ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "6"
+      },{
+         "range": "0x0000000100000000-0x0000000107ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "32"
+      },{
+         "range": "0x0000000108000000-0x000000010fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "33"
+      },{
+         "range": "0x0000000110000000-0x0000000117ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "34"
+      },{
+         "range": "0x0000000118000000-0x000000011fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "35"
+      },{
+         "range": "0x0000000120000000-0x0000000127ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "36"
+      },{
+         "range": "0x0000000128000000-0x000000012fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "37"
+      },{
+         "range": "0x0000000130000000-0x0000000137ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "38"
+      },{
+         "range": "0x0000000138000000-0x000000013fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "39"
+      },{
+         "range": "0x0000000140000000-0x0000000147ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "40"
+      },{
+         "range": "0x0000000148000000-0x000000014fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "41"
+      },{
+         "range": "0x0000000150000000-0x0000000157ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "42"
+      },{
+         "range": "0x0000000158000000-0x000000015fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "43"
+      },{
+         "range": "0x0000000160000000-0x0000000167ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "44"
+      },{
+         "range": "0x0000000168000000-0x000000016fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "45"
+      },{
+         "range": "0x0000000170000000-0x0000000177ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "46"
+      },{
+         "range": "0x0000000178000000-0x000000017fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "47"
+      },{
+         "range": "0x0000000180000000-0x0000000187ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "48"
+      },{
+         "range": "0x0000000188000000-0x000000018fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "49"
+      },{
+         "range": "0x0000000190000000-0x0000000197ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "50"
+      },{
+         "range": "0x0000000198000000-0x000000019fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "51"
+      },{
+         "range": "0x00000001a0000000-0x00000001a7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "52"
+      },{
+         "range": "0x00000001a8000000-0x00000001afffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "53"
+      },{
+         "range": "0x00000001b0000000-0x00000001b7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "54"
+      },{
+         "range": "0x00000001b8000000-0x00000001bfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "55"
+      },{
+         "range": "0x00000001c0000000-0x00000001c7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "56"
+      },{
+         "range": "0x00000001c8000000-0x00000001cfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "57"
+      },{
+         "range": "0x00000001d0000000-0x00000001d7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "58"
+      },{
+         "range": "0x00000001d8000000-0x00000001dfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "59"
+      },{
+         "range": "0x00000001e0000000-0x00000001e7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "60"
+      },{
+         "range": "0x00000001e8000000-0x00000001efffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "61"
+      },{
+         "range": "0x00000001f0000000-0x00000001f7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "62"
+      },{
+         "range": "0x00000001f8000000-0x00000001ffffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "63"
+      },{
+         "range": "0x0000000200000000-0x0000000207ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "64"
+      },{
+         "range": "0x0000000208000000-0x000000020fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "65"
+      },{
+         "range": "0x0000000210000000-0x0000000217ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "66"
+      },{
+         "range": "0x0000000218000000-0x000000021fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "67"
+      },{
+         "range": "0x0000000220000000-0x0000000227ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "68"
+      },{
+         "range": "0x0000000228000000-0x000000022fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "69"
+      },{
+         "range": "0x0000000230000000-0x0000000237ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "70"
+      },{
+         "range": "0x0000000238000000-0x000000023fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "71"
+      },{
+         "range": "0x0000000240000000-0x0000000247ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "72"
+      },{
+         "range": "0x0000000248000000-0x000000024fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "73"
+      },{
+         "range": "0x0000000250000000-0x0000000257ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "74"
+      },{
+         "range": "0x0000000258000000-0x000000025fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "75"
+      },{
+         "range": "0x0000000260000000-0x0000000267ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "76"
+      },{
+         "range": "0x0000000268000000-0x000000026fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "77"
+      },{
+         "range": "0x0000000270000000-0x0000000277ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "78"
+      },{
+         "range": "0x0000000278000000-0x000000027fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "79"
+      },{
+         "range": "0x0000000280000000-0x0000000287ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "80"
+      },{
+         "range": "0x0000000288000000-0x000000028fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "81"
+      },{
+         "range": "0x0000000290000000-0x0000000297ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "82"
+      },{
+         "range": "0x0000000298000000-0x000000029fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "83"
+      },{
+         "range": "0x00000002a0000000-0x00000002a7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "84"
+      },{
+         "range": "0x00000002a8000000-0x00000002afffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "85"
+      },{
+         "range": "0x00000002b0000000-0x00000002b7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "86"
+      },{
+         "range": "0x00000002b8000000-0x00000002bfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "87"
+      },{
+         "range": "0x00000002c0000000-0x00000002c7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "88"
+      },{
+         "range": "0x00000002c8000000-0x00000002cfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "89"
+      },{
+         "range": "0x00000002d0000000-0x00000002d7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "90"
+      },{
+         "range": "0x00000002d8000000-0x00000002dfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "91"
+      },{
+         "range": "0x00000002e0000000-0x00000002e7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "92"
+      },{
+         "range": "0x00000002e8000000-0x00000002efffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "93"
+      },{
+         "range": "0x00000002f0000000-0x00000002f7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "94"
+      },{
+         "range": "0x00000002f8000000-0x00000002ffffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "95"
+      },{
+         "range": "0x0000000300000000-0x0000000307ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "96"
+      },{
+         "range": "0x0000000308000000-0x000000030fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "97"
+      },{
+         "range": "0x0000000310000000-0x0000000317ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "98"
+      },{
+         "range": "0x0000000318000000-0x000000031fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "99"
+      },{
+         "range": "0x0000000320000000-0x0000000327ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "100"
+      },{
+         "range": "0x0000000328000000-0x000000032fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "101"
+      },{
+         "range": "0x0000000330000000-0x0000000337ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "102"
+      },{
+         "range": "0x0000000338000000-0x000000033fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "103"
+      },{
+         "range": "0x0000000340000000-0x0000000347ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "104"
+      },{
+         "range": "0x0000000348000000-0x000000034fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "105"
+      },{
+         "range": "0x0000000350000000-0x0000000357ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "106"
+      },{
+         "range": "0x0000000358000000-0x000000035fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "107"
+      },{
+         "range": "0x0000000360000000-0x0000000367ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "108"
+      },{
+         "range": "0x0000000368000000-0x000000036fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "109"
+      },{
+         "range": "0x0000000370000000-0x0000000377ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "110"
+      },{
+         "range": "0x0000000378000000-0x000000037fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "111"
+      },{
+         "range": "0x0000000380000000-0x0000000387ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "112"
+      },{
+         "range": "0x0000000388000000-0x000000038fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "113"
+      },{
+         "range": "0x0000000390000000-0x0000000397ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "114"
+      },{
+         "range": "0x0000000398000000-0x000000039fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "115"
+      },{
+         "range": "0x00000003a0000000-0x00000003a7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "116"
+      },{
+         "range": "0x00000003a8000000-0x00000003afffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "117"
+      },{
+         "range": "0x00000003b0000000-0x00000003b7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "118"
+      },{
+         "range": "0x00000003b8000000-0x00000003bfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "119"
+      },{
+         "range": "0x00000003c0000000-0x00000003c7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "120"
+      },{
+         "range": "0x00000003c8000000-0x00000003cfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "121"
+      },{
+         "range": "0x00000003d0000000-0x00000003d7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "122"
+      },{
+         "range": "0x00000003d8000000-0x00000003dfffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "123"
+      },{
+         "range": "0x00000003e0000000-0x00000003e7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "124"
+      },{
+         "range": "0x00000003e8000000-0x00000003efffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "125"
+      },{
+         "range": "0x00000003f0000000-0x00000003f7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "126"
+      },{
+         "range": "0x00000003f8000000-0x00000003ffffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "127"
+      },{
+         "range": "0x0000000400000000-0x0000000407ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "128"
+      },{
+         "range": "0x0000000408000000-0x000000040fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "129"
+      },{
+         "range": "0x0000000410000000-0x0000000417ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "130"
+      },{
+         "range": "0x0000000418000000-0x000000041fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "131"
+      },{
+         "range": "0x0000000420000000-0x0000000427ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "132"
+      },{
+         "range": "0x0000000428000000-0x000000042fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "133"
+      },{
+         "range": "0x0000000430000000-0x0000000437ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "134"
+      },{
+         "range": "0x0000000438000000-0x000000043fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "135"
+      },{
+         "range": "0x0000000440000000-0x0000000447ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "136"
+      },{
+         "range": "0x0000000448000000-0x000000044fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "137"
+      },{
+         "range": "0x0000000450000000-0x0000000457ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "138"
+      },{
+         "range": "0x0000000458000000-0x000000045fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "139"
+      },{
+         "range": "0x0000000460000000-0x0000000467ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "140"
+      },{
+         "range": "0x0000000468000000-0x000000046fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "141"
+      },{
+         "range": "0x0000000470000000-0x0000000477ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "142"
+      },{
+         "range": "0x0000000478000000-0x000000047fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "143"
+      },{
+         "range": "0x0000000480000000-0x0000000487ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "144"
+      },{
+         "range": "0x0000000488000000-0x000000048fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "145"
+      },{
+         "range": "0x0000000490000000-0x0000000497ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "146"
+      },{
+         "range": "0x0000000498000000-0x000000049fffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "147"
+      },{
+         "range": "0x00000004a0000000-0x00000004a7ffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "148"
+      },{
+         "range": "0x00000004a8000000-0x00000004afffffff",
+         "size": "128M",
+         "state": "online",
+         "removable": true,
+         "block": "149"
+      }
+   ]
+}

@@ -130,11 +130,11 @@ mod unix {
         let cmd_result = UCommand::new()
             .terminal_simulation(true)
             .arg(&shell_cmd)
-            .run();
+            .succeeds();
 
-        let output = cmd_result.code_is(0).no_stderr().stdout_str();
+        let output = cmd_result.no_stderr().stdout_str();
 
-        // /proc/self/stat format has sessiion ID as the 6th space-separated
+        // /proc/self/stat format has session ID as the 6th space-separated
         // item; if we managed to get session leadership, we should see a
         // difference there...
         let (before, after) = output

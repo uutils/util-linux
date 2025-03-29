@@ -13,13 +13,29 @@ mod test_lscpu;
 #[path = "by-util/test_lsmem.rs"]
 mod test_lsmem;
 
+#[cfg(feature = "lslocks")]
+#[path = "by-util/test_lslocks.rs"]
+mod test_lslocks;
+
+#[cfg(feature = "mesg")]
+#[path = "by-util/test_mesg.rs"]
+mod test_mesg;
+
 #[cfg(feature = "mountpoint")]
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
 
+#[cfg(feature = "blockdev")]
+#[path = "by-util/test_blockdev.rs"]
+mod test_blockdev;
+
 #[cfg(feature = "ctrlaltdel")]
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
+
+#[cfg(feature = "renice")]
+#[path = "by-util/test_renice.rs"]
+mod test_renice;
 
 #[cfg(feature = "rev")]
 #[path = "by-util/test_rev.rs"]
@@ -44,3 +60,7 @@ mod test_fsfreeze;
 #[cfg(feature = "findmnt")]
 #[path = "by-util/test_findmnt.rs"]
 mod test_findmnt;
+
+#[cfg(feature = "mcookie")]
+#[path = "by-util/test_mcookie.rs"]
+mod test_mcookie;

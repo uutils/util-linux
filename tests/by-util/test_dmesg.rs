@@ -26,7 +26,7 @@ fn test_kmsg_json() {
         .arg("--kmsg-file")
         .arg("kmsg.input")
         .arg("--json")
-        .run()
+        .succeeds()
         .no_stderr()
         .stdout_is_templated_fixture("test_kmsg_json.expected", &[("\r\n", "\n")]);
 }

@@ -1,10 +1,3 @@
-// enum HumanStringSize {
-//     Suffix1Letter = 0,
-//     Suffix3Letter = (1 << 0),
-//     SuffixSpace = (1 << 1),
-//     Decimal2Digits = (1 << 2),
-// }
-
 pub fn size_to_human_string(bytes: u64) -> String {
     let mut buf = String::with_capacity(32);
     let mut dec;

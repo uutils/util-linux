@@ -1,0 +1,17 @@
+[package]
+name = "uu_renice"
+version = "0.0.1"
+edition = "2021"
+description = "renice ~ (uutils) Alter priority of running processes"
+
+[lib]
+path = "src/renice.rs"
+
+[[bin]]
+name = "renice"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+libc = { workspace = true }
+uucore = { workspace = true }
