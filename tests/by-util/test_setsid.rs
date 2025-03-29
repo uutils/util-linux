@@ -5,8 +5,11 @@
 
 #[cfg(target_family = "unix")]
 mod unix {
-    use crate::common::util::{TestScenario, UCommand, TESTS_BINARY};
-
+    use uutests::new_ucmd;
+    use uutests::util::get_tests_binary;
+    use uutests::util::TestScenario;
+    use uutests::util::UCommand;
+    use uutests::util_name;
     #[test]
     fn test_invalid_arg() {
         new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
@@ -77,8 +80,11 @@ mod unix {
 
     #[test]
     fn unprivileged_user_cannot_steal_controlling_tty() {
-        let shell_cmd =
-            format!("{TESTS_BINARY} setsid -w -c {TESTS_BINARY} setsid -w -c /b/usrin/true");
+        let shell_cmd = format!(
+            "{} setsid -w -c {} setsid -w -c /b/usrin/true",
+            get_tests_binary(),
+            get_tests_binary()
+        );
         UCommand::new()
             .terminal_simulation(true)
             .arg(&shell_cmd)
@@ -92,7 +98,8 @@ mod unix {
     #[test]
     fn unprivileged_user_can_take_new_controlling_tty() {
         let shell_cmd = format!(
-            "/usr/bin/cat /proc/self/stat; {TESTS_BINARY} setsid -w -c /usr/bin/cat /proc/self/stat"
+            "/usr/bin/cat /proc/self/stat; {} setsid -w -c /usr/bin/cat /proc/self/stat",
+            get_tests_binary()
         );
 
         let cmd_result = UCommand::new()
@@ -124,7 +131,8 @@ mod unix {
     #[test]
     fn setsid_takes_session_leadership() {
         let shell_cmd = format!(
-            "/usr/bin/cat /proc/self/stat; {TESTS_BINARY} setsid /usr/bin/cat /proc/self/stat"
+            "/usr/bin/cat /proc/self/stat; {} setsid /usr/bin/cat /proc/self/stat",
+            get_tests_binary()
         );
 
         let cmd_result = UCommand::new()
@@ -161,7 +169,9 @@ mod unix {
 
 #[cfg(not(target_family = "unix"))]
 mod non_unix {
-    use crate::common::util::TestScenario;
+    use uutests::new_ucmd;
+    use uutests::util::TestScenario;
+    use uutests::util_name;
 
     #[test]
     fn unsupported_platforms() {
