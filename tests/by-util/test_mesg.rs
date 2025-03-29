@@ -3,7 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use crate::common::util::TestScenario;
+use uutests::new_ucmd;
+use uutests::util::TestScenario;
+use uutests::util_name;
 
 #[test]
 fn test_invalid_verb() {
@@ -24,7 +26,9 @@ fn test_no_terminal() {
 
 #[cfg(not(target_family = "unix"))]
 mod non_unix {
-    use crate::common::util::TestScenario;
+    use uutests::new_ucmd;
+    use uutests::util::TestScenario;
+    use uutests::util_name;
 
     #[test]
     fn test_fails_on_unsupported_platforms() {

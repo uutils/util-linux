@@ -4,8 +4,13 @@
 // file that was distributed with this source code.
 // spell-checker:ignore (words) symdir somefakedir
 
+use uutests::at_and_ucmd;
 #[cfg(unix)]
-use crate::common::util::TestScenario;
+use uutests::new_ucmd;
+#[cfg(unix)]
+use uutests::util::TestScenario;
+#[cfg(unix)]
+use uutests::util_name;
 
 #[cfg(unix)]
 use regex::Regex;

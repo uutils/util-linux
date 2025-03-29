@@ -7,7 +7,9 @@ use std::io::Write;
 
 use tempfile::NamedTempFile;
 
-use crate::common::util::TestScenario;
+use uutests::new_ucmd;
+use uutests::util::TestScenario;
+use uutests::util_name;
 
 #[test]
 fn test_invalid_arg() {
