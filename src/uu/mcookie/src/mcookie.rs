@@ -21,9 +21,6 @@ mod options {
 const ABOUT: &str = help_about!("mcookie.md");
 const USAGE: &str = help_usage!("mcookie.md");
 
-// Default number of bytes to read from character devices if no max-size is given
-const DEFAULT_SEED_READ_BYTES: u64 = 1024;
-
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
@@ -45,7 +42,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     for file in seed_files {
         let mut f = File::open(file)?;
-        let metadata = f.metadata()?; // Get metadata for file type check
         let mut buffer: Vec<u8> = Vec::new();
 
         if let Some(max_bytes) = &max_size {
@@ -53,10 +49,19 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             handle.read_to_end(&mut buffer)?;
         } else {
             #[cfg(unix)]
-            if metadata.file_type().is_char_device() {
-                let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
-                handle.read_to_end(&mut buffer)?;
-            } else {
+            {
+                const DEFAULT_SEED_READ_BYTES: u64 = 1024;
+                let metadata = f.metadata()?;
+
+                if metadata.file_type().is_char_device() {
+                    let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
+                    handle.read_to_end(&mut buffer)?;
+                } else {
+                    f.read_to_end(&mut buffer)?;
+                }
+            }
+            #[cfg(not(unix))]
+            {
                 f.read_to_end(&mut buffer)?;
             }
         }
