@@ -20,7 +20,7 @@ mod options {
 const ABOUT: &str = help_about!("mcookie.md");
 const USAGE: &str = help_usage!("mcookie.md");
 
-// Define a default number of bytes to read from character devices if no max-size is given
+// Default number of bytes to read from character devices if no max-size is given
 const DEFAULT_SEED_READ_BYTES: u64 = 1024;
 
 #[uucore::main]
@@ -51,14 +51,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             let mut handle = f.take(*max_bytes);
             handle.read_to_end(&mut buffer)?;
         } else {
-            // Check if the file is a character device (like /dev/random)
             #[cfg(unix)]
             if metadata.file_type().is_char_device() {
-                // Read a limited amount from character devices
                 let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
                 handle.read_to_end(&mut buffer)?;
             } else {
-                // For regular files, read to end
                 f.read_to_end(&mut buffer)?;
             }
         }
