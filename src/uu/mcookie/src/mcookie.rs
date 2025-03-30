@@ -4,6 +4,7 @@
 // file that was distributed with this source code.
 
 use std::{fs::File, io::Read};
+#[cfg(unix)] use std::os::unix::fs::FileTypeExt;
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
@@ -18,6 +19,9 @@ mod options {
 
 const ABOUT: &str = help_about!("mcookie.md");
 const USAGE: &str = help_usage!("mcookie.md");
+
+// Define a default number of bytes to read from character devices if no max-size is given
+const DEFAULT_SEED_READ_BYTES: u64 = 1024;
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
@@ -40,13 +44,23 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     for file in seed_files {
         let mut f = File::open(file)?;
+        let metadata = f.metadata()?; // Get metadata for file type check
         let mut buffer: Vec<u8> = Vec::new();
 
         if let Some(max_bytes) = &max_size {
             let mut handle = f.take(*max_bytes);
             handle.read_to_end(&mut buffer)?;
         } else {
-            f.read_to_end(&mut buffer)?;
+            // Check if the file is a character device (like /dev/random)
+            #[cfg(unix)]
+            if metadata.file_type().is_char_device() {
+                // Read a limited amount from character devices
+                let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
+                handle.read_to_end(&mut buffer)?;
+            } else {
+                // For regular files, read to end
+                f.read_to_end(&mut buffer)?;
+            }
         }
 
         if verbose {
