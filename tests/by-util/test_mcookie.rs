@@ -63,3 +63,34 @@ fn test_seed_files_and_max_size() {
         file2.path().to_str().unwrap()
     ));
 }
+
+#[test]
+#[cfg(unix)] // Character devices like /dev/zero are a Unix concept
+fn test_char_device_input() {
+    let res_no_limit = new_ucmd!().arg("-f").arg("/dev/zero").succeeds();
+
+    let stdout_no_limit = res_no_limit.no_stderr().stdout_str();
+    assert_eq!(stdout_no_limit.trim_end().len(), 32);
+    assert!(stdout_no_limit
+        .trim_end()
+        .chars()
+        .all(|c| c.is_ascii_hexdigit()));
+
+    let res_verbose = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg("/dev/zero")
+        .succeeds();
+
+    res_verbose.stderr_contains("Got 1024 bytes from /dev/zero");
+    res_verbose.stderr_contains("Got 128 bytes from randomness source"); // Ensure internal randomness is still added
+
+    let stdout_verbose = res_verbose.stdout_str();
+    assert_eq!(stdout_verbose.trim_end().len(), 32);
+    assert!(stdout_verbose
+        .trim_end()
+        .chars()
+        .all(|c| c.is_ascii_hexdigit()));
+
+    assert_ne!(stdout_no_limit, stdout_verbose);
+}
