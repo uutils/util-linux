@@ -8,7 +8,7 @@ use std::{fs::File, io::Read};
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
 use rand::RngCore;
-use uucore::{error::UResult, format_usage, help_about, help_usage};
+use uucore::{error::{UResult, USimpleError}, format_usage, help_about, help_usage};
 mod size;
 use size::Size;
 
@@ -37,8 +37,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         match Size::parse(size_str) {
             Ok(size) => Some(size.size_bytes()),
             Err(_) => {
-                eprintln!("Failed to parse max-size value");
-                std::process::exit(1);
+                return Err(USimpleError::new(1, "Failed to parse max-size value"));
             }
         }
     } else {
