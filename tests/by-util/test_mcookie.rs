@@ -32,7 +32,7 @@ fn test_verbose() {
 }
 
 #[test]
-fn test_seed_files_and_max_size() {
+fn test_seed_files_and_max_size_raw() {
     let mut file1 = NamedTempFile::new().unwrap();
     const CONTENT1: &str = "Some seed data";
     file1.write_all(CONTENT1.as_bytes()).unwrap();
@@ -62,4 +62,39 @@ fn test_seed_files_and_max_size() {
         "Got 1337 bytes from {}",
         file2.path().to_str().unwrap()
     ));
+}
+
+#[test]
+fn test_seed_files_and_max_size_human_readable() {
+    let mut file = NamedTempFile::new().unwrap();
+    const CONTENT: [u8; 4096] = [1; 4096];
+    file.write_all(&CONTENT).unwrap();
+
+    let res = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg(file.path())
+        .arg("-m")
+        .arg("2KiB")
+        .succeeds();
+
+    // Ensure we only read up to 2KiB (2048 bytes)
+    res.stderr_contains(format!(
+        "Got 2048 bytes from {}",
+        file.path().to_str().unwrap()
+    ));
+}
+
+#[test]
+fn test_invalid_size_format() {
+    let file = NamedTempFile::new().unwrap();
+
+    let res = new_ucmd!()
+        .arg("-f")
+        .arg(file.path())
+        .arg("-m")
+        .arg("invalid")
+        .fails();
+
+    res.stderr_contains("Failed to parse max-size value");
 }

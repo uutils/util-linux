@@ -8,7 +8,12 @@ use std::{fs::File, io::Read};
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
 use rand::RngCore;
-use uucore::{error::UResult, format_usage, help_about, help_usage};
+use uucore::{
+    error::{UResult, USimpleError},
+    format_usage, help_about, help_usage,
+};
+mod size;
+use size::Size;
 
 mod options {
     pub const FILE: &str = "file";
@@ -31,10 +36,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         .map(|v| v.as_str())
         .collect();
 
-    // TODO: Parse max size from human-readable strings (KiB, MiB, GiB etc.)
-    let max_size = matches
-        .get_one::<String>(options::MAX_SIZE)
-        .map(|v| v.parse::<u64>().expect("Failed to parse max-size value"));
+    let max_size = if let Some(size_str) = matches.get_one::<String>(options::MAX_SIZE) {
+        match Size::parse(size_str) {
+            Ok(size) => Some(size.size_bytes()),
+            Err(_) => {
+                return Err(USimpleError::new(1, "Failed to parse max-size value"));
+            }
+        }
+    } else {
+        None
+    };
 
     let mut hasher = Md5::new();
 
@@ -99,7 +110,7 @@ pub fn uu_app() -> Command {
                 .long("max-size")
                 .value_name("num")
                 .action(ArgAction::Set)
-                .help("limit how much is read from seed files"),
+                .help("limit how much is read from seed files (supports B suffix or binary units: KiB, MiB, GiB, TiB)"),
         )
         .arg(
             Arg::new(options::VERBOSE)
