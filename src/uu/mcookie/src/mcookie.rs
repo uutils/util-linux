@@ -3,6 +3,8 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+#[cfg(unix)]
+use std::os::unix::fs::FileTypeExt;
 use std::{fs::File, io::Read};
 
 use clap::{crate_version, Arg, ArgAction, Command};
@@ -57,7 +59,22 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             let mut handle = f.take(*max_bytes);
             handle.read_to_end(&mut buffer)?;
         } else {
-            f.read_to_end(&mut buffer)?;
+            #[cfg(unix)]
+            {
+                const DEFAULT_SEED_READ_BYTES: u64 = 1024;
+                let metadata = f.metadata()?;
+
+                if metadata.file_type().is_char_device() {
+                    let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
+                    handle.read_to_end(&mut buffer)?;
+                } else {
+                    f.read_to_end(&mut buffer)?;
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                f.read_to_end(&mut buffer)?;
+            }
         }
 
         if verbose {
