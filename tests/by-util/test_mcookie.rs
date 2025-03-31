@@ -87,6 +87,7 @@ fn test_char_device_input() {
     assert!(stdout_verbose.chars().all(|c| c.is_ascii_hexdigit()));
 
     assert_ne!(stdout_no_limit, stdout_verbose);
+}
 
 #[test]
 fn test_seed_files_and_max_size_human_readable() {
