@@ -71,9 +71,7 @@ fn test_char_device_input() {
 
     let stdout_no_limit = res_no_limit.no_stderr().stdout_str().trim_end();
     assert_eq!(stdout_no_limit.len(), 32);
-    assert!(stdout_no_limit
-        .chars()
-        .all(|c| c.is_ascii_hexdigit()));
+    assert!(stdout_no_limit.chars().all(|c| c.is_ascii_hexdigit()));
 
     let res_verbose = new_ucmd!()
         .arg("--verbose")
@@ -86,9 +84,7 @@ fn test_char_device_input() {
 
     let stdout_verbose = res_verbose.stdout_str().trim_end();
     assert_eq!(stdout_verbose.len(), 32);
-    assert!(stdout_verbose
-        .chars()
-        .all(|c| c.is_ascii_hexdigit()));
+    assert!(stdout_verbose.chars().all(|c| c.is_ascii_hexdigit()));
 
     assert_ne!(stdout_no_limit, stdout_verbose);
 }
