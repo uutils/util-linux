@@ -69,10 +69,9 @@ fn test_seed_files_and_max_size() {
 fn test_char_device_input() {
     let res_no_limit = new_ucmd!().arg("-f").arg("/dev/zero").succeeds();
 
-    let stdout_no_limit = res_no_limit.no_stderr().stdout_str();
-    assert_eq!(stdout_no_limit.trim_end().len(), 32);
+    let stdout_no_limit = res_no_limit.no_stderr().stdout_str().trim_end();
+    assert_eq!(stdout_no_limit.len(), 32);
     assert!(stdout_no_limit
-        .trim_end()
         .chars()
         .all(|c| c.is_ascii_hexdigit()));
 
@@ -85,10 +84,9 @@ fn test_char_device_input() {
     res_verbose.stderr_contains("Got 1024 bytes from /dev/zero");
     res_verbose.stderr_contains("Got 128 bytes from randomness source"); // Ensure internal randomness is still added
 
-    let stdout_verbose = res_verbose.stdout_str();
-    assert_eq!(stdout_verbose.trim_end().len(), 32);
+    let stdout_verbose = res_verbose.stdout_str().trim_end();
+    assert_eq!(stdout_verbose.len(), 32);
     assert!(stdout_verbose
-        .trim_end()
         .chars()
         .all(|c| c.is_ascii_hexdigit()));
 
