@@ -1142,6 +1142,7 @@ dependencies = [
  "uu_mcookie",
  "uu_mesg",
  "uu_mountpoint",
+ "uu_namei",
  "uu_renice",
  "uu_rev",
  "uu_setsid",
@@ -1277,6 +1278,14 @@ dependencies = [
 
 [[package]]
 name = "uu_mountpoint"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_namei"
 version = "0.0.1"
 dependencies = [
  "clap",

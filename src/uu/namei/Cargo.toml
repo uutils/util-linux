@@ -1,0 +1,15 @@
+[package]
+name = "uu_namei"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+
+[lib]
+path = "src/namei.rs"
+
+[[bin]]
+name = "namei"
+path = "src/main.rs"
