@@ -406,9 +406,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 maximum_group_length,
             );
         }
-    } else {
-        // Handle the case where path is not provided
     }
+    // Handling the case where path is not provided is not necessary
+    // because in path arguments have been made necessary in clap so
+    // it will automatically show an error in stdout
 
     Ok(())
 }
