@@ -41,6 +41,7 @@ feat_common_core = [
   "renice",
   "rev",
   "setsid",
+  "whereis",
 ]
 
 [workspace.dependencies]
@@ -94,6 +95,7 @@ mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", pa
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
+whereis = { optional = true, version = "0.0.1", package = "uu_whereis", path = "src/uu/whereis" }
 
 [dev-dependencies]
 # dmesg test require fixed-boot-time feature turned on.
