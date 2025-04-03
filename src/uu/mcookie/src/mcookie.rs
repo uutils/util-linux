@@ -5,7 +5,10 @@
 
 #[cfg(unix)]
 use std::os::unix::fs::FileTypeExt;
-use std::{fs::File, io::{Read, stdin}};
+use std::{
+    fs::File,
+    io::{stdin, Read},
+};
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
