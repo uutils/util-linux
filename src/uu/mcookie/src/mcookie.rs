@@ -61,6 +61,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         if file_path == "-" {
             input_name = "stdin";
             let mut stdin_handle = stdin();
+
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = stdin_handle.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
@@ -70,6 +71,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         } else {
             input_name = file_path;
             let mut f = File::open(file_path)?;
+            
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = f.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
