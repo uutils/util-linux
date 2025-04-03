@@ -5,7 +5,7 @@
 
 #[cfg(unix)]
 use std::os::unix::fs::FileTypeExt;
-use std::{fs::File, io::Read};
+use std::{fs::File, io::{Read, stdin}};
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
@@ -51,34 +51,47 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut hasher = Md5::new();
 
-    for file in seed_files {
-        let mut f = File::open(file)?;
+    for file_path in seed_files {
         let mut buffer: Vec<u8> = Vec::new();
+        let input_name: &str;
 
-        if let Some(max_bytes) = &max_size {
-            let mut handle = f.take(*max_bytes);
-            handle.read_to_end(&mut buffer)?;
+        if file_path == "-" {
+            input_name = "stdin";
+            let mut stdin_handle = stdin();
+            if let Some(max_bytes) = &max_size {
+                let mut limited_reader = stdin_handle.take(*max_bytes);
+                limited_reader.read_to_end(&mut buffer)?;
+            } else {
+                stdin_handle.read_to_end(&mut buffer)?;
+            }
         } else {
-            #[cfg(unix)]
-            {
-                const DEFAULT_SEED_READ_BYTES: u64 = 1024;
-                let metadata = f.metadata()?;
-
-                if metadata.file_type().is_char_device() {
-                    let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
-                    handle.read_to_end(&mut buffer)?;
-                } else {
+            input_name = file_path;
+            let mut f = File::open(file_path)?;
+            if let Some(max_bytes) = &max_size {
+                let mut limited_reader = f.take(*max_bytes);
+                limited_reader.read_to_end(&mut buffer)?;
+            } else {
+                #[cfg(unix)]
+                {
+                    const DEFAULT_SEED_READ_BYTES: u64 = 1024;
+                    let metadata = f.metadata()?;
+                    
+                    if metadata.file_type().is_char_device() {
+                        let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
+                        handle.read_to_end(&mut buffer)?;
+                    } else {
+                        f.read_to_end(&mut buffer)?;
+                    }
+                }
+                #[cfg(not(unix))]
+                {
                     f.read_to_end(&mut buffer)?;
                 }
-            }
-            #[cfg(not(unix))]
-            {
-                f.read_to_end(&mut buffer)?;
             }
         }
 
         if verbose {
-            eprintln!("Got {} bytes from {}", buffer.len(), file);
+            eprintln!("Got {} bytes from {}", buffer.len(), input_name);
         }
 
         hasher.update(&buffer);
