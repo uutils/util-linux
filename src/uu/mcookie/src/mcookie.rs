@@ -71,7 +71,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         } else {
             input_name = file_path;
             let mut f = File::open(file_path)?;
-            
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = f.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
