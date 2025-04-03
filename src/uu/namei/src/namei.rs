@@ -4,6 +4,8 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, Command};
+#[cfg(feature = "selinux")]
+use selinux::SecurityContext;
 use std::env;
 use std::str::FromStr;
 use std::{cmp::max, fs, os::unix::fs::MetadataExt, path::Path};
@@ -22,8 +24,10 @@ mod options {
     pub const OWNERS: &str = "owners";
     pub const VERTICAL: &str = "vertical";
     pub const MOUNTPOINTS: &str = "mountpoints";
-    pub const CONTEXT: &str = "context";
     pub const PATHNAMES: &str = "pathnames";
+
+    #[cfg(feature = "selinux")]
+    pub const CONTEXT: &str = "context";
 }
 
 struct OutputOptions {
@@ -33,11 +37,13 @@ struct OutputOptions {
     owners: bool,
     vertical: bool,
     mountpoints: bool,
+
+    #[cfg(feature = "selinux")]
     context: bool,
 }
 
 pub fn uu_app() -> Command {
-    Command::new(uucore::util_name())
+    let cmd = Command::new(uucore::util_name())
         .version(crate_version!())
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
@@ -92,14 +98,19 @@ pub fn uu_app() -> Command {
                 .long("mountpoints")
                 .help("show mount point directories with a 'D'")
                 .action(ArgAction::SetTrue),
-        )
-        .arg(
-            Arg::new(options::CONTEXT)
-                .short('Z')
-                .long("context")
-                .help("print any security context of each file")
-                .action(ArgAction::SetTrue),
-        )
+        );
+
+    #[cfg(feature = "selinux")]
+    return cmd.arg(
+        Arg::new(options::CONTEXT)
+            .short('Z')
+            .long("context")
+            .help("print any security context of each file")
+            .action(ArgAction::SetTrue),
+    );
+
+    #[cfg(not(feature = "selinux"))]
+    return cmd;
 }
 
 fn max_owner_length(path: &Path) -> usize {
@@ -117,7 +128,7 @@ fn max_owner_length(path: &Path) -> usize {
         max_length = max(max_entry_length, max_length);
     }
 
-    return max_length;
+    max_length
 }
 
 fn max_group_length(path: &Path) -> usize {
@@ -135,7 +146,7 @@ fn max_group_length(path: &Path) -> usize {
         max_length = max(max_entry_length, max_length);
     }
 
-    return max_length;
+    max_length
 }
 
 fn get_file_name(input: &str) -> &str {
@@ -155,9 +166,9 @@ fn is_mount_point(input_path: &Path) -> bool {
             return false;
         }
         let parent_metadata = fs::metadata(parent).unwrap();
-        return metadata.dev() != parent_metadata.dev();
+        metadata.dev() != parent_metadata.dev()
     } else {
-        return true;
+        true
     }
 }
 
@@ -187,9 +198,12 @@ fn get_prefix(
         if output_opts.vertical {
             blanks += 1;
         }
+
+        #[cfg(feature = "selinux")]
         if !output_opts.context {
             blanks += 1;
         }
+
         prefix = " ".repeat(blanks);
         return prefix;
     }
@@ -268,7 +282,7 @@ fn get_prefix(
 
         prefix.push_str(&perm_string);
     }
-    prefix.push_str(" ");
+    prefix.push(' ');
 
     if output_opts.owners {
         let uid = metadata.uid();
@@ -283,13 +297,32 @@ fn get_prefix(
         prefix = format!("{}{}{}", prefix, owner, group);
     }
 
+    #[cfg(feature = "selinux")]
+    if output_opts.context {
+        let context_not_available_string: String = '?'.to_string();
+        match SecurityContext::of_path(path, !output_opts.nosymlinks, false) {
+            Err(_r) => prefix.push_str(context_not_available_string.as_str()),
+            Ok(None) => prefix.push_str(context_not_available_string.as_str()),
+            Ok(Some(cntxt)) => {
+                let context = cntxt.as_bytes();
+                let context = context.strip_suffix(&[0]).unwrap_or(context);
+                prefix.push_str(
+                    String::from_utf8(context.to_vec())
+                        .unwrap_or_else(|_e| String::from_utf8_lossy(context).into_owned())
+                        .as_str(),
+                )
+            }
+        }
+        prefix.push_str("  ");
+    }
+
     if output_opts.vertical {
         let mut st = String::new();
         st.push_str(&" ".repeat(level * 2));
         prefix.push_str(&st);
     }
 
-    return prefix;
+    prefix
 }
 
 fn print_files(
@@ -351,7 +384,7 @@ fn print_files(
             print_files(
                 level + 1,
                 target_path,
-                &output_opts,
+                output_opts,
                 maximum_owner_length,
                 maximum_group_length,
             );
@@ -360,7 +393,7 @@ fn print_files(
             print_files(
                 level + 1,
                 Path::new(&osstr),
-                &output_opts,
+                output_opts,
                 maximum_owner_length,
                 maximum_group_length,
             );
@@ -381,6 +414,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         owners: matches.get_flag(options::OWNERS) || matches.get_flag(options::LONG),
         vertical: matches.get_flag(options::VERTICAL) || matches.get_flag(options::LONG),
         mountpoints: matches.get_flag(options::MOUNTPOINTS),
+
+        #[cfg(feature = "selinux")]
         context: matches.get_flag(options::CONTEXT),
     };
 
