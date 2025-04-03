@@ -75,7 +75,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 {
                     const DEFAULT_SEED_READ_BYTES: u64 = 1024;
                     let metadata = f.metadata()?;
-                    
+
                     if metadata.file_type().is_char_device() {
                         let mut handle = f.take(DEFAULT_SEED_READ_BYTES);
                         handle.read_to_end(&mut buffer)?;
