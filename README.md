@@ -89,7 +89,7 @@ First, reimplement the most important tools from util-linux:
 - `hardlink`: Creates hard links.
 - `mcookie`: Generates random numbers.
 - `namei`: Follows a pathname to its endpoint.
-- `rename.ul`: Renames files.
+- `rename`: Renames files.
 - `rev`: Reverses lines in a file.
 - `setarch`: Sets architecture emulation.
 - `setpriv`: Runs a program with different privileges.
