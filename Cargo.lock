@@ -269,6 +269,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07e9666f4a9a948d4f1dff0c08a4512b0f7c86414b23960104c243c10d79f4c3"
+dependencies = [
+ "ctor-proc-macro",
+ "dtor",
+]
+
+[[package]]
+name = "ctor-proc-macro"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f211af61d8efdd104f96e57adf5e426ba1bc3ed7a4ead616e15e5881fd79c4d"
+
+[[package]]
 name = "deranged"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,6 +320,21 @@ dependencies = [
  "socket2",
  "windows-sys 0.48.0",
 ]
+
+[[package]]
+name = "dtor"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "222ef136a1c687d4aa0395c175f2c4586e379924c352fd02f7870cf7de783c23"
+dependencies = [
+ "dtor-proc-macro",
+]
+
+[[package]]
+name = "dtor-proc-macro"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
 
 [[package]]
 name = "dunce"
@@ -1115,6 +1146,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
+ "ctor",
  "dns-lookup",
  "libc",
  "nix",
@@ -1146,6 +1178,7 @@ dependencies = [
  "uu_rev",
  "uu_setsid",
  "uucore",
+ "uutests",
  "xattr",
 ]
 
@@ -1346,6 +1379,26 @@ name = "uuhelp_parser"
 version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bb6d972f580f8223cb7052d8580aea2b7061e368cf476de32ea9457b19459ed"
+
+[[package]]
+name = "uutests"
+version = "0.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f33bc1f552cd82939d3e07867b118ed7ef7bc0fef04b330e1ac69f98593cb22"
+dependencies = [
+ "ctor",
+ "glob",
+ "libc",
+ "nix",
+ "pretty_assertions",
+ "rand 0.9.0",
+ "regex",
+ "rlimit",
+ "tempfile",
+ "time",
+ "uucore",
+ "xattr",
+]
 
 [[package]]
 name = "version_check"
