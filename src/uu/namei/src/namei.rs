@@ -7,6 +7,7 @@ use clap::{crate_version, Arg, ArgAction, Command};
 #[cfg(feature = "selinux")]
 use selinux::SecurityContext;
 use std::env;
+use std::process;
 use std::str::FromStr;
 use std::{cmp::max, fs, os::unix::fs::MetadataExt, path::Path};
 use uucore::entries::{gid2grp, uid2usr};
@@ -52,8 +53,7 @@ pub fn uu_app() -> Command {
                 .value_name("PATH")
                 .help("Paths to follow")
                 .hide(true)
-                .index(1)
-                .action(ArgAction::Set)
+                .action(ArgAction::Append)
                 .required(true)
                 .num_args(1..),
         )
@@ -360,12 +360,15 @@ fn print_files(
     };
 
     match fs::metadata(path) {
-        Err(e) => println!(
-            "{}{} - {}",
-            prefix,
-            get_file_name(path.to_str().unwrap()),
-            e
-        ),
+        Err(e) => {
+            eprintln!(
+                "{}{} - {}",
+                prefix,
+                get_file_name(path.to_str().unwrap()),
+                e
+            );
+            process::exit(1);
+        }
         _ => println!(
             "{}{}{}",
             prefix,
