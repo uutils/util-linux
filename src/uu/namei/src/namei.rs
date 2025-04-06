@@ -132,11 +132,7 @@ pub fn uu_app() -> Command {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn max_owner_length(path: &Path, owners_output: bool) -> usize {
-    if owners_output {
-        return 0;
-    }
-
+fn max_owner_length(path: &Path) -> usize {
     let mut max_length = 0;
 
     for entry in path.ancestors() {
@@ -154,11 +150,7 @@ fn max_owner_length(path: &Path, owners_output: bool) -> usize {
     max_length
 }
 #[cfg(not(target_os = "windows"))]
-fn max_group_length(path: &Path, owners_output: bool) -> usize {
-    if owners_output {
-        return 0;
-    }
-
+fn max_group_length(path: &Path) -> usize {
     let mut max_length = 0;
 
     for entry in path.ancestors() {
@@ -571,9 +563,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             let maximum_group_length = 0;
 
             #[cfg(not(target_os = "windows"))]
-            let maximum_owner_length = max_owner_length(path, output_opts.owners);
+            let maximum_owner_length = max_owner_length(path);
             #[cfg(not(target_os = "windows"))]
-            let maximum_group_length = max_group_length(path, output_opts.owners);
+            let maximum_group_length = max_group_length(path);
 
             print_files(
                 0,
