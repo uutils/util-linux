@@ -70,7 +70,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             }
         } else {
             input_name = file_path;
-            let mut f = File::open(file_path)?;
+            let open_result: Result<File, std::io::Error> = File::open(file_path);
+            if let Err(err) = open_result {
+                eprintln!("mcookie: cannot open {file_path}: {err}");
+                continue;
+            }
+
+            let mut f: File = open_result.unwrap();
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = f.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
