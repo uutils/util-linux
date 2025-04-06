@@ -43,7 +43,7 @@ fn test_long_arg() {
 
     #[cfg(unix)]
     let regex = r" *[-bcCdDlMnpPsStTx?]([r-][w-][xt-]){3} [a-z0-9_\.][a-z0-9_\-\.]*[$]? [a-z0-9_\.][a-z0-9_\-\.]*[$]? .*";
-    #[cfg(target_os="windows")]
+    #[cfg(target_os = "windows")]
     let regex = r"[-dl](r[w-]x){3}.*";
 
     let re = &Regex::new(regex).unwrap();

@@ -34,10 +34,10 @@ mod options {
 
     #[cfg(unix)]
     pub const OWNERS: &str = "owners";
-    
+
     #[cfg(not(target_os = "windows"))]
     pub const MOUNTPOINTS: &str = "mountpoints";
-    
+
     #[cfg(feature = "selinux")]
     pub const CONTEXT: &str = "context";
 }
@@ -109,7 +109,7 @@ pub fn uu_app() -> Command {
             .help("show mount point directories with a 'D'")
             .action(ArgAction::SetTrue),
     );
-    
+
     #[cfg(unix)]
     let cmd = cmd.arg(
         Arg::new(options::OWNERS)
@@ -188,7 +188,7 @@ fn get_file_name(input: &str) -> &str {
 #[cfg(target_os = "windows")]
 fn get_file_name(input: &str) -> &str {
     if !input.contains('\\') {
-        return input;
+        input
     } else {
         let stripped = input.trim_end_matches('\\');
         if stripped.is_empty() {
@@ -197,7 +197,7 @@ fn get_file_name(input: &str) -> &str {
         if !stripped.contains('\\') {
             return stripped;
         }
-        return stripped.rsplit('\\').next().unwrap_or("\\");
+        stripped.rsplit('\\').next().unwrap_or("\\")
     }
 }
 
@@ -231,7 +231,7 @@ fn get_file_type(path: &Path, outputmountpoints: bool) -> char {
 fn get_file_type(path: &Path, _outputmountpoints: bool) -> char {
     let filetype = fs::metadata(path).unwrap().file_type();
 
-    let file_type = if filetype.is_dir() {
+    if filetype.is_dir() {
         'd'
     } else if filetype.is_file() {
         '-'
@@ -239,9 +239,7 @@ fn get_file_type(path: &Path, _outputmountpoints: bool) -> char {
         'l'
     } else {
         '?'
-    };
-
-    file_type
+    }
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -408,7 +406,7 @@ fn get_prefix(
     let mountpoints = false;
     #[cfg(not(target_os = "windows"))]
     let mountpoints = output_opts.mountpoints;
-    
+
     prefix.push(get_file_type(path, mountpoints));
 
     if output_opts.modes || output_opts.long {
