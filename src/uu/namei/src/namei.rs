@@ -9,8 +9,8 @@ use selinux::SecurityContext;
 #[cfg(not(target_os = "windows"))]
 use std::cmp::max;
 use std::env;
-#[cfg(not(target_os = "windows"))]
-use std::fs::Metadata;
+// #[cfg(not(target_os = "windows"))]
+// use std::fs::Metadata;
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 use std::process;
@@ -214,7 +214,7 @@ fn get_file_type(path: &Path, outputmountpoints: bool) -> char {
 
     let mode = metadata.mode();
 
-    let file_type = match mode & 0o170000 {
+    match mode & 0o170000 {
         0o100000 => '-', // Regular file
         0o040000 => 'd', // Directory
         0o020000 => 'c', // Character device
@@ -222,9 +222,7 @@ fn get_file_type(path: &Path, outputmountpoints: bool) -> char {
         0o010000 => 'p', // FIFO
         0o140000 => 's', // Socket
         _ => '?',        // Unknown
-    };
-
-    file_type
+    }
 }
 
 #[cfg(not(unix))]
@@ -260,6 +258,7 @@ fn is_mount_point(input_path: &Path) -> bool {
 
 #[cfg(not(target_os = "windows"))]
 fn get_permissions(path: &Path) -> String {
+    let metadata = fs::metadata(path).unwrap();
     let mode = metadata.mode();
 
     let permissions = [
@@ -403,6 +402,7 @@ fn get_prefix(
         return prefix;
     }
 
+    #[cfg(target_os = "windows")]
     let mountpoints = false;
     #[cfg(not(target_os = "windows"))]
     let mountpoints = output_opts.mountpoints;
@@ -418,6 +418,7 @@ fn get_prefix(
 
     #[cfg(not(target_os = "windows"))]
     if output_opts.owners {
+        let metadata = fs::metadata(path).unwrap();
         let uid = metadata.uid();
         let gid = metadata.gid();
         let mut owner = uid2usr(uid).unwrap();
@@ -564,7 +565,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             let path = Path::new(path_str);
             println!("f: {}", path.to_str().unwrap());
 
+            #[cfg(target_os = "windows")]
             let maximum_owner_length = 0;
+            #[cfg(target_os = "windows")]
             let maximum_group_length = 0;
 
             #[cfg(not(target_os = "windows"))]
