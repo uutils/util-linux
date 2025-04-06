@@ -123,3 +123,20 @@ fn test_invalid_size_format() {
 
     res.stderr_contains("Failed to parse max-size value");
 }
+
+#[test]
+fn test_stdin_input() {
+    const INPUT_DATA: &str = "some test data for stdin";
+    let res = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg("-")
+        .pipe_in(INPUT_DATA)
+        .succeeds();
+
+    res.stderr_contains(format!("Got {} bytes from stdin", INPUT_DATA.len()));
+
+    let stdout = res.stdout_str().trim_end();
+    assert_eq!(stdout.len(), 32);
+    assert!(stdout.chars().all(|c| c.is_ascii_hexdigit()));
+}
