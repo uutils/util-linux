@@ -6,17 +6,17 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 #[cfg(feature = "selinux")]
 use selinux::SecurityContext;
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 use std::cmp::max;
 use std::env;
 #[cfg(not(target_os = "windows"))]
 use std::fs::Metadata;
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::MetadataExt;
 use std::process;
 use std::str::FromStr;
 use std::{fs, path::Path};
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 use uucore::entries::{gid2grp, uid2usr};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -32,7 +32,7 @@ mod options {
     pub const VERTICAL: &str = "vertical";
     pub const PATHNAMES: &str = "pathnames";
 
-    #[cfg(unix)]
+    #[cfg(not(target_os = "windows"))]
     pub const OWNERS: &str = "owners";
 
     #[cfg(not(target_os = "windows"))]
@@ -51,7 +51,7 @@ struct OutputOptions {
     #[cfg(not(target_os = "windows"))]
     mountpoints: bool,
 
-    #[cfg(unix)]
+    #[cfg(not(target_os = "windows"))]
     owners: bool,
 
     #[cfg(feature = "selinux")]
@@ -110,7 +110,7 @@ pub fn uu_app() -> Command {
             .action(ArgAction::SetTrue),
     );
 
-    #[cfg(unix)]
+    #[cfg(not(target_os = "windows"))]
     let cmd = cmd.arg(
         Arg::new(options::OWNERS)
             .short('o')
@@ -131,7 +131,7 @@ pub fn uu_app() -> Command {
     cmd
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 fn max_owner_length(path: &Path, owners_output: bool) -> usize {
     if owners_output {
         return 0;
@@ -153,7 +153,7 @@ fn max_owner_length(path: &Path, owners_output: bool) -> usize {
 
     max_length
 }
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 fn max_group_length(path: &Path, owners_output: bool) -> usize {
     if owners_output {
         return 0;
@@ -201,7 +201,7 @@ fn get_file_name(input: &str) -> &str {
     }
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 fn get_file_type(path: &Path, outputmountpoints: bool) -> char {
     if path.is_symlink() {
         return 'l';
@@ -258,7 +258,7 @@ fn is_mount_point(input_path: &Path) -> bool {
     }
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 fn get_permissions(path: &Path) -> String {
     let mode = metadata.mode();
 
@@ -386,7 +386,7 @@ fn get_prefix(
         if output_opts.modes {
             blanks += 9;
         }
-        #[cfg(unix)]
+        #[cfg(not(target_os = "windows"))]
         if output_opts.owners {
             blanks += maximum_owner_length + maximum_group_length + 2;
         }
@@ -416,7 +416,7 @@ fn get_prefix(
 
     prefix.push(' ');
 
-    #[cfg(unix)]
+    #[cfg(not(target_os = "windows"))]
     if output_opts.owners {
         let uid = metadata.uid();
         let gid = metadata.gid();
@@ -552,7 +552,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         #[cfg(not(target_os = "windows"))]
         mountpoints: matches.get_flag(options::MOUNTPOINTS),
 
-        #[cfg(unix)]
+        #[cfg(not(target_os = "windows"))]
         owners: matches.get_flag(options::OWNERS) || matches.get_flag(options::LONG),
 
         #[cfg(feature = "selinux")]
@@ -567,9 +567,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             let maximum_owner_length = 0;
             let maximum_group_length = 0;
 
-            #[cfg(unix)]
+            #[cfg(not(target_os = "windows"))]
             let maximum_owner_length = max_owner_length(path, output_opts.owners);
-            #[cfg(unix)]
+            #[cfg(not(target_os = "windows"))]
             let maximum_group_length = max_group_length(path, output_opts.owners);
 
             print_files(

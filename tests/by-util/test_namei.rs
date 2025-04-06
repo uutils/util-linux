@@ -21,7 +21,7 @@ fn test_fails_on_non_existing_path() {
         .stderr_contains("No such file or directory");
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn test_fails_on_no_permission() {
     let (at, mut ucmd) = at_and_ucmd!();
@@ -41,7 +41,7 @@ fn test_long_arg() {
     let at = &scene.fixtures;
     at.touch(at.plus_as_string("test-long"));
 
-    #[cfg(unix)]
+    #[cfg(not(target_os = "windows"))]
     let regex = r" *[-bcCdDlMnpPsStTx?]([r-][w-][xt-]){3} [a-z0-9_\.][a-z0-9_\-\.]*[$]? [a-z0-9_\.][a-z0-9_\-\.]*[$]? .*";
     #[cfg(target_os = "windows")]
     let regex = r"[-dl](r[w-]x){3}.*";
@@ -72,7 +72,7 @@ fn test_modes_arg() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(not(target_os = "windows"))]
 #[test]
 fn test_owners_arg() {
     let scene = TestScenario::new(util_name!());
