@@ -6,10 +6,17 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 #[cfg(feature = "selinux")]
 use selinux::SecurityContext;
+#[cfg(unix)]
+use std::cmp::max;
 use std::env;
+#[cfg(not(target_os = "windows"))]
+use std::fs::Metadata;
+#[cfg(unix)]
+use std::os::unix::fs::MetadataExt;
 use std::process;
 use std::str::FromStr;
-use std::{cmp::max, fs, os::unix::fs::MetadataExt, path::Path};
+use std::{fs, path::Path};
+#[cfg(unix)]
 use uucore::entries::{gid2grp, uid2usr};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -22,11 +29,15 @@ mod options {
     pub const LONG: &str = "long";
     pub const MODES: &str = "modes";
     pub const NOSYMLINKS: &str = "nosymlinks";
-    pub const OWNERS: &str = "owners";
     pub const VERTICAL: &str = "vertical";
-    pub const MOUNTPOINTS: &str = "mountpoints";
     pub const PATHNAMES: &str = "pathnames";
 
+    #[cfg(unix)]
+    pub const OWNERS: &str = "owners";
+    
+    #[cfg(not(target_os = "windows"))]
+    pub const MOUNTPOINTS: &str = "mountpoints";
+    
     #[cfg(feature = "selinux")]
     pub const CONTEXT: &str = "context";
 }
@@ -35,9 +46,13 @@ struct OutputOptions {
     long: bool,
     modes: bool,
     nosymlinks: bool,
-    owners: bool,
     vertical: bool,
+
+    #[cfg(not(target_os = "windows"))]
     mountpoints: bool,
+
+    #[cfg(unix)]
+    owners: bool,
 
     #[cfg(feature = "selinux")]
     context: bool,
@@ -79,29 +94,33 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::SetTrue),
         )
         .arg(
-            Arg::new(options::OWNERS)
-                .short('o')
-                .long("owners")
-                .help("show owner and group name of each file")
-                .action(ArgAction::SetTrue),
-        )
-        .arg(
             Arg::new(options::VERTICAL)
                 .short('v')
                 .long("vertical")
                 .help("vertical align of modes and owners")
                 .action(ArgAction::SetTrue),
-        )
-        .arg(
-            Arg::new(options::MOUNTPOINTS)
-                .short('x')
-                .long("mountpoints")
-                .help("show mount point directories with a 'D'")
-                .action(ArgAction::SetTrue),
         );
 
+    #[cfg(not(target_os = "windows"))]
+    let cmd = cmd.arg(
+        Arg::new(options::MOUNTPOINTS)
+            .short('x')
+            .long("mountpoints")
+            .help("show mount point directories with a 'D'")
+            .action(ArgAction::SetTrue),
+    );
+    
+    #[cfg(unix)]
+    let cmd = cmd.arg(
+        Arg::new(options::OWNERS)
+            .short('o')
+            .long("owners")
+            .help("show owner and group name of each file")
+            .action(ArgAction::SetTrue),
+    );
+
     #[cfg(feature = "selinux")]
-    return cmd.arg(
+    let cmd = cmd.arg(
         Arg::new(options::CONTEXT)
             .short('Z')
             .long("context")
@@ -109,11 +128,15 @@ pub fn uu_app() -> Command {
             .action(ArgAction::SetTrue),
     );
 
-    #[cfg(not(feature = "selinux"))]
-    return cmd;
+    cmd
 }
 
-fn max_owner_length(path: &Path) -> usize {
+#[cfg(unix)]
+fn max_owner_length(path: &Path, owners_output: bool) -> usize {
+    if owners_output {
+        return 0;
+    }
+
     let mut max_length = 0;
 
     for entry in path.ancestors() {
@@ -130,8 +153,12 @@ fn max_owner_length(path: &Path) -> usize {
 
     max_length
 }
+#[cfg(unix)]
+fn max_group_length(path: &Path, owners_output: bool) -> usize {
+    if owners_output {
+        return 0;
+    }
 
-fn max_group_length(path: &Path) -> usize {
     let mut max_length = 0;
 
     for entry in path.ancestors() {
@@ -149,6 +176,7 @@ fn max_group_length(path: &Path) -> usize {
     max_length
 }
 
+#[cfg(not(target_os = "windows"))]
 fn get_file_name(input: &str) -> &str {
     let stripped = input.trim_end_matches('/');
     if stripped.is_empty() {
@@ -157,6 +185,66 @@ fn get_file_name(input: &str) -> &str {
     stripped.rsplit('/').next().unwrap_or("/")
 }
 
+#[cfg(target_os = "windows")]
+fn get_file_name(input: &str) -> &str {
+    if !input.contains('\\') {
+        return input;
+    } else {
+        let stripped = input.trim_end_matches('\\');
+        if stripped.is_empty() {
+            return ":";
+        }
+        if !stripped.contains('\\') {
+            return stripped;
+        }
+        return stripped.rsplit('\\').next().unwrap_or("\\");
+    }
+}
+
+#[cfg(unix)]
+fn get_file_type(path: &Path, outputmountpoints: bool) -> char {
+    if path.is_symlink() {
+        return 'l';
+    }
+    if outputmountpoints && is_mount_point(path) {
+        return 'D';
+    }
+
+    let metadata = fs::metadata(path).unwrap();
+
+    let mode = metadata.mode();
+
+    let file_type = match mode & 0o170000 {
+        0o100000 => '-', // Regular file
+        0o040000 => 'd', // Directory
+        0o020000 => 'c', // Character device
+        0o060000 => 'b', // Block device
+        0o010000 => 'p', // FIFO
+        0o140000 => 's', // Socket
+        _ => '?',        // Unknown
+    };
+
+    file_type
+}
+
+#[cfg(not(unix))]
+fn get_file_type(path: &Path, _outputmountpoints: bool) -> char {
+    let filetype = fs::metadata(path).unwrap().file_type();
+
+    let file_type = if filetype.is_dir() {
+        'd'
+    } else if filetype.is_file() {
+        '-'
+    } else if filetype.is_symlink() {
+        'l'
+    } else {
+        '?'
+    };
+
+    file_type
+}
+
+#[cfg(not(target_os = "windows"))]
 fn is_mount_point(input_path: &Path) -> bool {
     let canonical_path = input_path.canonicalize().unwrap().into_os_string();
     let path = Path::new(&canonical_path);
@@ -172,6 +260,108 @@ fn is_mount_point(input_path: &Path) -> bool {
     }
 }
 
+#[cfg(unix)]
+fn get_permissions(path: &Path) -> String {
+    let mode = metadata.mode();
+
+    let permissions = [
+        (mode & 0o400, 'r'),
+        (mode & 0o200, 'w'),
+        (mode & 0o100, 'x'), // Owner
+        (mode & 0o040, 'r'),
+        (mode & 0o020, 'w'),
+        (mode & 0o010, 'x'), // Group
+        (mode & 0o004, 'r'),
+        (mode & 0o002, 'w'),
+        (mode & 0o001, 'x'), // Others
+    ];
+    let mut perm_string = String::new();
+    for &(bit, ch) in &permissions {
+        perm_string.push(if bit != 0 { ch } else { '-' });
+    }
+    if mode & 0o4000 != 0 {
+        // Set UID
+        perm_string.replace_range(
+            2..3,
+            if perm_string.chars().nth(3) == Some('x') {
+                "s"
+            } else {
+                "S"
+            },
+        );
+    }
+    if mode & 0o2000 != 0 {
+        // Set GID
+        perm_string.replace_range(
+            5..6,
+            if perm_string.chars().nth(6) == Some('x') {
+                "s"
+            } else {
+                "S"
+            },
+        );
+    }
+    if mode & 0o1000 != 0 {
+        // Sticky Bit
+        perm_string.replace_range(
+            8..9,
+            if perm_string.chars().nth(9) == Some('x') {
+                "t"
+            } else {
+                "T"
+            },
+        );
+    }
+
+    perm_string
+}
+
+#[cfg(not(unix))]
+fn get_permissions(path: &Path) -> String {
+    let metadata = fs::metadata(path).unwrap();
+    let file_type = metadata.file_type();
+
+    // NOTE: Windows doesn't give full Unix-style permissions
+    // We're faking it: check readonly bit to infer write access
+    let readonly = metadata.permissions().readonly();
+
+    // Use PATHEXT environment variable to figure out if file is executable
+    let executable = if file_type.is_file() {
+        match path.extension().and_then(|e| e.to_str()) {
+            Some(e) => {
+                let ext = e.to_ascii_lowercase();
+                let pathext = env::var("PATHEXT").unwrap_or_default();
+                pathext
+                    .split(';')
+                    .filter_map(|e| e.strip_prefix('.')) // ".EXE" -> "EXE"
+                    .any(|e| e.eq_ignore_ascii_case(&ext))
+            }
+            None => false,
+        }
+    } else {
+        false
+    };
+
+    let mut perm_string = String::new();
+
+    let mut rwx = if readonly {
+        "r-".to_string()
+    } else {
+        "rw".to_string()
+    };
+    if executable {
+        rwx.push('x');
+    } else {
+        rwx.push('-');
+    }
+
+    perm_string.push_str(rwx.as_str());
+    perm_string.push_str(rwx.as_str());
+    perm_string.push_str(rwx.as_str());
+
+    perm_string
+}
+
 fn get_prefix(
     level: usize,
     path: &Path,
@@ -179,6 +369,12 @@ fn get_prefix(
     maximum_owner_length: usize,
     maximum_group_length: usize,
 ) -> String {
+    // Avoid unused variable warnings on non-Unix platforms
+    #[cfg(not(unix))]
+    {
+        let _ = (maximum_owner_length, maximum_group_length);
+    }
+
     let mut prefix = String::new();
 
     if !output_opts.vertical {
@@ -192,6 +388,7 @@ fn get_prefix(
         if output_opts.modes {
             blanks += 9;
         }
+        #[cfg(unix)]
         if output_opts.owners {
             blanks += maximum_owner_length + maximum_group_length + 2;
         }
@@ -208,82 +405,20 @@ fn get_prefix(
         return prefix;
     }
 
-    let metadata = fs::metadata(path).unwrap();
-
-    let mode = metadata.mode();
-
-    let file_type = match mode & 0o170000 {
-        0o100000 => '-',                                                    // Regular file
-        0o040000 if output_opts.mountpoints && is_mount_point(path) => 'D', // Directory
-        0o040000 => 'd',                                                    // Directory
-        0o120000 => 'l',                                                    // Symbolic link
-        0o020000 => 'c',                                                    // Character device
-        0o060000 => 'b',                                                    // Block device
-        0o010000 => 'p',                                                    // FIFO
-        0o140000 => 's',                                                    // Socket
-        _ => '?',                                                           // Unknown
-    };
-
-    if path.is_symlink() {
-        prefix.push('l');
-    } else {
-        prefix.push(file_type);
-    }
+    let mountpoints = false;
+    #[cfg(not(target_os = "windows"))]
+    let mountpoints = output_opts.mountpoints;
+    
+    prefix.push(get_file_type(path, mountpoints));
 
     if output_opts.modes || output_opts.long {
-        let permissions = [
-            (mode & 0o400, 'r'),
-            (mode & 0o200, 'w'),
-            (mode & 0o100, 'x'), // Owner
-            (mode & 0o040, 'r'),
-            (mode & 0o020, 'w'),
-            (mode & 0o010, 'x'), // Group
-            (mode & 0o004, 'r'),
-            (mode & 0o002, 'w'),
-            (mode & 0o001, 'x'), // Others
-        ];
-        let mut perm_string = String::new();
-        for &(bit, ch) in &permissions {
-            perm_string.push(if bit != 0 { ch } else { '-' });
-        }
-        if mode & 0o4000 != 0 {
-            // Set UID
-            perm_string.replace_range(
-                2..3,
-                if perm_string.chars().nth(3) == Some('x') {
-                    "s"
-                } else {
-                    "S"
-                },
-            );
-        }
-        if mode & 0o2000 != 0 {
-            // Set GID
-            perm_string.replace_range(
-                5..6,
-                if perm_string.chars().nth(6) == Some('x') {
-                    "s"
-                } else {
-                    "S"
-                },
-            );
-        }
-        if mode & 0o1000 != 0 {
-            // Sticky Bit
-            perm_string.replace_range(
-                8..9,
-                if perm_string.chars().nth(9) == Some('x') {
-                    "t"
-                } else {
-                    "T"
-                },
-            );
-        }
-
+        let perm_string = get_permissions(path);
         prefix.push_str(&perm_string);
     }
+
     prefix.push(' ');
 
+    #[cfg(unix)]
     if output_opts.owners {
         let uid = metadata.uid();
         let gid = metadata.gid();
@@ -414,9 +549,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         long: matches.get_flag(options::LONG),
         modes: matches.get_flag(options::MODES) || matches.get_flag(options::LONG),
         nosymlinks: matches.get_flag(options::NOSYMLINKS),
-        owners: matches.get_flag(options::OWNERS) || matches.get_flag(options::LONG),
         vertical: matches.get_flag(options::VERTICAL) || matches.get_flag(options::LONG),
+
+        #[cfg(not(target_os = "windows"))]
         mountpoints: matches.get_flag(options::MOUNTPOINTS),
+
+        #[cfg(unix)]
+        owners: matches.get_flag(options::OWNERS) || matches.get_flag(options::LONG),
 
         #[cfg(feature = "selinux")]
         context: matches.get_flag(options::CONTEXT),
@@ -426,16 +565,15 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         for path_str in paths {
             let path = Path::new(path_str);
             println!("f: {}", path.to_str().unwrap());
-            let maximum_owner_length = if output_opts.owners {
-                max_owner_length(path)
-            } else {
-                0
-            };
-            let maximum_group_length = if output_opts.owners {
-                max_group_length(path)
-            } else {
-                0
-            };
+
+            let maximum_owner_length = 0;
+            let maximum_group_length = 0;
+
+            #[cfg(unix)]
+            let maximum_owner_length = max_owner_length(path, output_opts.owners);
+            #[cfg(unix)]
+            let maximum_group_length = max_group_length(path, output_opts.owners);
+
             print_files(
                 0,
                 path,
@@ -445,9 +583,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             );
         }
     }
-    // Handling the case where path is not provided is not necessary
-    // because in path arguments have been made necessary in clap so
-    // it will automatically show an error in stdout
 
     Ok(())
 }

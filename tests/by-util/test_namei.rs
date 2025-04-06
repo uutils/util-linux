@@ -21,6 +21,7 @@ fn test_fails_on_non_existing_path() {
         .stderr_contains("No such file or directory");
 }
 
+#[cfg(unix)]
 #[test]
 fn test_fails_on_no_permission() {
     let (at, mut ucmd) = at_and_ucmd!();
@@ -40,9 +41,9 @@ fn test_long_arg() {
     let at = &scene.fixtures;
     at.touch(at.plus_as_string("test-long"));
 
-    #[cfg(not(windows))]
+    #[cfg(unix)]
     let regex = r" *[-bcCdDlMnpPsStTx?]([r-][w-][xt-]){3} [a-z0-9_\.][a-z0-9_\-\.]*[$]? [a-z0-9_\.][a-z0-9_\-\.]*[$]? .*";
-    #[cfg(windows)]
+    #[cfg(target_os="windows")]
     let regex = r"[-dl](r[w-]x){3}.*";
 
     let re = &Regex::new(regex).unwrap();
@@ -60,7 +61,6 @@ fn test_modes_arg() {
     let at = &scene.fixtures;
     at.touch(at.plus_as_string("test-modes"));
 
-    #[cfg(not(windows))]
     let regex = r" +[-bcCdDlMnpPsStTx?]([r-][w-][xt-]){3} .*";
 
     let re = &Regex::new(regex).unwrap();
@@ -72,6 +72,7 @@ fn test_modes_arg() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn test_owners_arg() {
     let scene = TestScenario::new(util_name!());
@@ -97,7 +98,6 @@ fn test_vertical_arg() {
     let at = &scene.fixtures;
     at.touch(at.plus_as_string("test-vertical"));
 
-    #[cfg(not(windows))]
     let regex = r"[-bcCdDlMnpPsStTx?] +.*";
 
     let re = &Regex::new(regex).unwrap();
