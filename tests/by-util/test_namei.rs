@@ -14,11 +14,15 @@ fn test_invalid_arg() {
 
 #[test]
 fn test_fails_on_non_existing_path() {
-    new_ucmd!()
-        .arg("/non/existing")
-        .fails()
-        .code_is(1)
-        .stderr_contains("No such file or directory");
+    let (at, mut ucmd) = at_and_ucmd!();
+    let argmnt = at.plus_as_string("nonexisting");
+
+    #[cfg(target_os = "windows")]
+    let err = "The system cannot find the file specified";
+    #[cfg(not(target_os = "windows"))]
+    let err = "No such file or directory";
+
+    ucmd.arg(argmnt).fails().code_is(1).stderr_contains(err);
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -44,7 +48,7 @@ fn test_long_arg() {
     #[cfg(not(target_os = "windows"))]
     let regex = r" *[-bcCdDlMnpPsStTx?]([r-][w-][xt-]){3} [a-z0-9_\.][a-z0-9_\-\.]*[$]? [a-z0-9_\.][a-z0-9_\-\.]*[$]? .*";
     #[cfg(target_os = "windows")]
-    let regex = r"[-dl](r[w-]x){3}.*";
+    let regex = r"[-dl]([r-][w-][x-]){3} .*";
 
     let re = &Regex::new(regex).unwrap();
 
