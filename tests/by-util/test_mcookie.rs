@@ -140,3 +140,43 @@ fn test_stdin_input() {
     assert_eq!(stdout.len(), 32);
     assert!(stdout.chars().all(|c| c.is_ascii_hexdigit()));
 }
+
+#[test]
+fn test_not_existing_file() {
+    let mut file1 = NamedTempFile::new().unwrap();
+    const CONTENT1: &str = "Some seed data";
+    file1.write_all(CONTENT1.as_bytes()).unwrap();
+
+    let file_not_existing = file1.path().to_str().unwrap().to_owned() + "_extra";
+
+    let mut file2 = NamedTempFile::new().unwrap();
+    const CONTENT2: [u8; 2048] = [1; 2048];
+    file2.write_all(&CONTENT2).unwrap();
+
+    let res = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg(file1.path())
+        .arg("-f")
+        .arg(&file_not_existing)
+        .arg("-f")
+        .arg(file2.path())
+        .succeeds();
+
+    res.stderr_contains(format!(
+        "Got {} bytes from {}",
+        CONTENT1.len(),
+        file1.path().to_str().unwrap()
+    ));
+
+    res.stderr_contains(format!(
+        "mcookie: cannot open {}: No such file or directory",
+        file_not_existing
+    ));
+
+    // Ensure we only read up to the limit of bytes, despite the file being bigger
+    res.stderr_contains(format!(
+        "Got 2048 bytes from {}",
+        file2.path().to_str().unwrap()
+    ));
+}
