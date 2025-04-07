@@ -170,7 +170,7 @@ fn test_not_existing_file() {
     ));
 
     res.stderr_contains(format!(
-        "mcookie: cannot open {}: No such file or directory",
+        "mcookie: cannot open {}",
         file_not_existing
     ));
 

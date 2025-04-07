@@ -70,7 +70,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             }
         } else {
             input_name = file_path;
-            let open_result: Result<File, std::io::Error> = File::open(file_path);
+            let open_result = File::open(file_path);
             if let Err(err) = open_result {
                 eprintln!("mcookie: cannot open {file_path}: {err}");
                 continue;
