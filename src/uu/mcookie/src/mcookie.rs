@@ -76,7 +76,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 continue;
             }
 
-            let mut f: File = open_result.unwrap();
+            let mut f = open_result.unwrap();
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = f.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
