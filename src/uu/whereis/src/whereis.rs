@@ -3,19 +3,22 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, Command};
-use serde::Serialize;
-use std::{fs, collections::HashSet, collections::HashMap, path::Path, path::PathBuf, os::unix::fs::MetadataExt};
-use uucore::{error::UResult, format_usage, help_about, help_usage};
 use glob::glob;
+use serde::Serialize;
+use std::{
+    collections::HashMap, collections::HashSet, fs, os::unix::fs::MetadataExt, path::Path,
+    path::PathBuf,
+};
+use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod constants;
-use crate::constants::{SRCDIRS, BINDIRS, MANDIRS};
+use crate::constants::{BINDIRS, MANDIRS, SRCDIRS};
 
 mod options {
-   	pub const BIN:   &str = "binaries";
-   	pub const MAN:   &str = "manuals";
-    pub const SRC:   &str = "sources";
-    pub const PATH:  &str = "lookups";
+    pub const BIN: &str = "binaries";
+    pub const MAN: &str = "manuals";
+    pub const SRC: &str = "sources";
+    pub const PATH: &str = "lookups";
 
     pub const SPECIFIED_BIN: &str = "listed binaries";
     pub const SPECIFIED_MAN: &str = "listed manuals";
@@ -28,132 +31,125 @@ const USAGE: &str = help_usage!("whereis.md");
 // Directories are usually manual pages dirs, binary dirs or source dirs. Hopefully not unknown.
 #[derive(Serialize, Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum DirType {
-	BIN,
-	MAN,
-	SRC,
-	UNK,
+    BIN,
+    MAN,
+    SRC,
+    UNK,
 }
 
 // Store the metadata for a file
 #[derive(Serialize, Clone, Debug)]
 pub struct WhDir {
-
-	#[serde(skip_serializing)]
-	#[serde(skip_deserializing)]
-	metadata: Option<fs::Metadata>,	
-	path: PathBuf, 	
-	type_of_dir: DirType
-} 
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    metadata: Option<fs::Metadata>,
+    path: PathBuf,
+    type_of_dir: DirType,
+}
 
 impl WhDir {
-
-	fn new (path: PathBuf, type_of_dir: DirType) -> Self {
-		Self {
-			metadata: fs::metadata(&path).ok(),
-			path,
-			type_of_dir,
-		}
-	}
-
+    fn new(path: PathBuf, type_of_dir: DirType) -> Self {
+        Self {
+            metadata: fs::metadata(&path).ok(),
+            path,
+            type_of_dir,
+        }
+    }
 }
 
 // Use a vector to store the list of directories. Additionally keep a HashSet of the inode number and st_dev ID.
 #[derive(Serialize, Debug)]
-pub struct WhDirList {	
-	list: Vec<WhDir>,
-	seen_files: HashSet<(u64, u64)>,
+pub struct WhDirList {
+    list: Vec<WhDir>,
+    seen_files: HashSet<(u64, u64)>,
 }
 
 impl WhDirList {
+    fn new() -> Self {
+        Self {
+            list: Vec::new(),
+            seen_files: HashSet::new(),
+        }
+    }
 
-	fn new () -> Self {
-		Self { 
-			list: Vec::new(), 
-			seen_files: HashSet::new(),
-		}	
-	}
+    fn construct_dir_list(&mut self, dir_type: DirType, paths: &[&str]) {
+        for path in paths {
+            let pathbuf = PathBuf::from(path);
+            if !path.contains('*') {
+                self.add_dir(WhDir::new(pathbuf, dir_type));
+            } else {
+                self.add_sub_dirs(&pathbuf, dir_type);
+            }
+        }
+    }
 
-	fn construct_dir_list (&mut self, dir_type: DirType, paths: &[&str]) {
-		for path in paths {
-		 	let pathbuf = PathBuf::from(path);
-			if !path.contains('*') {
-				self.add_dir (WhDir::new(pathbuf, dir_type.clone()));
-			} else {
-				self.add_sub_dirs(&pathbuf, dir_type.clone());
-			} 
-		}
-	}
+    // Use (ino) inode number and (st_dev) ID of device containing the file to keep track of whats unique.
+    fn add_dir(&mut self, dir: WhDir) {
+        if self.list.iter().any(|d| d.path == dir.path) {
+            return;
+        }
 
+        if dir.metadata.is_some() {
+            let dev = dir.metadata.clone().unwrap().dev();
+            let ino = dir.metadata.clone().unwrap().ino();
 
-	// Use (ino) inode number and (st_dev) ID of device containing the file to keep track of whats unique.
-	fn add_dir (&mut self, dir: WhDir)  {
-		if self.list.iter().any(|d| d.path == dir.path) {
-			return;
-		}	
-		
-		if dir.metadata.is_some() {
-			let dev = dir.metadata.clone().unwrap().dev();
-			let ino = dir.metadata.clone().unwrap().ino();
+            if self.seen_files.insert((dev, ino)) {
+                self.list.push(dir);
+            }
+        }
+    }
 
-			if self.seen_files.insert((dev, ino)) {
-				self.list.push(dir);
-			}
-		} 
-	}
-	
-	#[allow(dead_code)]
-	fn remove_dir (&mut self, dir: &WhDir) {
-		self.list.retain(|d| d.path != dir.path);
-	}
+    #[allow(dead_code)]
+    fn remove_dir(&mut self, dir: &WhDir) {
+        self.list.retain(|d| d.path != dir.path);
+    }
 
+    // TODO: We need to do something with the entry if an error occurs.
+    fn add_sub_dirs(&mut self, parent_dir: &Path, dir_type: DirType) {
+        for entry in glob(&parent_dir.display().to_string()).expect("Failed to read glob pattern") {
+            match entry {
+                Ok(path) if path.is_dir() => {
+                    self.add_dir(WhDir::new(path, dir_type));
+                }
+                Ok(_) => todo!(),
+                Err(_e) => todo!(),
+            }
+        }
+    }
 
-	// TODO: We need to do something with the entry if an error occurs. 
-	fn add_sub_dirs (&mut self, parent_dir: &PathBuf, dir_type: DirType) {
-		for entry in glob(&parent_dir.display().to_string()).expect("Failed to read glob pattern") {
-			match entry {
-				Ok(path) if path.is_dir() => {
-					self.add_dir(WhDir::new(path, dir_type.clone()));
-				}
-				Ok(_) => todo!(),
-				Err(_e) => todo!(),
-			}
-		}			
-	}
+    // A debug function.
+    #[allow(dead_code)]
+    fn list_dirs(&self) {
+        for dir in &self.list {
+            let dir_type = whereis_type_to_name(dir.type_of_dir);
+            println!("{:?} : {:?}", dir_type, dir.path.display());
+        }
+    }
 
-	// A debug function. 	
-	#[allow(dead_code)]
-	fn list_dirs (&self) {
-		for dir in &self.list {
-			let dir_type = whereis_type_to_name (dir.type_of_dir);
-			println!("{:?} : {:?}", dir_type, dir.path.display());	
-		}	
-	}
+    fn lookup(&self, pattern: &str, dir_type: DirType) -> Vec<String> {
+        let mut results = Vec::new();
+        let pathbuf_pattern = PathBuf::from(pattern);
 
+        for dir in &self.list {
+            if dir.type_of_dir == dir_type {
+                find_in(&dir.path, &pathbuf_pattern, &mut results, dir.type_of_dir);
+            }
+        }
 
-	fn lookup(&self, pattern: &str, dir_type: DirType) -> Vec<String> {
-		let mut results = Vec::new();
-		let pathbuf_pattern = PathBuf::from(pattern);
-
-		for dir in &self.list {
-			if dir.type_of_dir == dir_type {
-				find_in(&dir.path, &pathbuf_pattern, &mut results, dir.type_of_dir);
-			}
-		}
-
-		results
-	}			
+        results
+    }
 }
 
-pub fn whereis_type_to_name (dir_type: DirType) -> &'static str {
-	match dir_type {
-		DirType::MAN => "man",
-		DirType::BIN => "bin",
-		DirType::SRC => "src",
-		DirType::UNK => "???",
-	}
+pub fn whereis_type_to_name(dir_type: DirType) -> &'static str {
+    match dir_type {
+        DirType::MAN => "man",
+        DirType::BIN => "bin",
+        DirType::SRC => "src",
+        DirType::UNK => "???",
+    }
 }
 
-// Almost an exact ripoff from the C source. 
+// Almost an exact ripoff from the C source.
 fn filename_equal(cp: &PathBuf, dp: &str, dir_type: DirType) -> bool {
     let cp_str = match cp.file_name().and_then(|s| s.to_str()) {
         Some(s) => s,
@@ -191,7 +187,6 @@ fn filename_equal(cp: &PathBuf, dp: &str, dir_type: DirType) -> bool {
     }
 }
 
-
 fn find_in(dir: &Path, pathbuf: &PathBuf, results: &mut Vec<String>, dir_type: DirType) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -206,8 +201,8 @@ fn find_in(dir: &Path, pathbuf: &PathBuf, results: &mut Vec<String>, dir_type: D
 }
 
 // TODO: Doesn't completely all possible options like specified_bin, etc.
-fn print_output (options: &OutputOptions, pattern: &str, results: Vec<String>) {
-	let mut grouped: HashMap<DirType, Vec<String>> = HashMap::new();
+fn print_output(options: &OutputOptions, pattern: &str, results: Vec<String>) {
+    let mut grouped: HashMap<DirType, Vec<String>> = HashMap::new();
 
     // Split results by type, grouping MAN, BIN and SRC.
     for path in results {
@@ -257,62 +252,61 @@ fn print_output (options: &OutputOptions, pattern: &str, results: Vec<String>) {
     println!();
 }
 
-
 #[uucore::main]
-pub fn uumain(args: impl uucore::Args) -> UResult <()> {
-
-	let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
 
     let output_options = OutputOptions {
-     	search_bin: matches.get_flag(options::BIN),
-      	search_man: matches.get_flag(options::MAN),
-       	search_src: matches.get_flag(options::SRC),
-       	path_given: matches.get_flag(options::PATH),
+        search_bin: matches.get_flag(options::BIN),
+        search_man: matches.get_flag(options::MAN),
+        search_src: matches.get_flag(options::SRC),
+        path_given: matches.get_flag(options::PATH),
 
-       	search_specific_bin: matches.get_flag(options::SPECIFIED_BIN),
-       	search_specific_man: matches.get_flag(options::SPECIFIED_MAN),
-       	search_specific_src: matches.get_flag(options::SPECIFIED_SRC),
-    };   	
+        search_specific_bin: matches.get_flag(options::SPECIFIED_BIN),
+        search_specific_man: matches.get_flag(options::SPECIFIED_MAN),
+        search_specific_src: matches.get_flag(options::SPECIFIED_SRC),
+    };
 
-	let mut dir_list = WhDirList::new();
+    let mut dir_list = WhDirList::new();
 
-	dir_list.construct_dir_list(DirType::BIN, &BINDIRS);
-	dir_list.construct_dir_list(DirType::MAN, &MANDIRS);
-	dir_list.construct_dir_list(DirType::SRC, &SRCDIRS);
+    dir_list.construct_dir_list(DirType::BIN, &BINDIRS);
+    dir_list.construct_dir_list(DirType::MAN, &MANDIRS);
+    dir_list.construct_dir_list(DirType::SRC, &SRCDIRS);
 
-	let names: Vec<_> = matches.get_many::<String>("names")
-		.unwrap()
-		.map(|s| s.as_str())
-		.collect();
+    let names: Vec<_> = matches
+        .get_many::<String>("names")
+        .unwrap()
+        .map(|s| s.as_str())
+        .collect();
 
-	// Search for the names that were passed into the program.
-	for pattern in names {
-		let mut results = dir_list.lookup(pattern, DirType::BIN);
-		results.append(&mut dir_list.lookup(pattern, DirType::MAN));
-		results.append(&mut dir_list.lookup(pattern, DirType::SRC));
+    // Search for the names that were passed into the program.
+    for pattern in names {
+        let mut results = dir_list.lookup(pattern, DirType::BIN);
+        results.append(&mut dir_list.lookup(pattern, DirType::MAN));
+        results.append(&mut dir_list.lookup(pattern, DirType::SRC));
 
-		print_output(&output_options, pattern, results);	
-	}
+        print_output(&output_options, pattern, results);
+    }
 
-	Ok(())
+    Ok(())
 }
-	
-// TODO: Implement the necessary behavior for path_given and other fields with the dead_code macro.	
+
+// TODO: Implement the necessary behavior for path_given and other fields with the dead_code macro.
 struct OutputOptions {
     search_bin: bool,
     search_man: bool,
     search_src: bool,
 
-	#[allow(dead_code)]
+    #[allow(dead_code)]
     path_given: bool,
 
-	#[allow(dead_code)]
+    #[allow(dead_code)]
     search_specific_bin: bool,
 
-	#[allow(dead_code)]
+    #[allow(dead_code)]
     search_specific_man: bool,
 
-	#[allow(dead_code)]
+    #[allow(dead_code)]
     search_specific_src: bool,
 }
 
@@ -406,7 +400,4 @@ pub fn uu_app() -> Command {
 				.action(ArgAction::SetTrue)
 				.required(false),
         )
-
-
 }
-
