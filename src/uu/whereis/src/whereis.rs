@@ -205,6 +205,7 @@ fn find_in(dir: &Path, pathbuf: &PathBuf, results: &mut Vec<String>, dir_type: D
     }
 }
 
+// TODO: Doesn't completely all possible options like specified_bin, etc.
 fn print_output (options: &OutputOptions, pattern: &str, results: Vec<String>) {
 	let mut grouped: HashMap<DirType, Vec<String>> = HashMap::new();
 
