@@ -79,7 +79,7 @@ fn test_char_device_input() {
         .arg("/dev/zero")
         .succeeds();
 
-    res_verbose.stderr_contains("Got 1024 bytes from /dev/zero");
+    res_verbose.stderr_contains("Got 4096 bytes from /dev/zero");
     res_verbose.stderr_contains("Got 128 bytes from randomness source"); // Ensure internal randomness is still added
 
     let stdout_verbose = res_verbose.stdout_str().trim_end();
@@ -175,5 +175,38 @@ fn test_not_existing_file() {
     res.stderr_contains(format!(
         "Got 2048 bytes from {}",
         file2.path().to_str().unwrap()
+    ));
+}
+
+#[test]
+fn test_max_size_limits() {
+    let mut file = NamedTempFile::new().unwrap();
+    const CONTENT: [u8; 5500] = [1; 5500];
+    file.write_all(&CONTENT).unwrap();
+
+    let res_default = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg(file.path())
+        .succeeds();
+
+    // Ensure we only read up to 4096 bytes
+    res_default.stderr_contains(format!(
+        "Got 4096 bytes from {}",
+        file.path().to_str().unwrap()
+    ));
+
+    let res_zero = new_ucmd!()
+        .arg("--verbose")
+        .arg("-f")
+        .arg(file.path())
+        .arg("-m")
+        .arg("0")
+        .succeeds();
+
+    // Ensure we read up 4096 bytes
+    res_zero.stderr_contains(format!(
+        "Got 4096 bytes from {}",
+        file.path().to_str().unwrap()
     ));
 }
