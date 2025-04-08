@@ -1184,6 +1184,7 @@ name = "uu_whereis"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "glob",
  "regex",
  "serde",
  "serde_json",
