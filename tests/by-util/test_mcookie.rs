@@ -169,10 +169,7 @@ fn test_not_existing_file() {
         file1.path().to_str().unwrap()
     ));
 
-    res.stderr_contains(format!(
-        "mcookie: cannot open {}",
-        file_not_existing
-    ));
+    res.stderr_contains(format!("mcookie: cannot open {}", file_not_existing));
 
     // Ensure we only read up to the limit of bytes, despite the file being bigger
     res.stderr_contains(format!(
