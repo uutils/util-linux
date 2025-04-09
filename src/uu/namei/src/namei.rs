@@ -451,23 +451,26 @@ fn get_prefix(
     prefix
 }
 
-fn print_files(
+fn tokenize_relative_path(path: &str, cwd: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::from(cwd);
+
+    for part in path.split('/') {
+        current.push('/');
+        current.push_str(part);
+        result.push(current.clone());
+    }
+
+    result
+}
+
+fn print_file(
     level: usize,
     path: &Path,
     output_opts: &OutputOptions,
     maximum_owner_length: usize,
     maximum_group_length: usize,
 ) {
-    if let Some(pt) = path.parent() {
-        print_files(
-            level,
-            pt,
-            output_opts,
-            maximum_owner_length,
-            maximum_group_length,
-        );
-    }
-
     let prefix = get_prefix(
         level,
         path,
@@ -526,6 +529,59 @@ fn print_files(
                 maximum_owner_length,
                 maximum_group_length,
             );
+        }
+    }
+}
+
+fn print_files(
+    level: usize,
+    path: &Path,
+    output_opts: &OutputOptions,
+    maximum_owner_length: usize,
+    maximum_group_length: usize,
+) {
+    if path.is_absolute() {
+        if let Some(pt) = path.parent() {
+            print_files(
+                level,
+                pt,
+                output_opts,
+                maximum_owner_length,
+                maximum_group_length,
+            );
+        }
+        print_file(
+            level,
+            path,
+            output_opts,
+            maximum_owner_length,
+            maximum_group_length,
+        );
+    }
+
+    if path.is_relative() {
+        match env::current_dir() {
+            Ok(pt) => {
+                if let Some(cwd) = pt.to_str() {
+                    if path.to_str().is_none() {
+                        eprintln!("Invalid Path (Non-unicode)");
+                    } else {
+                        let paths = tokenize_relative_path(path.to_str().unwrap(), cwd);
+                        for path_string in &paths {
+                            let p = Path::new(path_string);
+
+                            print_file(
+                                level,
+                                p,
+                                output_opts,
+                                maximum_owner_length,
+                                maximum_group_length,
+                            );
+                        }
+                    }
+                }
+            }
+            Err(e) => eprintln!("{}", e),
         }
     }
 }
