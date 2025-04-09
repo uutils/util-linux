@@ -29,6 +29,9 @@ mod options {
 const ABOUT: &str = help_about!("mcookie.md");
 const USAGE: &str = help_usage!("mcookie.md");
 
+const RANDOM_BYTES: usize = 128;
+const MAX_DEFAULT: u64 = 4096;
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
@@ -43,13 +46,19 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let max_size = if let Some(size_str) = matches.get_one::<String>(options::MAX_SIZE) {
         match Size::parse(size_str) {
-            Ok(size) => Some(size.size_bytes()),
+            Ok(size) => {
+                let mut s = size.size_bytes();
+                if s == 0 {
+                    s = MAX_DEFAULT;
+                }
+                Some(s)
+            }
             Err(_) => {
                 return Err(USimpleError::new(1, "Failed to parse max-size value"));
             }
         }
     } else {
-        None
+        Some(MAX_DEFAULT)
     };
 
     let mut hasher = Md5::new();
@@ -70,7 +79,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             }
         } else {
             input_name = file_path;
-            let mut f = File::open(file_path)?;
+            let open_result = File::open(file_path);
+            if let Err(err) = open_result {
+                eprintln!("mcookie: cannot open {file_path}: {err}");
+                continue;
+            }
+
+            let mut f = open_result.unwrap();
             if let Some(max_bytes) = &max_size {
                 let mut limited_reader = f.take(*max_bytes);
                 limited_reader.read_to_end(&mut buffer)?;
@@ -101,7 +116,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         hasher.update(&buffer);
     }
 
-    const RANDOM_BYTES: usize = 128;
     let mut rng = rand::rng();
     let mut rand_bytes = [0u8; RANDOM_BYTES];
     rng.fill_bytes(&mut rand_bytes);
