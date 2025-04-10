@@ -455,9 +455,14 @@ fn tokenize_relative_path(path: &str, cwd: &str) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::from(cwd);
 
-    for part in path.split('/') {
+    #[cfg(not(target_os = "windows"))]
+    let sep = '/';
+    #[cfg(target_os = "windows")]
+    let sep = '\\';
+
+    for part in path.split(sep) {
         if part.len() != 0 {
-            current.push('/');
+            current.push(sep);
             current.push_str(part);
             result.push(current.clone());
         }
