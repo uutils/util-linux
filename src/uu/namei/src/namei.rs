@@ -461,7 +461,7 @@ fn tokenize_relative_path(path: &str, cwd: &str) -> Vec<String> {
     let sep = '\\';
 
     for part in path.split(sep) {
-        if part.len() != 0 {
+        if !part.is_empty() {
             current.push(sep);
             current.push_str(part);
             result.push(current.clone());
