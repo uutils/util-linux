@@ -57,6 +57,10 @@ mod test_dmesg;
 #[path = "by-util/test_fsfreeze.rs"]
 mod test_fsfreeze;
 
+#[cfg(feature = "findmnt")]
+#[path = "by-util/test_findmnt.rs"]
+mod test_findmnt;
+
 #[cfg(feature = "mcookie")]
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;
