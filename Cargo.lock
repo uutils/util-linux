@@ -1143,6 +1143,7 @@ dependencies = [
  "uu_mountpoint",
  "uu_renice",
  "uu_rev",
+ "uu_script",
  "uu_setsid",
  "uucore",
  "xattr",
@@ -1296,6 +1297,17 @@ name = "uu_rev"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_script"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
+ "nix",
+ "tempfile",
  "uucore",
 ]
 
