@@ -1141,6 +1141,7 @@ dependencies = [
  "uu_lsmem",
  "uu_mcookie",
  "uu_mesg",
+ "uu_mkswap",
  "uu_mountpoint",
  "uu_renice",
  "uu_rev",
@@ -1272,6 +1273,15 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "nix",
+ "uucore",
+]
+
+[[package]]
+name = "uu_mkswap"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
  "uucore",
 ]
 
