@@ -3,18 +3,19 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
 use std::{
-    env, fs, 
-    io::{BufRead, BufReader, Write}, 
-    os::{fd::AsRawFd, linux::fs::MetadataExt}, 
-    path::Path
+    env, fs,
+    io::{BufRead, BufReader, Write},
+    os::{fd::AsRawFd, linux::fs::MetadataExt},
+    path::Path,
 };
 use uucore::{
-    libc::{sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE, ioctl, _IO}, 
-    error::{UResult, set_exit_code, UUsageError},
-    help_about, help_usage, format_usage
+    error::{set_exit_code, UResult, UUsageError},
+    format_usage, help_about, help_usage,
+    libc::{ioctl, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE},
 };
-use clap::{crate_version, ArgAction, ArgMatches, Command, Arg};
+
 
 const ABOUT: &str = help_about!("mkswap.md");
 const USAGE: &str = help_usage!("mkswap.md");
@@ -25,7 +26,6 @@ const SWAP_VERSION: u8 = 1;
 
 const BLKGETSIZE: u64 = _IO(0x12, 96) as u64;
 
-
 #[repr(C)]
 struct SwapHeader {
     bootbits: [u8; 1024],
@@ -35,107 +35,112 @@ struct SwapHeader {
     uuid: [u8; 16],
     volume_name: [char; 16],
     padding: [u32; 117],
-    badpages: [u32; 1]
+    badpages: [u32; 1],
 }
 
-
 pub fn mkswap(args: &ArgMatches) -> UResult<()> {
-
     if let Some(devstr) = args.get_one::<String>("device") {
-   
         let dev = Path::new(devstr.as_str());
         let devname = devstr.strip_prefix("/dev/").unwrap_or("err");
 
-        let mut fd = fs::File::options().create(true)
-                                        .write(true)
-                                        .truncate(false)
-                                        .append(false)
-                                        .open(dev)?;
+        let mut fd = fs::File::options()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .append(false)
+            .open(dev)?;
 
         let stat = fd.metadata()?;
 
         if stat.st_uid() != 0 {
-            println!("{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
-                uucore::util_name(), devstr, stat.st_uid(), devstr);
+            println!(
+                "{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
+                uucore::util_name(),
+                devstr,
+                stat.st_uid(),
+                devstr
+            );
         }
 
         let mut devsize: u128 = 0;
-    
+
         /* for block devices, ioctl call with manual size reading as a backup method */
         if stat.st_mode() == 25008 {
-            
-            let err = unsafe {ioctl(fd.as_raw_fd(), BLKGETSIZE, &mut devsize)};
+            let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE, &mut devsize) };
 
-            if devsize == 0  || err < 0 {
-            
+            if devsize == 0 || err < 0 {
                 let f_size = fs::File::open(format!("/sys/class/block/{devname}/size"))?;
-                
+
                 let reader = BufReader::new(f_size);
-                let vec: Vec<Result<u128, _>> = reader.lines()
-                                                .map(|v| v.unwrap().parse::<u128>())
-                                                .collect::<Vec<Result<u128, _>>>();
-                devsize = vec[0].clone().unwrap_or(0);   
+                let vec: Vec<Result<u128, _>> = reader
+                    .lines()
+                    .map(|v| v.unwrap().parse::<u128>())
+                    .collect::<Vec<Result<u128, _>>>();
+                devsize = vec[0].clone().unwrap_or(0);
             }
         } else {
-            devsize = (stat.st_size() as u128)/512;
+            devsize = (stat.st_size() as u128) / 512;
         }
 
-
-        let mut pagesize: i64 =  unsafe {sysconf(_SC_PAGESIZE)};
+        let mut pagesize: i64 = unsafe { sysconf(_SC_PAGESIZE) };
         if pagesize <= 0 {
-            pagesize = unsafe {sysconf(_SC_PAGE_SIZE)};
+            pagesize = unsafe { sysconf(_SC_PAGE_SIZE) };
             if pagesize <= 0 {
                 pagesize = stat.st_blksize() as i64;
                 if pagesize <= 0 {
                     panic!("Can't determine system pagesize");
                 }
             }
-    }
-        
+        }
+
         assert!(pagesize > 0);
         assert!(devsize > 0);
 
-        let pages = (devsize*512) / pagesize as u128;
+        let pages = (devsize * 512) / pagesize as u128;
         let lastpage = pages - 1;
 
-
         if pages < 10 {
-            println!("swap space needs to be at least {}KiB",
-                    10 * pagesize / 1024);
+            println!(
+                "swap space needs to be at least {}KiB",
+                10 * pagesize / 1024
+            );
             return Ok(());
         }
 
         assert!(pages > 0);
         assert!(lastpage > 0);
-        
+
         //signature page
         let mut buf = Box::<[u8]>::new_uninit_slice(pagesize as usize);
-        
 
         unsafe {
-            buf.as_mut_ptr().write_bytes(0, pagesize as usize); 
+            buf.as_mut_ptr().write_bytes(0, pagesize as usize);
 
             //fill up swap header
-            let swap_hdr = buf.as_mut_ptr() as *mut SwapHeader; 
+            let swap_hdr = buf.as_mut_ptr() as *mut SwapHeader;
             (*swap_hdr).version = SWAP_VERSION;
-            (*swap_hdr).last_page = lastpage as u32; 
+            (*swap_hdr).last_page = lastpage as u32;
         }
-            
-        let mut buf = unsafe {buf.assume_init()};
+
+        let mut buf = unsafe { buf.assume_init() };
 
         //write swap signature
-        let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize].copy_from_slice(SWAP_SIGNATURE);
-
+        let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize]
+            .copy_from_slice(SWAP_SIGNATURE);
 
         fd.write_all(&buf)?;
         fd.flush()?;
         fd.sync_all()?;
 
-        println!("Setting up swapspace version 1, size = {}KiB", (((pages-1) * pagesize as u128) / 1024));
-
-
+        println!(
+            "Setting up swapspace version 1, size = {}KiB",
+            (((pages - 1) * pagesize as u128) / 1024)
+        );
     } else {
-        return Err(UUsageError::new(1, format!("Usage: {} -d device", uucore::util_name())));
+        return Err(UUsageError::new(
+            1,
+            format!("Usage: {} -d device", uucore::util_name()),
+        ));
     }
 
     Ok(())
@@ -162,8 +167,6 @@ pub fn uu_app() -> Command {
                 .short('d')
                 .long("device")
                 .action(ArgAction::Set)
-                .help("block device")
-                
+                .help("block device"),
         )
-        
 }
