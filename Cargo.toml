@@ -82,7 +82,6 @@ serde = { workspace = true }
 serde_json  = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
-libc = { workspace = true }
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }

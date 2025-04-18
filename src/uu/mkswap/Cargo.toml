@@ -12,7 +12,6 @@ path = "src/main.rs"
 
 [dependencies]
 clap = {workspace = true}
-libc = {workspace = true}
 uucore = {workspace = true}
 
 

@@ -41,20 +41,8 @@ struct SwapHeader {
 
 pub fn mkswap(args: &ArgMatches) -> UResult<()> {
 
-
-    let mut pagesize: i64 =  unsafe { sysconf(_SC_PAGESIZE)};
-    if pagesize <= 0 {
-        pagesize = unsafe {sysconf(_SC_PAGE_SIZE)};
-        if pagesize <= 0 {
-            panic!("can't determine system page size\n");
-        }
-    }
-    assert!(pagesize > 0);
-
-
     if let Some(devstr) = args.get_one::<String>("device") {
    
-
         let dev = Path::new(devstr.as_str());
         let devname = devstr.strip_prefix("/dev/").unwrap_or("err");
 
@@ -88,12 +76,10 @@ pub fn mkswap(args: &ArgMatches) -> UResult<()> {
                                                 .collect::<Vec<Result<u128, _>>>();
                 devsize = vec[0].clone().unwrap_or(0);   
             }
-            
-            
         } else {
             devsize = (stat.st_size() as u128)/512;
         }
-        
+
 
         let mut pagesize: i64 =  unsafe {sysconf(_SC_PAGESIZE)};
         if pagesize <= 0 {
@@ -101,16 +87,17 @@ pub fn mkswap(args: &ArgMatches) -> UResult<()> {
             if pagesize <= 0 {
                 pagesize = stat.st_blksize() as i64;
                 if pagesize <= 0 {
-                    pagesize = 4096;
+                    panic!("Can't determine system pagesize");
                 }
             }
-        }
+    }
         
         assert!(pagesize > 0);
         assert!(devsize > 0);
 
         let pages = (devsize*512) / pagesize as u128;
         let lastpage = pages - 1;
+
 
         if pages < 10 {
             println!("swap space needs to be at least {}KiB",
@@ -121,13 +108,12 @@ pub fn mkswap(args: &ArgMatches) -> UResult<()> {
         assert!(pages > 0);
         assert!(lastpage > 0);
         
-        //swap signature page
+        //signature page
         let mut buf = Box::<[u8]>::new_uninit_slice(pagesize as usize);
         
 
         unsafe {
             buf.as_mut_ptr().write_bytes(0, pagesize as usize); 
-        
 
             //fill up swap header
             let swap_hdr = buf.as_mut_ptr() as *mut SwapHeader; 
@@ -137,8 +123,8 @@ pub fn mkswap(args: &ArgMatches) -> UResult<()> {
             
         let mut buf = unsafe {buf.assume_init()};
 
-
-        let _ = &buf[(pagesize as usize -SWAP_SIGNATURE_SZ)..pagesize as usize].copy_from_slice(SWAP_SIGNATURE);
+        //write swap signature
+        let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize].copy_from_slice(SWAP_SIGNATURE);
 
 
         fd.write_all(&buf)?;
