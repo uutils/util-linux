@@ -1,0 +1,19 @@
+[package]
+name = "uu_namei"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+selinux = { version = "0.5.1", optional = true }
+
+[features]
+selinux = ["dep:selinux"]
+
+[lib]
+path = "src/namei.rs"
+
+[[bin]]
+name = "namei"
+path = "src/main.rs"
