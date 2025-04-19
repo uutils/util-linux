@@ -13,5 +13,6 @@ path = "src/main.rs"
 [dependencies]
 clap = {workspace = true}
 uucore = {workspace = true, features = ["libc"]}
+uuid = { version = "1.16.0", features = ["v4"] }
 
 
