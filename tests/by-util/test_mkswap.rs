@@ -3,10 +3,15 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+
+#[cfg(target_os = "linux")]
+mod linux {
 use crate::common::util::TestScenario;
+
 
 #[test]
 fn test_invalid_path() {
+    
     new_ucmd!()
         .arg("-d")
         .arg("/foo/bar/baz")
@@ -50,6 +55,7 @@ fn test_swapfile() {
         .code_is(0)
         .stdout_contains("Setting up swapspace version 1")
         .stdout_contains("insecure file owner");
+}
 }
 
 #[cfg(not(target_os = "linux"))]
