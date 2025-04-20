@@ -3,18 +3,19 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
+use clap::{crate_version, Arg, ArgAction, Command};
 
-use uucore::{
-    error::{set_exit_code, UResult, USimpleError, UUsageError},
-    format_usage, help_about, help_usage,
-};
+use uucore::error::UResult;
+use uucore::{format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("mkswap.md");
 const USAGE: &str = help_usage!("mkswap.md");
 
 #[cfg(target_os = "linux")]
 mod platform {
+    use uucore::error::{set_exit_code, USimpleError, UUsageError};
+
+    use clap::ArgMatches;
 
     use std::{
         fs::{self, File, Metadata},
@@ -246,9 +247,10 @@ pub fn uu_app() -> Command {
 
 #[cfg(not(target_os = "linux"))]
 mod platform {
-    #[uucore::main]
+    use crate::uu_app;
+    use uucore::error::UResult;
     pub fn run(_args: impl uucore::Args) -> UResult<()> {
-        let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+        let _matches: clap::ArgMatches = uu_app().try_get_matches_from(_args)?;
 
         Err(uucore::error::USimpleError::new(
             1,
