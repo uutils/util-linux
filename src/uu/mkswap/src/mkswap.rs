@@ -4,19 +4,22 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
+#[cfg(target_os = "linux")]
+use std::os::{fd::AsRawFd, linux::fs::MetadataExt};
 use std::{
     env,
     fs::{self, File, Metadata},
     io::{BufRead, BufReader, Write},
-    os::{fd::AsRawFd, linux::fs::MetadataExt},
     path::Path,
     str::FromStr,
 };
+#[cfg(target_os = "linux")]
+use uucore::libc::{ioctl, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE};
 use uucore::{
     error::{set_exit_code, UResult, USimpleError, UUsageError},
     format_usage, help_about, help_usage,
-    libc::{ioctl, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE},
 };
+
 use uuid::Uuid;
 
 const ABOUT: &str = help_about!("mkswap.md");
@@ -206,6 +209,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     ))
 }
 
+#[cfg(target_os = "linux")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
