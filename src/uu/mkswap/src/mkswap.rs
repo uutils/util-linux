@@ -195,6 +195,17 @@ pub fn mkswap(args: &ArgMatches) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(not(target_os = "linux"))]
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`mkswap` is available only on Linux.",
+    ))
+}
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;

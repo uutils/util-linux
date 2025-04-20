@@ -51,3 +51,16 @@ fn test_swapfile() {
         .stdout_contains("Setting up swapspace version 1")
         .stdout_contains("insecure file owner");
 }
+
+#[cfg(not(target_os = "linux"))]
+mod non_linux {
+    use crate::common::util::TestScenario;
+
+    #[test]
+    fn test_fails_on_unsupported_platforms() {
+        new_ucmd!()
+            .fails()
+            .code_is(1)
+            .stderr_is("mkswap: `mkswap` is available only on Linux.\n");
+    }
+}
