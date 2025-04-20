@@ -210,7 +210,7 @@ mod platform {
         Ok(())
     }
 }
-#[cfg(target_os = "linux")]
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     platform::run(args)
