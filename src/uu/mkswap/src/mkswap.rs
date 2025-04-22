@@ -8,7 +8,6 @@ use clap::{crate_version, Arg, ArgAction, Command};
 use uucore::error::UResult;
 use uucore::{format_usage, help_about, help_usage};
 
-
 const ABOUT: &str = help_about!("mkswap.md");
 const USAGE: &str = help_usage!("mkswap.md");
 
@@ -184,7 +183,6 @@ mod platform {
         fd.flush()?;
         fd.sync_all()?;
 
-
         if label.is_empty() {
             println!(
                 "Setting up swapspace version 1, size = {}KiB\nNo label, UUID={}",
@@ -211,13 +209,11 @@ mod platform {
         };
         Ok(())
     }
-
 }
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     platform::run(args)
-
 }
 
 pub fn uu_app() -> Command {

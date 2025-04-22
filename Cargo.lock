@@ -458,6 +458,7 @@ checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
  "windows-targets 0.52.6",
+]
 
 [[package]]
 name = "libmount-sys"
@@ -468,6 +469,7 @@ dependencies = [
  "bindgen",
  "cc",
  "walkdir",
+]
 
 [[package]]
 name = "linux-raw-sys"
@@ -1292,7 +1294,7 @@ dependencies = [
  "clap",
  "uucore",
  "uuid",
-
+]
 
 [[package]]
 name = "uu_mountpoint"
