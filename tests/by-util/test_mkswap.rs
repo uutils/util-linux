@@ -14,7 +14,7 @@ mod linux {
             .arg("/foo/bar/baz")
             .fails()
             .code_is(2)
-            .stderr_is("mkswap: No such file or directory\n");
+            .stderr_contains("failed to open /foo/bar/baz: No such file or directory");
     }
 
     #[test]
@@ -52,6 +52,17 @@ mod linux {
             .code_is(0)
             .stdout_contains("Setting up swapspace version 1")
             .stdout_contains("insecure file owner");
+    }
+
+    #[test]
+    fn test_directory_err() {
+        let (at, mut ucmd) = at_and_ucmd!();
+        at.mkdir("foo");
+        ucmd.arg("-d")
+            .arg("foo")
+            .fails()
+            .code_is(2)
+            .stderr_contains("failed to open foo: Is a directory");
     }
 }
 

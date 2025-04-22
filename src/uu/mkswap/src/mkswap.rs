@@ -20,6 +20,7 @@ mod platform {
     use std::{
         fs::{self, File, Metadata},
         io::{BufRead, BufReader, Write},
+        os::unix::fs::FileTypeExt,
         path::Path,
         str::FromStr,
     };
@@ -50,7 +51,7 @@ mod platform {
     fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u128, std::io::Error> {
         let devsize: u128;
         /* for block devices, ioctl call with manual size reading as a backup method */
-        if stat.st_mode() == 25008 {
+        if stat.file_type().is_block_device() {
             let mut sectors: u128 = 0;
             let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE, &mut sectors) };
 
@@ -91,42 +92,52 @@ mod platform {
                 (*swap_hdr).uuid = *uuid.as_bytes();
             }
             if !label.is_empty() {
+                let lblen = match label.len() > 16 {
+                    true => 16,
+                    false => label.len(),
+                };
                 (*swap_hdr)
                     .volume_name
                     .as_mut_ptr()
-                    .copy_from(label.as_ptr(), label.len());
+                    .copy_from(label.as_ptr(), lblen);
             }
             buf.assume_init()
         }
     }
 
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
-        let devstr;
-
-        match args.get_one::<String>("device") {
-            Some(str) => devstr = str,
+        let device = match args.get_one::<String>("device") {
+            Some(str) => str,
             None => {
                 return Err(UUsageError::new(
                     1,
                     format!("Usage: {} -d device", uucore::util_name()),
                 ))
             }
-        }
+        };
 
         let label = match args.get_one::<String>("label") {
             Some(l) => l.as_str(),
             None => "",
         };
 
-        let dev = Path::new(devstr.as_str());
-        let devname = devstr.strip_prefix("/dev/").unwrap_or("err");
+        let dev = Path::new(device.as_str());
 
-        let mut fd = fs::File::options()
+        let mut fd = match fs::File::options()
             .create(false)
             .write(true)
             .truncate(false)
             .append(false)
-            .open(dev)?;
+            .open(dev)
+        {
+            Ok(f) => f,
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("failed to open {}: {}", device, e),
+                ))
+            }
+        };
 
         let stat = fd.metadata()?;
 
@@ -139,11 +150,31 @@ mod platform {
             println!(
                 "{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
                 uucore::util_name(),
-                devstr,
+                device,
                 stat.st_uid(),
-                devstr
+                device
             );
         }
+
+        let devname = match stat.file_type().is_block_device() {
+            true => {
+                let res = match device.strip_prefix("/dev/") {
+                    Some(str) => str,
+                    None => {
+                        return Err(UUsageError::new(
+                            1,
+                            format!(
+                            "{}: invalid device path '{}'. Device paths must start with '/dev/'.",
+                            uucore::util_name(),
+                            device
+                        ),
+                        ))
+                    }
+                };
+                res
+            }
+            false => device.as_str(),
+        };
 
         let devsize: u128 = getsize(&fd, &stat, devname)?;
 
