@@ -458,7 +458,6 @@ checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
  "windows-targets 0.52.6",
-]
 
 [[package]]
 name = "libmount-sys"
@@ -469,7 +468,6 @@ dependencies = [
  "bindgen",
  "cc",
  "walkdir",
-]
 
 [[package]]
 name = "linux-raw-sys"
@@ -1292,9 +1290,9 @@ name = "uu_mkswap"
 version = "0.0.1"
 dependencies = [
  "clap",
- "libc",
  "uucore",
-]
+ "uuid",
+
 
 [[package]]
 name = "uu_mountpoint"
@@ -1367,6 +1365,15 @@ name = "uuhelp_parser"
 version = "0.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bb6d972f580f8223cb7052d8580aea2b7061e368cf476de32ea9457b19459ed"
+
+[[package]]
+name = "uuid"
+version = "1.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "version_check"
