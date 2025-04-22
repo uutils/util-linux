@@ -111,7 +111,10 @@ mod platform {
             None => {
                 return Err(UUsageError::new(
                     1,
-                    format!("Usage: {} -d device", uucore::util_name()),
+                    format!(
+                        "Usage: {}\nFor more information, try '--help'.",
+                        format_usage(USAGE)
+                    ),
                 ))
             }
         };
@@ -258,7 +261,7 @@ pub fn uu_app() -> Command {
                 .short('d')
                 .long("device")
                 .action(ArgAction::Set)
-                .help("block device"),
+                .help("block device or swap file"),
         )
         .arg(
             Arg::new("label")
@@ -272,7 +275,7 @@ pub fn uu_app() -> Command {
                 .short('u')
                 .long("uuid")
                 .action(ArgAction::Set)
-                .help("set a uuid"),
+                .help("specify the UUID to use"),
         )
 }
 

@@ -21,6 +21,10 @@ mod linux {
     fn test_invalid_arg() {
         new_ucmd!().arg("foo").fails().code_is(1);
     }
+    #[test]
+    fn test_empty_args() {
+        new_ucmd!().fails().code_is(2).stderr_contains("Usage:");
+    }
 
     #[test]
     fn test_empty_file() {
