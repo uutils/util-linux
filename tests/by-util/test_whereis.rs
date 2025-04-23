@@ -31,7 +31,6 @@ fn test_man_only() {
 
 #[test]
 #[cfg(target_os = "linux")]
-// dig doesn't seem to have any output when passing in the -s flag.
 fn test_src_only() {
     new_ucmd!()
         .arg("-s")
