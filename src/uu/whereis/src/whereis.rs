@@ -75,10 +75,10 @@ impl WhDirList {
     fn construct_dir_list(&mut self, dir_type: DirType, paths: &[&str]) {
         for path in paths {
             let pathbuf = PathBuf::from(path);
-            if !path.contains('*') {
-                self.add_dir(WhDir::new(pathbuf, dir_type));
-            } else {
+            if path.contains('*') {
                 self.add_sub_dirs(&pathbuf, dir_type);
+            } else {
+                self.add_dir(WhDir::new(pathbuf, dir_type));
             }
         }
     }
