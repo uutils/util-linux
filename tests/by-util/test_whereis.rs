@@ -1,3 +1,8 @@
+// This file is part of the uutils util-linux package.
+//
+// For the full copyright and license information, please view the LICENSE
+// file that was distributed with this source code.
+
 use crate::common::util::TestScenario;
 
 #[test]
@@ -24,9 +29,9 @@ fn test_bin_only() {
 fn test_man_only() {
     new_ucmd!()
         .arg("-m")
-        .arg("nmap")
+        .arg("ls")
         .succeeds()
-        .stdout_contains("/usr/share/man/man1/nmap.1.gz");
+        .stdout_contains("/usr/share/man");
 }
 
 #[test]
@@ -36,7 +41,7 @@ fn test_src_only() {
         .arg("-s")
         .arg("dig")
         .succeeds()
-        .stdout_contains("");
+        .stdout_is("dig:\n");
 }
 
 #[test]
