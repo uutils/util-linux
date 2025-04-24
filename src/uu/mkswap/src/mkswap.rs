@@ -8,7 +8,6 @@ use clap::{crate_version, Arg, ArgAction, Command};
 use uucore::error::UResult;
 use uucore::{format_usage, help_about, help_usage};
 
-
 const ABOUT: &str = help_about!("mkswap.md");
 const USAGE: &str = help_usage!("mkswap.md");
 
@@ -21,6 +20,7 @@ mod platform {
     use std::{
         fs::{self, File, Metadata},
         io::{BufRead, BufReader, Write},
+        os::unix::fs::FileTypeExt,
         path::Path,
         str::FromStr,
     };
@@ -33,6 +33,7 @@ mod platform {
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
     const SWAP_VERSION: u8 = 1;
+    const MIN_SWAP_PAGES: u128 = 10;
 
     const BLKGETSIZE: u64 = _IO(0x12, 96) as u64;
 
@@ -51,7 +52,7 @@ mod platform {
     fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u128, std::io::Error> {
         let devsize: u128;
         /* for block devices, ioctl call with manual size reading as a backup method */
-        if stat.st_mode() == 25008 {
+        if stat.file_type().is_block_device() {
             let mut sectors: u128 = 0;
             let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE, &mut sectors) };
 
@@ -91,48 +92,58 @@ mod platform {
             if !uuid.is_nil() {
                 (*swap_hdr).uuid = *uuid.as_bytes();
             }
+
             if !label.is_empty() {
-                (*swap_hdr)
-                    .volume_name
-                    .as_mut_ptr()
-                    .copy_from(label.as_ptr(), label.len());
+                let lb = label.as_bytes();
+                let lblen = lb.len().min((*swap_hdr).volume_name.len()); //TODO: verbose mode, informs user of truncation
+                (*swap_hdr).volume_name[..lblen].copy_from_slice(&lb[..lblen]);
             }
+
             buf.assume_init()
         }
     }
 
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
-        let devstr;
-
-        match args.get_one::<String>("device") {
-            Some(str) => devstr = str,
+        let device = match args.get_one::<String>("device") {
+            Some(str) => str,
             None => {
                 return Err(UUsageError::new(
                     1,
-                    format!("Usage: {} -d device", uucore::util_name()),
+                    format!(
+                        "Usage: {}\nFor more information, try '--help'.",
+                        format_usage(USAGE)
+                    ),
                 ))
             }
-        }
+        };
 
         let label = match args.get_one::<String>("label") {
             Some(l) => l.as_str(),
             None => "",
         };
 
-        let dev = Path::new(devstr.as_str());
-        let devname = devstr.strip_prefix("/dev/").unwrap_or("err");
+        let dev = Path::new(device.as_str());
 
-        let mut fd = fs::File::options()
+        let mut fd = match fs::File::options()
             .create(false)
             .write(true)
             .truncate(false)
             .append(false)
-            .open(dev)?;
+            .open(dev)
+        {
+            Ok(f) => f,
+            Err(e) => {
+                return Err(USimpleError::new(
+                    1,
+                    format!("failed to open {}: {}", device, e),
+                ))
+            }
+        };
 
         let stat = fd.metadata()?;
 
         let uuid = match args.get_one::<String>("uuid") {
-            Some(str) => Uuid::from_str(str).expect("Unable to parse UUID"),
+            Some(str) => Uuid::from_str(str).expect("Unable to parse UUID"), //TODO: more gracious error handling
             None => Uuid::new_v4(),
         };
 
@@ -140,40 +151,61 @@ mod platform {
             println!(
                 "{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
                 uucore::util_name(),
-                devstr,
+                device,
                 stat.st_uid(),
-                devstr
+                device
             );
         }
 
+        let devname = match stat.file_type().is_block_device() {
+            true => {
+                let res = match device.strip_prefix("/dev/") {
+                    Some(str) => str,
+                    None => {
+                        return Err(UUsageError::new(
+                            1,
+                            format!(
+                            "{}: invalid device path '{}'. Device paths must start with '/dev/'.",
+                            uucore::util_name(),
+                            device
+                        ),
+                        ))
+                    }
+                };
+                res
+            }
+            false => device.as_str(),
+        };
+
         let devsize: u128 = getsize(&fd, &stat, devname)?;
 
-        let mut pagesize: i64 = stat.st_blksize() as i64;
-        if pagesize <= 0 {
-            pagesize = unsafe { sysconf(_SC_PAGE_SIZE) };
-            if pagesize <= 0 {
-                pagesize = unsafe { sysconf(_SC_PAGESIZE) };
-                if pagesize <= 0 {
+        let stblksize: u64 = stat.st_blksize();
+        let pagesize: u128 = if stblksize == 0 {
+            let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
+            if sz <= 0 {
+                sz = unsafe { sysconf(_SC_PAGE_SIZE) };
+                if sz <= 0 {
                     return Err(USimpleError::new(1, "Can't determine system pagesize"));
                 }
             }
-        }
+            (sz as u64).into()
+        } else {
+            stblksize.into()
+        };
 
-        assert!(pagesize > 0);
-        if devsize < (10 * pagesize as u128) {
+        let pages: u128 = devsize / pagesize;
+
+        if pages < MIN_SWAP_PAGES {
             return Err(USimpleError::new(
                 1,
                 format!(
                     "swap space needs to be at least {}KiB",
-                    (10 * pagesize / 1024)
+                    MIN_SWAP_PAGES * pagesize / 1024
                 ),
             ));
         }
-        assert!(devsize > 0);
 
-        let pages: u128 = devsize / pagesize as u128;
-
-        //signature page
+        //initialize and write swap header to signature page
         let mut buf = unsafe { init_signature_page(pagesize as usize, pages, uuid, label) };
 
         //write swap signature
@@ -184,7 +216,6 @@ mod platform {
         fd.flush()?;
         fd.sync_all()?;
 
-
         if label.is_empty() {
             println!(
                 "Setting up swapspace version 1, size = {}KiB\nNo label, UUID={}",
@@ -193,9 +224,9 @@ mod platform {
             );
         } else {
             println!(
-                "Setting up swapspace version 1, size = {}KiB\nLabel={}, UUID={}",
+                "Setting up swapspace version 1, size = {}KiB\nLABEL={}, UUID={}",
                 (((pages - 1) * pagesize as u128) / 1024),
-                label,
+                &label[..label.len().min(16)], //truncate given too long of a label.
                 uuid
             )
         }
@@ -211,13 +242,11 @@ mod platform {
         };
         Ok(())
     }
-
 }
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     platform::run(args)
-
 }
 
 pub fn uu_app() -> Command {
@@ -231,7 +260,7 @@ pub fn uu_app() -> Command {
                 .short('d')
                 .long("device")
                 .action(ArgAction::Set)
-                .help("block device"),
+                .help("block device or swap file"),
         )
         .arg(
             Arg::new("label")
@@ -245,7 +274,7 @@ pub fn uu_app() -> Command {
                 .short('u')
                 .long("uuid")
                 .action(ArgAction::Set)
-                .help("set a uuid"),
+                .help("specify the UUID to use"),
         )
 }
 
