@@ -18,6 +18,17 @@ mod linux {
     }
 
     #[test]
+    fn test_directory_err() {
+        let (at, mut ucmd) = at_and_ucmd!();
+        at.mkdir("foo");
+        ucmd.arg("-d")
+            .arg("foo")
+            .fails()
+            .code_is(2)
+            .stderr_contains("failed to open foo: Is a directory");
+    }
+
+    #[test]
     fn test_invalid_arg() {
         new_ucmd!().arg("foo").fails().code_is(1);
     }
@@ -59,17 +70,50 @@ mod linux {
     }
 
     #[test]
-    fn test_directory_err() {
+    fn test_swaplabel() {
         let (at, mut ucmd) = at_and_ucmd!();
-        at.mkdir("foo");
+        at.write_bytes("swap", &[0; 65536]);
         ucmd.arg("-d")
-            .arg("foo")
-            .fails()
-            .code_is(2)
-            .stderr_contains("failed to open foo: Is a directory");
+            .arg("swap")
+            .arg("-l")
+            .arg("SWAPLABEL")
+            .succeeds()
+            .code_is(0)
+            .stdout_contains("LABEL=SWAPLABEL,")
+            .stdout_contains("Setting up swapspace version 1");
+    }
+
+    #[test]
+    fn test_custom_uuid() {
+        let (at, mut ucmd) = at_and_ucmd!();
+        at.write_bytes("swap", &[0; 65536]);
+        ucmd.arg("-d")
+            .arg("swap")
+            .arg("-l")
+            .arg("SWAP")
+            .arg("-u")
+            .arg("4adbb628-19fa-4bef-9c60-8ce030381672")
+            .succeeds()
+            .code_is(0)
+            .stdout_contains("LABEL=SWAP, UUID=4adbb628-19fa-4bef-9c60-8ce030381672")
+            .stdout_contains("Setting up swapspace version 1");
+    }
+
+    ///test truncation on a label that is above the 16 byte maximum
+    #[test]
+    fn test_long_label() {
+        let (at, mut ucmd) = at_and_ucmd!();
+        at.write_bytes("swap", &[0; 65536]);
+        ucmd.arg("-d")
+            .arg("swap")
+            .arg("-l")
+            .arg("OUTRAGEOUSLYLONGSWAPLABEL")
+            .succeeds()
+            .code_is(0)
+            .stdout_contains("LABEL=OUTRAGEOUSLYLONG,")
+            .stdout_contains("Setting up swapspace version 1");
     }
 }
-
 #[cfg(not(target_os = "linux"))]
 mod non_linux {
     use crate::common::util::TestScenario;

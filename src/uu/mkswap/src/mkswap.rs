@@ -33,6 +33,7 @@ mod platform {
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
     const SWAP_VERSION: u8 = 1;
+    const MIN_SWAP_PAGES: u128 = 10;
 
     const BLKGETSIZE: u64 = _IO(0x12, 96) as u64;
 
@@ -91,16 +92,13 @@ mod platform {
             if !uuid.is_nil() {
                 (*swap_hdr).uuid = *uuid.as_bytes();
             }
+
             if !label.is_empty() {
-                let lblen = match label.len() > 16 {
-                    true => 16,
-                    false => label.len(),
-                };
-                (*swap_hdr)
-                    .volume_name
-                    .as_mut_ptr()
-                    .copy_from(label.as_ptr(), lblen);
+                let lb = label.as_bytes();
+                let lblen = lb.len().min((*swap_hdr).volume_name.len()); //TODO: verbose mode, informs user of truncation
+                (*swap_hdr).volume_name[..lblen].copy_from_slice(&lb[..lblen]);
             }
+
             buf.assume_init()
         }
     }
@@ -145,7 +143,7 @@ mod platform {
         let stat = fd.metadata()?;
 
         let uuid = match args.get_one::<String>("uuid") {
-            Some(str) => Uuid::from_str(str).expect("Unable to parse UUID"),
+            Some(str) => Uuid::from_str(str).expect("Unable to parse UUID"), //TODO: more gracious error handling
             None => Uuid::new_v4(),
         };
 
@@ -181,32 +179,33 @@ mod platform {
 
         let devsize: u128 = getsize(&fd, &stat, devname)?;
 
-        let mut pagesize: i64 = stat.st_blksize() as i64;
-        if pagesize <= 0 {
-            pagesize = unsafe { sysconf(_SC_PAGE_SIZE) };
-            if pagesize <= 0 {
-                pagesize = unsafe { sysconf(_SC_PAGESIZE) };
-                if pagesize <= 0 {
+        let stblksize: u64 = stat.st_blksize();
+        let pagesize: u128 = if stblksize == 0 {
+            let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
+            if sz <= 0 {
+                sz = unsafe { sysconf(_SC_PAGE_SIZE) };
+                if sz <= 0 {
                     return Err(USimpleError::new(1, "Can't determine system pagesize"));
                 }
             }
-        }
+            (sz as u64).into()
+        } else {
+            stblksize.into()
+        };
 
-        assert!(pagesize > 0);
-        if devsize < (10 * pagesize as u128) {
+        let pages: u128 = devsize / pagesize;
+
+        if pages < MIN_SWAP_PAGES {
             return Err(USimpleError::new(
                 1,
                 format!(
                     "swap space needs to be at least {}KiB",
-                    (10 * pagesize / 1024)
+                    MIN_SWAP_PAGES * pagesize / 1024
                 ),
             ));
         }
-        assert!(devsize > 0);
 
-        let pages: u128 = devsize / pagesize as u128;
-
-        //signature page
+        //initialize and write swap header to signature page
         let mut buf = unsafe { init_signature_page(pagesize as usize, pages, uuid, label) };
 
         //write swap signature
@@ -225,9 +224,9 @@ mod platform {
             );
         } else {
             println!(
-                "Setting up swapspace version 1, size = {}KiB\nLabel={}, UUID={}",
+                "Setting up swapspace version 1, size = {}KiB\nLABEL={}, UUID={}",
                 (((pages - 1) * pagesize as u128) / 1024),
-                label,
+                &label[..label.len().min(16)], //truncate given too long of a label.
                 uuid
             )
         }
