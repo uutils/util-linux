@@ -44,15 +44,15 @@ pub struct WhDir {
     #[serde(skip_deserializing)]
     metadata: Option<fs::Metadata>,
     path: PathBuf,
-    type_of_dir: DirType,
+    dir_type: DirType,
 }
 
 impl WhDir {
-    fn new(path: PathBuf, type_of_dir: DirType) -> Self {
+    fn new(path: PathBuf, dir_type: DirType) -> Self {
         Self {
             metadata: fs::metadata(&path).ok(),
             path,
-            type_of_dir,
+            dir_type,
         }
     }
 }
@@ -121,7 +121,7 @@ impl WhDirList {
     #[allow(dead_code)]
     fn list_dirs(&self) {
         for dir in &self.list {
-            let dir_type = whereis_type_to_name(dir.type_of_dir);
+            let dir_type = whereis_type_to_name(dir.dir_type);
             println!("{:?} : {:?}", dir_type, dir.path.display());
         }
     }
@@ -131,8 +131,8 @@ impl WhDirList {
         let pathbuf_pattern = PathBuf::from(pattern);
 
         for dir in &self.list {
-            if dir.type_of_dir == dir_type {
-                find_in(&dir.path, &pathbuf_pattern, &mut results, dir.type_of_dir);
+            if dir.dir_type == dir_type {
+                find_in(&dir.path, &pathbuf_pattern, &mut results, dir.dir_type);
             }
         }
 
