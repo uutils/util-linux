@@ -12,7 +12,7 @@ use std::{
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod constants;
-use crate::constants::{BINDIRS, MANDIRS, SRCDIRS};
+use crate::constants::{BIN_DIRS, MAN_DIRS, SRC_DIRS};
 
 mod options {
     pub const BIN: &str = "binaries";
@@ -269,9 +269,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut dir_list = WhDirList::new();
 
-    dir_list.construct_dir_list(DirType::BIN, &BINDIRS);
-    dir_list.construct_dir_list(DirType::MAN, &MANDIRS);
-    dir_list.construct_dir_list(DirType::SRC, &SRCDIRS);
+    dir_list.construct_dir_list(DirType::BIN, &BIN_DIRS);
+    dir_list.construct_dir_list(DirType::MAN, &MAN_DIRS);
+    dir_list.construct_dir_list(DirType::SRC, &SRC_DIRS);
 
     let names: Vec<_> = matches
         .get_many::<String>("names")

@@ -1,6 +1,6 @@
 // List of directories, man, src, and binary
 
-pub const MANDIRS: [&str; 7] = [
+pub const MAN_DIRS: [&str; 7] = [
     "/usr/man/*",
     "/usr/share/man/*",
     "/usr/X386/man/*",
@@ -11,7 +11,7 @@ pub const MANDIRS: [&str; 7] = [
     // NULL
 ];
 
-pub const SRCDIRS: [&str; 6] = [
+pub const SRC_DIRS: [&str; 6] = [
     "/usr/src/*",
     "/usr/src/lib/libc/*",
     "/usr/src/lib/libc/net/*",
@@ -21,7 +21,7 @@ pub const SRCDIRS: [&str; 6] = [
     // NULL
 ];
 
-pub const BINDIRS: [&str; 46] = [
+pub const BIN_DIRS: [&str; 46] = [
     "/usr/bin",
     "/usr/sbin",
     "/bin",
