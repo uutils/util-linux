@@ -31,10 +31,10 @@ const USAGE: &str = help_usage!("whereis.md");
 // Directories are usually manual pages dirs, binary dirs or source dirs. Hopefully not unknown.
 #[derive(Serialize, Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum DirType {
-    BIN,
-    MAN,
-    SRC,
-    UNK,
+    Binary,
+    Manual,
+    Source,
+    Unknown,
 }
 
 // Store the metadata for a file
@@ -142,10 +142,10 @@ impl WhDirList {
 
 pub fn whereis_type_to_name(dir_type: DirType) -> &'static str {
     match dir_type {
-        DirType::MAN => "man",
-        DirType::BIN => "bin",
-        DirType::SRC => "src",
-        DirType::UNK => "???",
+        DirType::Manual => "man",
+        DirType::Binary => "bin",
+        DirType::Source => "src",
+        DirType::Unknown => "???",
     }
 }
 
@@ -158,11 +158,11 @@ fn filename_equal(cp: &PathBuf, dp: &str, dir_type: DirType) -> bool {
 
     let mut dp_trimmed = dp;
 
-    if dir_type == DirType::SRC && dp_trimmed.starts_with("s.") {
+    if dir_type == DirType::Source && dp_trimmed.starts_with("s.") {
         return filename_equal(cp, &dp_trimmed[2..], dir_type);
     }
 
-    if dir_type == DirType::MAN {
+    if dir_type == DirType::Manual {
         for ext in [".Z", ".gz", ".xz", ".bz2", ".zst"] {
             if let Some(stripped) = dp_trimmed.strip_suffix(ext) {
                 dp_trimmed = stripped;
@@ -178,7 +178,7 @@ fn filename_equal(cp: &PathBuf, dp: &str, dir_type: DirType) -> bool {
         match (cp_chars.next(), dp_chars.next()) {
             (Some(c1), Some(c2)) if c1 == c2 => continue,
             (None, None) => return true, // both ended
-            (None, Some('.')) if dir_type != DirType::BIN => {
+            (None, Some('.')) if dir_type != DirType::Binary => {
                 // cp ended, dp has .section
                 return true;
             }
@@ -207,11 +207,11 @@ fn print_output(options: &OutputOptions, pattern: &str, results: Vec<String>) {
     // Split results by type, grouping MAN, BIN and SRC.
     for path in results {
         if path.contains("/bin/") {
-            grouped.entry(DirType::BIN).or_default().push(path);
+            grouped.entry(DirType::Binary).or_default().push(path);
         } else if path.contains("/man") || path.contains("/share/man") {
-            grouped.entry(DirType::MAN).or_default().push(path);
+            grouped.entry(DirType::Manual).or_default().push(path);
         } else {
-            grouped.entry(DirType::SRC).or_default().push(path);
+            grouped.entry(DirType::Source).or_default().push(path);
         }
     }
 
@@ -220,21 +220,21 @@ fn print_output(options: &OutputOptions, pattern: &str, results: Vec<String>) {
     // If *any* of the search flags are set, print according to them
     if options.search_bin || options.search_man || options.search_src {
         if options.search_bin {
-            if let Some(paths) = grouped.get(&DirType::BIN) {
+            if let Some(paths) = grouped.get(&DirType::Binary) {
                 for path in paths {
                     print!(" {}", path);
                 }
             }
         }
         if options.search_man {
-            if let Some(paths) = grouped.get(&DirType::MAN) {
+            if let Some(paths) = grouped.get(&DirType::Manual) {
                 for path in paths {
                     print!(" {}", path);
                 }
             }
         }
         if options.search_src {
-            if let Some(paths) = grouped.get(&DirType::SRC) {
+            if let Some(paths) = grouped.get(&DirType::Source) {
                 for path in paths {
                     print!(" {}", path);
                 }
@@ -269,9 +269,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     let mut dir_list = WhDirList::new();
 
-    dir_list.construct_dir_list(DirType::BIN, &BIN_DIRS);
-    dir_list.construct_dir_list(DirType::MAN, &MAN_DIRS);
-    dir_list.construct_dir_list(DirType::SRC, &SRC_DIRS);
+    dir_list.construct_dir_list(DirType::Binary, &BIN_DIRS);
+    dir_list.construct_dir_list(DirType::Manual, &MAN_DIRS);
+    dir_list.construct_dir_list(DirType::Source, &SRC_DIRS);
 
     let names: Vec<_> = matches
         .get_many::<String>("names")
@@ -281,9 +281,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     // Search for the names that were passed into the program.
     for pattern in names {
-        let mut results = dir_list.lookup(pattern, DirType::BIN);
-        results.append(&mut dir_list.lookup(pattern, DirType::MAN));
-        results.append(&mut dir_list.lookup(pattern, DirType::SRC));
+        let mut results = dir_list.lookup(pattern, DirType::Binary);
+        results.append(&mut dir_list.lookup(pattern, DirType::Manual));
+        results.append(&mut dir_list.lookup(pattern, DirType::Source));
 
         print_output(&output_options, pattern, results);
     }
