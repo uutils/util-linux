@@ -1,0 +1,20 @@
+[package]
+name = "uu_whereis"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/whereis.rs"
+
+[[bin]]
+name = "whereis"
+path = "src/main.rs"
+
+[dependencies]
+regex = { workspace = true }
+uucore = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sysinfo = { workspace = true }
+glob = "0.3"

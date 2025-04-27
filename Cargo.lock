@@ -1155,6 +1155,7 @@ dependencies = [
  "uu_renice",
  "uu_rev",
  "uu_setsid",
+ "uu_whereis",
  "uucore",
  "xattr",
 ]
@@ -1317,6 +1318,19 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "libc",
+ "uucore",
+]
+
+[[package]]
+name = "uu_whereis"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "glob",
+ "regex",
+ "serde",
+ "serde_json",
+ "sysinfo",
  "uucore",
 ]
 
