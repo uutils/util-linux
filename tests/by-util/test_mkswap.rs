@@ -34,7 +34,7 @@ mod linux {
     }
     #[test]
     fn test_empty_args() {
-        new_ucmd!().fails().code_is(2).stderr_contains("Usage:");
+        new_ucmd!().fails().code_is(1).stderr_contains("Usage:");
     }
 
     #[test]
@@ -112,6 +112,20 @@ mod linux {
             .code_is(0)
             .stdout_contains("LABEL=OUTRAGEOUSLYLONG,")
             .stdout_contains("Setting up swapspace version 1");
+    }
+
+    #[test]
+    fn test_check_blocks() {
+        let (at, mut ucmd) = at_and_ucmd!();
+        at.write_bytes("swap", &[0; 65536]);
+        ucmd.arg("-d")
+            .arg("swap")
+            .arg("--check")
+            .arg("--verbose")
+            .succeeds()
+            .code_is(0)
+            .stdout_contains("Setting up swapspace version 1")
+            .stdout_contains("0 bad pages");
     }
 }
 #[cfg(not(target_os = "linux"))]

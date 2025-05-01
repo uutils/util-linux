@@ -13,21 +13,21 @@ const USAGE: &str = help_usage!("mkswap.md");
 
 #[cfg(target_os = "linux")]
 mod platform {
-    use uucore::error::{set_exit_code, USimpleError, UUsageError};
-
-    use clap::ArgMatches;
 
     use std::{
         fs::{self, File, Metadata},
-        io::{BufRead, BufReader, Write},
-        os::unix::fs::FileTypeExt,
+        io::{BufRead, BufReader, Seek, SeekFrom, Write},
+        os::{fd::AsRawFd, linux::fs::MetadataExt, unix::fs::FileTypeExt},
         path::Path,
         str::FromStr,
     };
 
     use crate::*;
-    use std::os::{fd::AsRawFd, linux::fs::MetadataExt};
-    use uucore::libc::{ioctl, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE};
+
+    use uucore::error::{set_exit_code, USimpleError, UUsageError};
+    use uucore::libc::{ioctl, lseek, read, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE};
+
+    use clap::ArgMatches;
     use uuid::Uuid;
 
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
@@ -46,7 +46,7 @@ mod platform {
         uuid: [u8; 16],
         volume_name: [u8; 16],
         padding: [u32; 117],
-        badpages: [u32; 1],
+        badpages: [u32; 100],
     }
 
     fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u128, std::io::Error> {
@@ -74,11 +74,53 @@ mod platform {
         Ok(devsize)
     }
 
+    unsafe fn check_blocks(
+        file: &mut File,
+        pagesize: usize,
+        pages: u128,
+        verbose: bool,
+    ) -> Result<Vec<u32>, std::io::Error> {
+        let mut bad_pages: Vec<u32> = Vec::new();
+        let mut buffer = vec![0u8; pagesize];
+        let end = pagesize as u64 * pages as u64;
+
+        let fd = file.as_raw_fd();
+        let mut bytes: uucore::libc::ssize_t;
+
+        for current_page in 0..pages {
+            let offset = current_page as u64 * pagesize as u64;
+            if offset > end {
+                break;
+            }
+
+            unsafe {
+                if lseek(fd, offset as i64, uucore::libc::SEEK_SET) < 0 {
+                    panic!("Failed to seek");
+                }
+
+                bytes = read(fd, buffer.as_mut_ptr() as *mut std::ffi::c_void, pagesize);
+                if bytes < 0 || bytes != pagesize as isize {
+                    bad_pages.push(current_page as u32);
+                }
+            }
+            if bad_pages.len() >= 640 {
+                panic!("Too many bad pages detected: {}", bad_pages.len());
+            }
+        }
+        if verbose {
+            println!("{} bad pages", bad_pages.len())
+        }
+        file.seek(SeekFrom::Start(0))?;
+
+        Ok(bad_pages)
+    }
+
     unsafe fn init_signature_page(
         pagesize: usize,
         pages: u128,
         uuid: Uuid,
         label: &str,
+        badpages: &mut Vec<u32>,
     ) -> Box<[u8]> {
         let mut buf = Box::<[u8]>::new_uninit_slice(pagesize);
 
@@ -89,6 +131,8 @@ mod platform {
             let swap_hdr = buf.as_mut_ptr() as *mut SwapHeader;
             (*swap_hdr).version = SWAP_VERSION;
             (*swap_hdr).last_page = (pages - 1) as u32;
+            (*swap_hdr).nr_badpages = badpages.len() as u32;
+            (*swap_hdr).badpages[..badpages.len()].copy_from_slice(badpages.as_mut_slice());
             if !uuid.is_nil() {
                 (*swap_hdr).uuid = *uuid.as_bytes();
             }
@@ -104,6 +148,9 @@ mod platform {
     }
 
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
+        let verbose = args.get_flag("verbose");
+        let checkflag: bool = args.get_flag("check");
+
         let device = match args.get_one::<String>("device") {
             Some(str) => str,
             None => {
@@ -127,6 +174,7 @@ mod platform {
         let mut fd = match fs::File::options()
             .create(false)
             .write(true)
+            .read(true)
             .truncate(false)
             .append(false)
             .open(dev)
@@ -205,8 +253,15 @@ mod platform {
             ));
         }
 
+        let mut badpages = if checkflag {
+            unsafe { check_blocks(&mut fd, pagesize as usize, pages, verbose)? }
+        } else {
+            vec![0; 100]
+        };
+
         //initialize and write swap header to signature page
-        let mut buf = unsafe { init_signature_page(pagesize as usize, pages, uuid, label) };
+        let mut buf =
+            unsafe { init_signature_page(pagesize as usize, pages, uuid, label, &mut badpages) };
 
         //write swap signature
         let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize]
@@ -259,6 +314,7 @@ pub fn uu_app() -> Command {
             Arg::new("device")
                 .short('d')
                 .long("device")
+                .required(true)
                 .action(ArgAction::Set)
                 .help("block device or swap file"),
         )
@@ -267,14 +323,27 @@ pub fn uu_app() -> Command {
                 .short('l')
                 .long("label")
                 .action(ArgAction::Set)
-                .help("specify a label"),
+                .help("set a label"),
         )
         .arg(
             Arg::new("uuid")
                 .short('u')
                 .long("uuid")
                 .action(ArgAction::Set)
-                .help("specify the UUID to use"),
+                .help("set the UUID to use"),
+        )
+        .arg(
+            Arg::new("check")
+                .long("check")
+                .action(ArgAction::SetTrue)
+                .help("check the device for bad pages before writing to it"),
+        )
+        .arg(
+            Arg::new("verbose")
+                .short('v')
+                .long("verbose")
+                .action(ArgAction::SetTrue)
+                .help("verbose output"),
         )
 }
 
