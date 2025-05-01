@@ -34,7 +34,7 @@ mod linux {
     }
     #[test]
     fn test_empty_args() {
-        new_ucmd!().fails().code_is(1).stderr_contains("Usage:");
+        new_ucmd!().fails().code_is(2).stderr_contains("Usage:");
     }
 
     #[test]

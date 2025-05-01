@@ -314,7 +314,6 @@ pub fn uu_app() -> Command {
             Arg::new("device")
                 .short('d')
                 .long("device")
-                .required(true)
                 .action(ArgAction::Set)
                 .help("block device or swap file"),
         )
