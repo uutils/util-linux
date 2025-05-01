@@ -205,24 +205,10 @@ mod platform {
             );
         }
 
-        let devname = match stat.file_type().is_block_device() {
-            true => {
-                let res = match device.strip_prefix("/dev/") {
-                    Some(str) => str,
-                    None => {
-                        return Err(UUsageError::new(
-                            1,
-                            format!(
-                            "{}: invalid device path '{}'. Device paths must start with '/dev/'.",
-                            uucore::util_name(),
-                            device
-                        ),
-                        ))
-                    }
-                };
-                res
-            }
-            false => device.as_str(),
+        let devname = if let Some(str) = dev.file_name().unwrap().to_str() {
+            str
+        } else {
+            device.strip_prefix("/dev/").unwrap_or(device)
         };
 
         let devsize: u128 = getsize(&fd, &stat, devname)?;
