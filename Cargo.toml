@@ -42,7 +42,8 @@ feat_common_core = [
   "renice",
   "rev",
   "setsid",
-  "mkswap"
+  "uuidgen",
+  "mkswap",
 ]
 
 
@@ -66,11 +67,13 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.122", features = ["preserve_order"] }
 smartcols-sys = "0.1"
 syscall-numbers = "4.0.2"
-sysinfo = "0.34"
+sysinfo = "0.35"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
 uucore = "0.0.30"
+uuid = { version = "1.16.0", features = ["rng-rand"] }
+windows = { version = "0.61.1" }
 xattr = "1.3.1"
 
 [dependencies]
@@ -102,7 +105,9 @@ mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", pa
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
+uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
 mkswap = { optional = true, version = "0.0.1", package = "uu_mkswap", path = "src/uu/mkswap" }
+
 
 [dev-dependencies]
 # dmesg test require fixed-boot-time feature turned on.
@@ -113,6 +118,7 @@ rand = { workspace = true }
 regex = { workspace = true }
 tempfile = { workspace = true }
 uucore = { workspace = true, features = ["entries", "process", "signals"] }
+uuid = { workspace = true }
 
 [target.'cfg(unix)'.dev-dependencies]
 nix = { workspace = true, features = ["term"] }

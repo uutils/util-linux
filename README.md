@@ -99,6 +99,7 @@ First, reimplement the most important tools from util-linux:
 - `ldattach`: Attaches line discipline to a serial line.
 - `readprofile`: Reads kernel profiling info.
 - `i386, linux32, linux64, x86_64`: Set personality flags for execution environment.
+- `uuidgen`: Generate different types of UUID.
 
 Note:
 * /bin/more is already implemented in https://github.com/uutils/coreutils
