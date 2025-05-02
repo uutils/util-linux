@@ -1,0 +1,24 @@
+[package]
+name = "uu_uuidgen"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/uuidgen.rs"
+
+[[bin]]
+name = "uuidgen"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+uucore = { workspace = true }
+uuid = { workspace = true, features = ["v1", "v3", "v4", "v5"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = ["Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Networking_WinSock"] }
+
+[target.'cfg(all(target_family = "unix", not(target_os = "redox")))'.dependencies]
+nix = { workspace = true, features = ["net"] }

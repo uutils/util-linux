@@ -60,3 +60,7 @@ mod test_fsfreeze;
 #[cfg(feature = "mcookie")]
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;
+
+#[cfg(feature = "uuidgen")]
+#[path = "by-util/test_uuidgen.rs"]
+mod test_uuidgen;
