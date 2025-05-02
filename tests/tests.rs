@@ -68,6 +68,3 @@ mod test_uuidgen;
 #[cfg(feature = "mkswap")]
 #[path = "by-util/test_mkswap.rs"]
 mod test_mkswap;
-
-
-

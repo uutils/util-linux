@@ -211,8 +211,6 @@ mod platform {
             device.strip_prefix("/dev/").unwrap_or(device)
         };
 
-        let devsize: u128 = getsize(&fd, &stat, devname)?;
-
         let stblksize: u64 = stat.st_blksize();
         let pagesize: u128 = if stblksize == 0 {
             let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
@@ -227,7 +225,7 @@ mod platform {
             stblksize.into()
         };
 
-        let pages: u128 = devsize / pagesize;
+        let pages: u128 = getsize(&fd, &stat, devname)? / pagesize;
 
         if pages < MIN_SWAP_PAGES {
             return Err(USimpleError::new(
