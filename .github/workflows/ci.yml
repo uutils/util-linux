@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        shell: bash
+        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
       - run: cargo check
 
   test:
@@ -26,6 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        shell: bash
+        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
       - run: cargo test
 
   fmt:
@@ -34,6 +40,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update --quiet
+      - run: sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
       - run: rustup component add rustfmt
       - run: cargo fmt --all -- --check
 
@@ -46,6 +54,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        shell: bash
+        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
       - run: rustup component add clippy
       - run: cargo clippy -- -D warnings
 
@@ -78,6 +89,10 @@ jobs:
         # * CODECOV_FLAGS
         CODECOV_FLAGS=$( echo "${{ matrix.job.os }}" | sed 's/[^[:alnum:]]/_/g' )
         outputs CODECOV_FLAGS
+
+    - name: Install dependencies
+      shell: bash
+      run: case ${{ matrix.job.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
 
     - name: rust toolchain ~ install
       uses: dtolnay/rust-toolchain@nightly

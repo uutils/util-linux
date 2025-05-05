@@ -1,18 +1,18 @@
 [package]
-name    = "uu_lslocks"
+name    = "uu_lsipc"
 version = "0.0.1"
 edition = "2024"
 
 [lib]
-path = "src/lslocks.rs"
+path = "src/lsipc.rs"
 
 [[bin]]
-name = "lslocks"
+name = "lsipc"
 path = "src/main.rs"
 
 [dependencies]
 uucore        = { workspace = true }
 clap          = { workspace = true }
 libc          = { workspace = true }
+errno         = { workspace = true }
 smartcols-sys = { workspace = true }
-libmount-sys  = { workspace = true }

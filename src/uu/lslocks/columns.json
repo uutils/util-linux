@@ -1,0 +1,69 @@
+{
+    "lslocks-columns": [
+        {
+            "holder": "COMMAND",
+            "type": "<string>",
+            "description": "command of the process holding the lock"
+        },
+        {
+            "holder": "PID",
+            "type": "<integer>",
+            "description": "PID of the process holding the lock"
+        },
+        {
+            "holder": "TYPE",
+            "type": "<string>",
+            "description": "kind of lock"
+        },
+        {
+            "holder": "SIZE",
+            "type": "<string|number>",
+            "description": "size of the lock, use <number> if --bytes is given"
+        },
+        {
+            "holder": "INODE",
+            "type": "<integer>",
+            "description": "inode number"
+        },
+        {
+            "holder": "MAJ:MIN",
+            "type": "<string>",
+            "description": "major:minor device number"
+        },
+        {
+            "holder": "MODE",
+            "type": "<string>",
+            "description": "lock access mode"
+        },
+        {
+            "holder": "M",
+            "type": "<boolean>",
+            "description": "mandatory state of the lock: 0 (none), 1 (set)"
+        },
+        {
+            "holder": "START",
+            "type": "<integer>",
+            "description": "relative byte offset of the lock"
+        },
+        {
+            "holder": "END",
+            "type": "<integer>",
+            "description": "ending offset of the lock"
+        },
+        {
+            "holder": "PATH",
+            "type": "<string>",
+            "description": "path of the locked file"
+        },
+        {
+            "holder": "BLOCKER",
+            "type": "<integer>",
+            "description": "PID of the process blocking the lock"
+        },
+        {
+            "holder": "HOLDERS",
+            "type": "<string>",
+            "description": "holders of the lock"
+        }
+    ]
+}

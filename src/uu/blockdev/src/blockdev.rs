@@ -230,8 +230,8 @@ mod linux {
 
     fn get_partition_offset(device_file: &File) -> UResult<usize> {
         let rdev = device_file.metadata()?.rdev();
-        let major = unsafe { libc::major(rdev) };
-        let minor = unsafe { libc::minor(rdev) };
+        let major = libc::major(rdev);
+        let minor = libc::minor(rdev);
         if Path::new(&format!("/sys/dev/block/{}:{}/partition", major, minor)).exists() {
             let mut start_fd = File::open(format!("/sys/dev/block/{}:{}/start", major, minor))?;
             let mut str = String::new();
