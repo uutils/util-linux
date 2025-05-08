@@ -521,11 +521,11 @@ impl Last {
         }
 
         if self.time_format != "notime" {
-            let time_ftm = 12;
+            let time_fmt = 12;
             let end_time_delta = format!("{end_time:<6} {delta}");
             let end_time_delta_fmt = 18;
 
-            write!(buf, " {time:<time_ftm$}").unwrap_or_default();
+            write!(buf, " {time:<time_fmt$}").unwrap_or_default();
             write!(buf, " {end_time_delta:<end_time_delta_fmt$}").unwrap_or_default();
         }
 
