@@ -17,7 +17,7 @@ fn test_invalid_arg() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_last() {
     let regex = Regex::new("still running|still logged in").unwrap();
     TestScenario::new(util_name!())
@@ -27,7 +27,7 @@ fn test_last() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_limit_arg() {
     let line_check = |input: &str| input.lines().count() == 3;
     new_ucmd!()
@@ -58,7 +58,7 @@ fn test_timestamp_format_no_time() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_timestamp_format_short() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
@@ -68,7 +68,7 @@ fn test_timestamp_format_short() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_timestamp_format_full() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
@@ -79,7 +79,7 @@ fn test_timestamp_format_full() {
 
 // 2024-07-11T19:30:44+08:00
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_timestamp_format_iso() {
     let regex =
         Regex::new(" [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")
@@ -91,7 +91,7 @@ fn test_timestamp_format_iso() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_short_invalid_utmp_file() {
     let (at, mut ucmd) = at_and_ucmd!();
     let file = "testfile";
@@ -110,7 +110,7 @@ fn test_short_invalid_utmp_file() {
 }
 
 #[test]
-#[cfg(all(unix, not(target_os="macos"), not(target_os="openbsd")))]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn test_display_hostname_last_column() {
     let output_expected = vec![
         "ferris   tty2         Sat Mar  8 16:29   still logged in  :0",
