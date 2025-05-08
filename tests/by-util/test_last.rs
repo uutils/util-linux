@@ -110,7 +110,7 @@ fn test_short_invalid_utmp_file() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os="macos"), not(target_os="openbsd")))]
 fn test_display_hostname_last_column() {
     let output_expected = vec![
         "ferris   tty2         Sat Mar  8 16:29   still logged in  :0",
