@@ -16,7 +16,9 @@ mod platform {
     use std::{
         fs::{self, File, Metadata},
         io::{BufRead, BufReader, Seek, SeekFrom, Write},
-        os::{fd::AsRawFd, linux::fs::MetadataExt, unix::fs::FileTypeExt},
+        os::{
+            fd::AsRawFd, linux::fs::MetadataExt, unix::fs::FileTypeExt, unix::fs::PermissionsExt,
+        },
         path::Path,
         str::FromStr,
     };
@@ -139,7 +141,7 @@ mod platform {
 
         if !label.is_empty() {
             let lb = label.as_bytes();
-            let lblen = lb.len().min(swap_hdr.volume_name.len()); 
+            let lblen = lb.len().min(swap_hdr.volume_name.len());
             swap_hdr.volume_name[..lblen].copy_from_slice(&lb[..lblen]);
 
             if lb.len() > swap_hdr.volume_name.len() && verbose {
@@ -150,9 +152,44 @@ mod platform {
         buf
     }
 
+    fn open_device(
+        device: &String,
+        dev: &Path,
+        createflag: bool,
+        filesize: u64,
+    ) -> Result<File, std::io::Error> {
+        let mut options = fs::OpenOptions::new();
+        let fd = match options
+            .create(false)
+            .create_new(createflag)
+            .write(true)
+            .read(true)
+            .truncate(false)
+            .append(false)
+            .open(dev)
+        {
+            Ok(f) => f,
+            Err(e) => {
+                return Err(std::io::Error::other(format!(
+                    "failed to open {}: {}",
+                    device, e
+                )))
+            }
+        };
+
+        if createflag {
+            fd.set_permissions(fs::Permissions::from_mode(0o600))?;
+            fd.set_len(filesize)?;
+        }
+
+        Ok(fd)
+    }
+
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
         let verbose = args.get_flag("verbose");
         let checkflag: bool = args.get_flag("check");
+        let createflag: bool = args.get_flag("file");
+        let filesize: u64 = *args.get_one::<u64>("filesize").unwrap_or(&0);
 
         let device = match args.get_one::<String>("device") {
             Some(str) => str,
@@ -179,29 +216,13 @@ mod platform {
             device.strip_prefix("/dev/").unwrap_or(device)
         };
 
-        let mut fd = match fs::File::options()
-            .create(false)
-            .write(true)
-            .read(true)
-            .truncate(false)
-            .append(false)
-            .open(dev)
-        {
-            Ok(f) => f,
-            Err(e) => {
-                return Err(USimpleError::new(
-                    1,
-                    format!("failed to open {}: {}", device, e),
-                ))
-            }
-        };
-        
-
         let uuid = match args.get_one::<String>("uuid") {
             Some(str) => Uuid::from_str(str)
                 .map_err(|e| USimpleError::new(1, format!("Invalid UUID '{}': {}", str, e)))?, //TODO: more gracious error handling
             None => Uuid::new_v4(),
         };
+
+        let mut fd = open_device(device, dev, createflag, filesize)?;
 
         let stat = fd.metadata()?;
         if stat.st_uid() != 0 {
@@ -213,7 +234,6 @@ mod platform {
                 device
             );
         }
-
         let stblksize: u64 = stat.st_blksize();
         let pagesize: u128 = if stblksize == 0 {
             let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
@@ -228,13 +248,20 @@ mod platform {
             stblksize.into()
         };
 
-        let devsize: u128 = getsize(&fd, &stat, devname).map_err(|e| {
-            USimpleError::new(1, format!("failed to determine size of {}: {}", devname, e))
-        })?;
+        let devsize: u128 = if createflag {
+            filesize as u128
+        } else {
+            getsize(&fd, &stat, devname).map_err(|e| {
+                USimpleError::new(1, format!("failed to determine size of {}: {}", devname, e))
+            })?
+        };
 
         let pages: u128 = devsize / pagesize;
 
         if pages < MIN_SWAP_PAGES {
+            if createflag {
+                fs::remove_file(dev)?;
+            }
             return Err(USimpleError::new(
                 1,
                 format!(
@@ -330,8 +357,25 @@ pub fn uu_app() -> Command {
         .arg(
             Arg::new("check")
                 .long("check")
+                .short('c')
                 .action(ArgAction::SetTrue)
                 .help("check the device for bad pages before writing to it"),
+        )
+        .arg(
+            Arg::new("file")
+                .short('F')
+                .long("file")
+                .action(ArgAction::SetTrue)
+                .help("create a swap file"),
+        )
+        .arg(
+            Arg::new("filesize")
+                .short('s')
+                .long("size")
+                .action(ArgAction::Set)
+                .value_parser(clap::value_parser!(u64))
+                .value_name("SIZE")
+                .help("size of the swap file in bytes"),
         )
         .arg(
             Arg::new("verbose")

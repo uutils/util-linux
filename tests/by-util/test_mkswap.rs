@@ -142,6 +142,30 @@ mod linux {
             .code_is(2)
             .stderr_contains("Invalid UUID '078d9a95+4c1e-4961-b8a5-3f9d27586645':");
     }
+
+    #[test]
+    fn test_create_file() {
+        use std::io::Read;
+        let (at, mut ucmd) = at_and_ucmd!();
+        ucmd.arg("-d")
+            .arg("swapfile")
+            .arg("-F")
+            .arg("-s")
+            .arg("65535")
+            .succeeds()
+            .code_is(0)
+            .stdout_contains("Setting up swapspace version 1");
+        at.file_exists("swapfile");
+
+        let mut buf = vec![0u8; 4096];
+
+        let mut fd = at.open("swapfile");
+        fd.read_exact(&mut buf).unwrap();
+
+        let sig = &buf[4086..];
+        let swapsig = "SWAPSPACE2".as_bytes();
+        assert_eq!(sig, swapsig);
+    }
 }
 #[cfg(not(target_os = "linux"))]
 mod non_linux {
