@@ -116,16 +116,31 @@ mod linux {
 
     #[test]
     fn test_check_blocks() {
+         let (at, mut ucmd) = at_and_ucmd!();
+         at.write_bytes("swap", &[0; 65536]);
+         ucmd.arg("-d")
+        .arg("swap")
+        .arg("--check")
+        .arg("--verbose")
+        .succeeds()
+        .code_is(0)
+        .stdout_contains("Setting up swapspace version 1")
+        .stdout_contains("0 bad pages");
+
+    #[test]
+    fn test_invalid_uuid() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
         ucmd.arg("-d")
             .arg("swap")
-            .arg("--check")
-            .arg("--verbose")
-            .succeeds()
-            .code_is(0)
-            .stdout_contains("Setting up swapspace version 1")
-            .stdout_contains("0 bad pages");
+            .arg("-l")
+            .arg("SWAP")
+            .arg("-u")
+            .arg("078d9a95+4c1e-4961-b8a5-3f9d27586645")
+            .fails()
+            .code_is(2)
+            .stderr_contains("Invalid UUID '078d9a95+4c1e-4961-b8a5-3f9d27586645':");
+
     }
 }
 #[cfg(not(target_os = "linux"))]

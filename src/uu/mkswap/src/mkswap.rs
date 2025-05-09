@@ -24,18 +24,16 @@ mod platform {
 
     use crate::*;
 
-    use uucore::error::{set_exit_code, USimpleError, UUsageError};
-    use uucore::libc::{ioctl, lseek, read, sysconf, _IO, _SC_PAGESIZE, _SC_PAGE_SIZE};
-
-    use clap::ArgMatches;
+    use linux_raw_sys::ioctl::BLKGETSIZE64;
+    use std::os::{fd::AsRawFd, linux::fs::MetadataExt};
+    use uucore::libc::{ioctl, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
     use uuid::Uuid;
+    use clap::ArgMatches;
 
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
     const SWAP_VERSION: u8 = 1;
     const MIN_SWAP_PAGES: u128 = 10;
-
-    const BLKGETSIZE: u64 = _IO(0x12, 96) as u64;
 
     #[repr(C)]
     struct SwapHeader {
@@ -53,10 +51,10 @@ mod platform {
         let devsize: u128;
         /* for block devices, ioctl call with manual size reading as a backup method */
         if stat.file_type().is_block_device() {
-            let mut sectors: u128 = 0;
-            let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE, &mut sectors) };
+            let mut sz: u128 = 0;
+            let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE64 as u64, &mut sz) };
 
-            if sectors == 0 || err < 0 {
+            if sz == 0 || err < 0 {
                 let f_size = fs::File::open(format!("/sys/class/block/{}/size", devname))?;
 
                 let reader = BufReader::new(f_size);
@@ -64,9 +62,11 @@ mod platform {
                     .lines()
                     .map(|v| v.unwrap().parse::<u128>())
                     .collect::<Vec<Result<u128, _>>>();
-                sectors = vec[0].clone().unwrap_or(0);
+                sz = vec[0].clone().unwrap_or(0);
+                devsize = sz * 512;
+            } else {
+                devsize = sz;
             }
-            devsize = sectors * 512;
         } else {
             devsize = stat.st_size() as u128;
         }
@@ -191,7 +191,8 @@ mod platform {
         let stat = fd.metadata()?;
 
         let uuid = match args.get_one::<String>("uuid") {
-            Some(str) => Uuid::from_str(str).expect("Unable to parse UUID"), //TODO: more gracious error handling
+            Some(str) => Uuid::from_str(str)
+                .map_err(|e| USimpleError::new(1, format!("Invalid UUID '{}': {}", str, e)))?, //TODO: more gracious error handling
             None => Uuid::new_v4(),
         };
 
@@ -224,8 +225,12 @@ mod platform {
         } else {
             stblksize.into()
         };
+      
+        let devsize: u128 = getsize(&fd, &stat, devname).map_err(|e| {
+            USimpleError::new(1, format!("failed to determine size of {}: {}", devname, e))
+        })?;
 
-        let pages: u128 = getsize(&fd, &stat, devname)? / pagesize;
+        let pages: u128 = devsize / pagesize;
 
         if pages < MIN_SWAP_PAGES {
             return Err(USimpleError::new(
@@ -255,20 +260,17 @@ mod platform {
         fd.flush()?;
         fd.sync_all()?;
 
-        if label.is_empty() {
-            println!(
-                "Setting up swapspace version 1, size = {}KiB\nNo label, UUID={}",
-                (((pages - 1) * pagesize as u128) / 1024),
-                uuid
-            );
-        } else {
-            println!(
-                "Setting up swapspace version 1, size = {}KiB\nLABEL={}, UUID={}",
-                (((pages - 1) * pagesize as u128) / 1024),
-                &label[..label.len().min(16)], //truncate given too long of a label.
-                uuid
-            )
-        }
+        println!(
+            "Setting up swapspace version 1, size = {}KiB\n{}{}, UUID={}",
+            (((pages - 1) * pagesize as u128) / 1024),
+            if label.is_empty() {
+                "No label"
+            } else {
+                "LABEL="
+            },
+            &label[..label.len().min(16)], //truncate given too long of a label.
+            uuid
+        );
 
         Ok(())
     }
