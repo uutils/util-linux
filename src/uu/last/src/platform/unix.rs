@@ -369,7 +369,7 @@ impl Last {
                 .unwrap_or_else(|| time::OffsetDateTime::from_unix_timestamp(0).unwrap());
             let time_delta = duration_string(calculate_time_delta(&curr_datetime, &shutdown));
             if ut.is_user_process() {
-                proc_status = Some("- down");
+                proc_status = Some("- down ");
             }
             (
                 self.end_time_string(proc_status, &shutdown),
@@ -520,16 +520,18 @@ impl Last {
             write!(buf, " {host_to_print:<16}").unwrap_or_default();
         }
 
-        let time_size = 3 + 2 + 2 + 1 + 2;
-        if self.host_last && !self.no_host && self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap_or_default();
-            write!(buf, " {end_time:<8}").unwrap_or_default();
-            write!(buf, " {host_to_print}").unwrap_or_default();
-        } else if self.time_format != "notime" {
-            write!(buf, " {time:<time_size$}").unwrap_or_default();
-            write!(buf, " {end_time:<8}").unwrap_or_default();
+        if self.time_format != "notime" {
+            let time_fmt = 12;
+            let end_time_delta = format!("{end_time:<6} {delta}");
+            let end_time_delta_fmt = 18;
+
+            write!(buf, " {time:<time_fmt$}").unwrap_or_default();
+            write!(buf, " {end_time_delta:<end_time_delta_fmt$}").unwrap_or_default();
         }
-        write!(buf, " {delta:^6}").unwrap_or_default();
+
+        if self.host_last && !self.no_host {
+            write!(buf, " {host_to_print:<16}").unwrap_or_default();
+        }
         println!("{}", buf.trim_end());
     }
 }

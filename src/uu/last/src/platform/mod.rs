@@ -3,9 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 mod unix;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 pub use self::unix::*;
 
 #[cfg(target_os = "openbsd")]
@@ -17,3 +17,8 @@ pub use self::openbsd::*;
 mod windows;
 #[cfg(windows)]
 pub use self::windows::*;
+
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use self::macos::*;
