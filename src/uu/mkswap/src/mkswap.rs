@@ -13,7 +13,6 @@ const USAGE: &str = help_usage!("mkswap.md");
 
 #[cfg(target_os = "linux")]
 mod platform {
-
     use std::{
         fs::{self, File, Metadata},
         io::{BufRead, BufReader, Seek, SeekFrom, Write},
@@ -21,14 +20,14 @@ mod platform {
         path::Path,
         str::FromStr,
     };
+    use uucore::error::{set_exit_code, USimpleError, UUsageError};
 
     use crate::*;
 
-    use linux_raw_sys::ioctl::BLKGETSIZE64;
-    use std::os::{fd::AsRawFd, linux::fs::MetadataExt};
-    use uucore::libc::{ioctl, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
-    use uuid::Uuid;
     use clap::ArgMatches;
+    use linux_raw_sys::ioctl::BLKGETSIZE64;
+    use uucore::libc::{ioctl, lseek, read, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
+    use uuid::Uuid;
 
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
@@ -225,7 +224,7 @@ mod platform {
         } else {
             stblksize.into()
         };
-      
+
         let devsize: u128 = getsize(&fd, &stat, devname).map_err(|e| {
             USimpleError::new(1, format!("failed to determine size of {}: {}", devname, e))
         })?;
