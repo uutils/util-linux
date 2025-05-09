@@ -114,36 +114,40 @@ mod platform {
         Ok(bad_pages)
     }
 
-    unsafe fn init_signature_page(
+    unsafe fn write_signature_page(
         pagesize: usize,
         pages: u128,
         uuid: Uuid,
         label: &str,
         badpages: &mut Vec<u32>,
-    ) -> Box<[u8]> {
-        let mut buf = Box::<[u8]>::new_uninit_slice(pagesize);
+        verbose: bool,
+    ) -> Vec<u8> {
+        //let mut buf = Box::<[u8]>::new_uninit_slice(pagesize);
+        //buf.as_mut_ptr().write_bytes(0, pagesize);
+        let mut buf = vec![0u8; pagesize];
+        buf.as_mut_ptr().write_bytes(0, pagesize);
 
-        unsafe {
-            buf.as_mut_ptr().write_bytes(0, pagesize);
-
-            //fill up swap header
-            let swap_hdr = buf.as_mut_ptr() as *mut SwapHeader;
-            (*swap_hdr).version = SWAP_VERSION;
-            (*swap_hdr).last_page = (pages - 1) as u32;
-            (*swap_hdr).nr_badpages = badpages.len() as u32;
-            (*swap_hdr).badpages[..badpages.len()].copy_from_slice(badpages.as_mut_slice());
-            if !uuid.is_nil() {
-                (*swap_hdr).uuid = *uuid.as_bytes();
-            }
-
-            if !label.is_empty() {
-                let lb = label.as_bytes();
-                let lblen = lb.len().min((*swap_hdr).volume_name.len()); //TODO: verbose mode, informs user of truncation
-                (*swap_hdr).volume_name[..lblen].copy_from_slice(&lb[..lblen]);
-            }
-
-            buf.assume_init()
+        //fill up swap header
+        let swap_hdr = unsafe { &mut *(buf.as_mut_ptr() as *mut SwapHeader) };
+        swap_hdr.version = SWAP_VERSION;
+        swap_hdr.last_page = (pages - 1) as u32;
+        swap_hdr.nr_badpages = badpages.len() as u32;
+        swap_hdr.badpages[..badpages.len()].copy_from_slice(badpages.as_mut_slice());
+        if !uuid.is_nil() {
+            swap_hdr.uuid = *uuid.as_bytes();
         }
+
+        if !label.is_empty() {
+            let lb = label.as_bytes();
+            let lblen = lb.len().min(swap_hdr.volume_name.len()); 
+            swap_hdr.volume_name[..lblen].copy_from_slice(&lb[..lblen]);
+
+            if lb.len() > swap_hdr.volume_name.len() && verbose {
+                println!("Label '{}' truncated", label);
+            }
+        }
+
+        buf
     }
 
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
@@ -169,6 +173,11 @@ mod platform {
         };
 
         let dev = Path::new(device.as_str());
+        let devname = if let Some(str) = dev.file_name().unwrap().to_str() {
+            str
+        } else {
+            device.strip_prefix("/dev/").unwrap_or(device)
+        };
 
         let mut fd = match fs::File::options()
             .create(false)
@@ -186,8 +195,7 @@ mod platform {
                 ))
             }
         };
-
-        let stat = fd.metadata()?;
+        
 
         let uuid = match args.get_one::<String>("uuid") {
             Some(str) => Uuid::from_str(str)
@@ -195,6 +203,7 @@ mod platform {
             None => Uuid::new_v4(),
         };
 
+        let stat = fd.metadata()?;
         if stat.st_uid() != 0 {
             println!(
                 "{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
@@ -204,12 +213,6 @@ mod platform {
                 device
             );
         }
-
-        let devname = if let Some(str) = dev.file_name().unwrap().to_str() {
-            str
-        } else {
-            device.strip_prefix("/dev/").unwrap_or(device)
-        };
 
         let stblksize: u64 = stat.st_blksize();
         let pagesize: u128 = if stblksize == 0 {
@@ -247,11 +250,19 @@ mod platform {
             vec![0; 100]
         };
 
-        //initialize and write swap header to signature page
-        let mut buf =
-            unsafe { init_signature_page(pagesize as usize, pages, uuid, label, &mut badpages) };
+        // initialize and write swap header information to a buffer
+        let mut buf = unsafe {
+            write_signature_page(
+                pagesize as usize,
+                pages,
+                uuid,
+                label,
+                &mut badpages,
+                verbose,
+            )
+        };
 
-        //write swap signature
+        //write swap signature to buffer
         let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize]
             .copy_from_slice(SWAP_SIGNATURE);
 
