@@ -43,7 +43,9 @@ feat_common_core = [
   "rev",
   "setsid",
   "uuidgen",
+  "mkswap",
 ]
+
 
 [workspace.dependencies]
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
@@ -84,6 +86,7 @@ serde = { workspace = true }
 serde_json  = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
+libc = { workspace = true }
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
@@ -103,6 +106,8 @@ renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "sr
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
 uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
+mkswap = { optional = true, version = "0.0.1", package = "uu_mkswap", path = "src/uu/mkswap" }
+
 
 [dev-dependencies]
 # dmesg test require fixed-boot-time feature turned on.
