@@ -69,7 +69,7 @@ sysinfo = "0.35"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
-uucore = "0.0.30"
+uucore = "0.1.0"
 uuid = { version = "1.16.0", features = ["rng-rand"] }
 windows = { version = "0.61.1" }
 xattr = "1.3.1"
