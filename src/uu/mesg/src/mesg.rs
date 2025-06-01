@@ -5,7 +5,7 @@
 
 use clap::{builder::PossibleValuesParser, crate_version, Arg, ArgAction, ArgMatches, Command};
 #[cfg(target_family = "unix")]
-use uucore::error::{set_exit_code, UIoError};
+use uucore::error::{set_exit_code, UIoError, USimpleError};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("mesg.md");
@@ -14,7 +14,7 @@ const USAGE: &str = help_usage!("mesg.md");
 #[cfg(target_family = "unix")]
 pub fn do_mesg(matches: &ArgMatches) -> UResult<()> {
     use nix::sys::stat::{fchmod, fstat, Mode};
-    use std::{io, os::fd::AsRawFd};
+    use std::io;
     use std::{io::IsTerminal, os::fd::AsFd};
 
     for fd in &[
@@ -23,7 +23,7 @@ pub fn do_mesg(matches: &ArgMatches) -> UResult<()> {
         std::io::stderr().as_fd(),
     ] {
         if fd.is_terminal() {
-            let st = fstat(fd.as_raw_fd())?;
+            let st = fstat(fd.as_fd()).map_err(|e| USimpleError::new(1, e.desc()))?;
             if let Some(enable) = matches.get_one::<String>("enable") {
                 // 'mesg y' on the GNU version seems to only modify the group write bit,
                 // but 'mesg n' modifies both group and others write bits.
@@ -32,7 +32,8 @@ pub fn do_mesg(matches: &ArgMatches) -> UResult<()> {
                 } else {
                     st.st_mode & !0o022
                 };
-                fchmod(fd.as_raw_fd(), Mode::from_bits_retain(new_mode))?;
+                fchmod(fd.as_fd(), Mode::from_bits_retain(new_mode))
+                    .map_err(|e| USimpleError::new(1, e.desc()))?;
                 if enable == "n" {
                     set_exit_code(1);
                 }
