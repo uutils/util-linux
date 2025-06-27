@@ -156,7 +156,7 @@ enum ZoneId {
 impl core::fmt::Display for ZoneId {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let value = serde_json::to_string(self).unwrap().replace("\"", "");
-        write!(f, "{}", value)
+        write!(f, "{value}")
     }
 }
 

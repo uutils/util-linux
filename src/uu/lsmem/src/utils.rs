@@ -40,7 +40,7 @@ pub fn size_to_human_string(bytes: u64) -> String {
     // Format the result
     if frac != 0 {
         let decimal_point = ".";
-        buf = format!("{}{}{:02}", dec, decimal_point, frac);
+        buf = format!("{dec}{decimal_point}{frac:02}");
         if buf.ends_with('0') {
             buf.pop(); // Remove extraneous zero
         }

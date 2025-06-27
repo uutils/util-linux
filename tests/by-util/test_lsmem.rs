@@ -47,7 +47,7 @@ impl TestSysMemory {
         write_file_content(&sysmem, "block_size_bytes", "8000000\n");
 
         for i in MEMORY_BLOCK_IDS {
-            let block_dir = sysmem.join(format!("memory{}", i));
+            let block_dir = sysmem.join(format!("memory{i}"));
             write_file_content(&block_dir, "removable", "1\n");
             write_file_content(&block_dir, "state", "online\n");
             let valid_zone = match i {

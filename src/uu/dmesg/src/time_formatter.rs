@@ -12,7 +12,7 @@ use uucore::error::{UResult, USimpleError};
 pub fn raw(timestamp_us: i64) -> String {
     let seconds = timestamp_us / 1000000;
     let sub_seconds = timestamp_us % 1000000;
-    format!("{:>5}.{:0>6}", seconds, sub_seconds)
+    format!("{seconds:>5}.{sub_seconds:0>6}")
 }
 
 pub fn ctime(timestamp_us: i64) -> String {
@@ -80,8 +80,8 @@ impl ReltimeFormatter {
         let seconds = i64::abs(delta_us / 1000000);
         let sub_seconds = i64::abs(delta_us % 1000000);
         let sign = if delta_us >= 0 { '+' } else { '-' };
-        let res = format!("{}{}.{:0>6}", sign, seconds, sub_seconds);
-        format!("{:>11}", res)
+        let res = format!("{sign}{seconds}.{sub_seconds:0>6}");
+        format!("{res:>11}")
     }
 }
 
@@ -109,11 +109,11 @@ impl DeltaFormatter {
     fn delta(delta_us: i64) -> String {
         let seconds = i64::abs(delta_us / 1000000);
         let sub_seconds = i64::abs(delta_us % 1000000);
-        let mut res = format!("{}.{:0>6}", seconds, sub_seconds);
+        let mut res = format!("{seconds}.{sub_seconds:0>6}");
         if delta_us < 0 {
             res.insert(0, '-');
         }
-        format!("<{:>12}>", res)
+        format!("<{res:>12}>")
     }
 }
 
