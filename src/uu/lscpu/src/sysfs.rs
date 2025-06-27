@@ -47,7 +47,7 @@ impl CpuTopology {
         let online_cpus = parse_cpu_list(&read_online_cpus());
 
         for cpu_index in online_cpus {
-            let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{}/", cpu_index));
+            let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/"));
 
             let pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
                 .unwrap()
@@ -132,7 +132,7 @@ impl CacheSize {
             _ => return format!("{} bytes", self.0),
         };
         let scaled_size = self.0 / denominator;
-        format!("{} {}", scaled_size, unit)
+        format!("{scaled_size} {unit}")
     }
 }
 
@@ -145,7 +145,7 @@ pub fn read_online_cpus() -> String {
 }
 
 fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
-    let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{}/", cpu_index));
+    let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/"));
     let cache_dir = fs::read_dir(cpu_dir.join("cache")).unwrap();
     let cache_paths = cache_dir
         .flatten()
@@ -161,7 +161,7 @@ fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
             "Unified" => CacheType::Unified,
             "Data" => CacheType::Data,
             "Instruction" => CacheType::Instruction,
-            _ => panic!("Unrecognized cache type: {}", type_string),
+            _ => panic!("Unrecognized cache type: {type_string}"),
         };
 
         let c_level = fs::read_to_string(cache_path.join("level"))
@@ -225,7 +225,7 @@ pub fn read_cpu_byte_order() -> Option<&'static str> {
         match byte_order.trim() {
             "big" => return Some("Big Endian"),
             "little" => return Some("Little Endian"),
-            _ => eprintln!("Unrecognised Byte Order: {}", byte_order),
+            _ => eprintln!("Unrecognised Byte Order: {byte_order}"),
         }
     }
     None

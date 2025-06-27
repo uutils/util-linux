@@ -1440,7 +1440,7 @@ impl UCommand {
             // Input/output error (os error 5) is returned due to pipe closes. Buffer gets content anyway.
             Err(e) if e.raw_os_error().unwrap_or_default() == 5 => {}
             Err(e) => {
-                eprintln!("Unexpected error: {:?}", e);
+                eprintln!("Unexpected error: {e:?}");
                 panic!("error forwarding output of pty");
             }
         }
@@ -3675,7 +3675,7 @@ mod tests {
 
         std::assert_eq!(
             String::from_utf8_lossy(out.stdout()),
-            format!("{}\r\n", message)
+            format!("{message}\r\n")
         );
         std::assert_eq!(String::from_utf8_lossy(out.stderr()), "");
     }

@@ -38,7 +38,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         process::exit(1);
     }
 
-    println!("Nice value of process {} set to {}", pid, nice_value);
+    println!("Nice value of process {pid} set to {nice_value}");
     Ok(())
 }
 

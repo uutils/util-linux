@@ -24,10 +24,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 fn get_long_usage() -> String {
-    format!(
-        "If FILE is not specified, use {}.  /var/log/wtmp as FILE is common.",
-        WTMP_PATH,
-    )
+    format!("If FILE is not specified, use {WTMP_PATH}.  /var/log/wtmp as FILE is common.")
 }
 
 const WTMP_PATH: &str = "/var/log/wtmp";
@@ -151,9 +148,9 @@ fn duration_string(duration: time::Duration) -> String {
     let minutes = seconds / 60;
 
     if days > 0 {
-        format!("({}+{:0>2}:{:0>2})", days, hours, minutes)
+        format!("({days}+{hours:0>2}:{minutes:0>2})")
     } else {
-        format!("({:0>2}:{:0>2})", hours, minutes)
+        format!("({hours:0>2}:{minutes:0>2})")
     }
 }
 
@@ -249,13 +246,13 @@ impl Last {
             ))?;
 
         if let Some(file_time) = first_ut_time {
-            println!("\n{} begins {}", path_str, file_time);
+            println!("\n{path_str} begins {file_time}");
         } else {
             let secs = fs::metadata(&self.file)?.ctime();
             let nsecs = fs::metadata(&self.file)?.ctime_nsec() as u64;
             let file_time = self.utmp_file_time(secs, nsecs);
 
-            println!("\n{} begins {}", path_str, file_time);
+            println!("\n{path_str} begins {file_time}");
         }
 
         Ok(())

@@ -443,8 +443,7 @@ fn record_regex() -> &'static Regex {
         let valid_number_pattern = "0|[1-9][0-9]*";
         let additional_fields_pattern = ",^[,;]*";
         let record_pattern = format!(
-            "(?m)^({0}),({0}),({0}),.(?:{1})*;(.*)$",
-            valid_number_pattern, additional_fields_pattern
+            "(?m)^({valid_number_pattern}),({valid_number_pattern}),({valid_number_pattern}),.(?:{additional_fields_pattern})*;(.*)$"
         );
         Regex::new(&record_pattern).expect("invalid regex.")
     })

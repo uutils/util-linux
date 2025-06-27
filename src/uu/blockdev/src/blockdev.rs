@@ -232,8 +232,8 @@ mod linux {
         let rdev = device_file.metadata()?.rdev();
         let major = libc::major(rdev);
         let minor = libc::minor(rdev);
-        if Path::new(&format!("/sys/dev/block/{}:{}/partition", major, minor)).exists() {
-            let mut start_fd = File::open(format!("/sys/dev/block/{}:{}/start", major, minor))?;
+        if Path::new(&format!("/sys/dev/block/{major}:{minor}/partition")).exists() {
+            let mut start_fd = File::open(format!("/sys/dev/block/{major}:{minor}/start"))?;
             let mut str = String::new();
             start_fd.read_to_string(&mut str)?;
             return str
@@ -286,21 +286,21 @@ mod linux {
             IoctlCommand::GetAttribute(ioctl_type) => {
                 let ret = unsafe { get_ioctl_attribute(device, ioctl_code, *ioctl_type)? };
                 if verbose {
-                    println!("{}: {}", name, ret);
+                    println!("{name}: {ret}");
                 } else {
-                    println!("{}", ret);
+                    println!("{ret}");
                 }
             }
             IoctlCommand::SetAttribute => {
                 unsafe { uu_ioctl(device, ioctl_code, arg)? };
                 if verbose {
-                    println!("{} succeeded.", name);
+                    println!("{name} succeeded.");
                 }
             }
             IoctlCommand::Operation(param) => {
                 unsafe { uu_ioctl(device, ioctl_code, param)? };
                 if verbose {
-                    println!("{} succeeded.", name);
+                    println!("{name} succeeded.");
                 }
             }
         };
@@ -359,7 +359,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                             *value,
                         ) {
                             if verbose {
-                                println!("{} failed.", description);
+                                println!("{description} failed.");
                             }
                             return Err(e);
                         }

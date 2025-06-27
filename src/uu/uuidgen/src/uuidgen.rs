@@ -134,7 +134,7 @@ fn namespace_from_str(s: &str) -> Result<Uuid, USimpleError> {
         "@x500" => Ok(Uuid::NAMESPACE_X500),
         _ => Err(USimpleError {
             code: 1,
-            message: format!("Invalid namespace {}.", s),
+            message: format!("Invalid namespace {s}."),
         }),
     }
 }
