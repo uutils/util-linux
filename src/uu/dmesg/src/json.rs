@@ -136,7 +136,7 @@ impl serde_json::ser::Formatter for DmesgFormatter {
         // The only i64 field in Dmesg is time, which requires a specific format
         let seconds = value / 1000000;
         let sub_seconds = value % 1000000;
-        let repr = format!("{:>5}.{:0>6}", seconds, sub_seconds);
+        let repr = format!("{seconds:>5}.{sub_seconds:0>6}");
         writer.write_all(repr.as_bytes())
     }
 }

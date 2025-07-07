@@ -98,17 +98,17 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     hasher.update(rand_bytes);
 
     if verbose {
-        eprintln!("Got {} bytes from randomness source", RANDOM_BYTES);
+        eprintln!("Got {RANDOM_BYTES} bytes from randomness source");
     }
 
     let result = hasher.finalize();
     let output = result
         .iter()
-        .map(|byte| format!("{:02x}", byte))
+        .map(|byte| format!("{byte:02x}"))
         .collect::<Vec<_>>()
         .join("");
 
-    println!("{}", output);
+    println!("{output}");
 
     Ok(())
 }

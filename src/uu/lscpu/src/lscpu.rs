@@ -285,7 +285,7 @@ fn print_output(infos: CpuInfos, out_opts: OutputOptions) {
 }
 
 fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
-    let pattern = format!(r"^{}\s+:\s+(.*)$", key);
+    let pattern = format!(r"^{key}\s+:\s+(.*)$");
     let re = RegexBuilder::new(pattern.as_str())
         .multi_line(true)
         .build()
