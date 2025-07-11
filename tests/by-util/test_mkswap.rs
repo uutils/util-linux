@@ -10,7 +10,6 @@ mod linux {
     #[test]
     fn test_invalid_path() {
         new_ucmd!()
-            .arg("-d")
             .arg("/foo/bar/baz")
             .fails()
             .code_is(2)
@@ -21,8 +20,7 @@ mod linux {
     fn test_directory_err() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.mkdir("foo");
-        ucmd.arg("-d")
-            .arg("foo")
+        ucmd.arg("foo")
             .fails()
             .code_is(2)
             .stderr_contains("failed to open foo: Is a directory");
@@ -30,7 +28,7 @@ mod linux {
 
     #[test]
     fn test_invalid_arg() {
-        new_ucmd!().arg("foo").fails().code_is(1);
+        new_ucmd!().arg("foo").fails().code_is(2);
     }
     #[test]
     fn test_empty_args() {
@@ -41,8 +39,7 @@ mod linux {
     fn test_empty_file() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.touch("empty");
-        ucmd.arg("-d")
-            .arg("empty")
+        ucmd.arg("empty")
             .fails()
             .stderr_contains("swap space needs to be at least");
     }
@@ -51,8 +48,7 @@ mod linux {
     fn test_min_size() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 4096]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .fails()
             .stderr_contains("swap space needs to be at least");
     }
@@ -61,8 +57,7 @@ mod linux {
     fn test_swapfile() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .succeeds()
             .code_is(0)
             .stdout_contains("Setting up swapspace version 1")
@@ -73,8 +68,7 @@ mod linux {
     fn test_swaplabel() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .arg("-l")
             .arg("SWAPLABEL")
             .succeeds()
@@ -87,8 +81,7 @@ mod linux {
     fn test_custom_uuid() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .arg("-l")
             .arg("SWAP")
             .arg("-u")
@@ -104,8 +97,7 @@ mod linux {
     fn test_long_label() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .arg("-l")
             .arg("OUTRAGEOUSLYLONGSWAPLABEL")
             .succeeds()
@@ -115,25 +107,10 @@ mod linux {
     }
 
     #[test]
-    fn test_check_blocks() {
-        let (at, mut ucmd) = at_and_ucmd!();
-        at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
-            .arg("--check")
-            .arg("--verbose")
-            .succeeds()
-            .code_is(0)
-            .stdout_contains("Setting up swapspace version 1")
-            .stdout_contains("0 bad pages");
-    }
-
-    #[test]
     fn test_invalid_uuid() {
         let (at, mut ucmd) = at_and_ucmd!();
         at.write_bytes("swap", &[0; 65536]);
-        ucmd.arg("-d")
-            .arg("swap")
+        ucmd.arg("swap")
             .arg("-l")
             .arg("SWAP")
             .arg("-u")
@@ -147,8 +124,7 @@ mod linux {
     fn test_create_file() {
         use std::io::Read;
         let (at, mut ucmd) = at_and_ucmd!();
-        ucmd.arg("-d")
-            .arg("swapfile")
+        ucmd.arg("swapfile")
             .arg("-F")
             .arg("-s")
             .arg("65535")

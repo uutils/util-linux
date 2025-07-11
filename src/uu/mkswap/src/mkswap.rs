@@ -15,9 +15,10 @@ const USAGE: &str = help_usage!("mkswap.md");
 mod platform {
     use std::{
         fs::{self, File, Metadata},
-        io::{BufRead, BufReader, Seek, SeekFrom, Write},
+        io::{BufRead, BufReader, Write},
         os::{
-            fd::AsRawFd, linux::fs::MetadataExt, unix::fs::FileTypeExt, unix::fs::PermissionsExt,
+            fd::AsRawFd, linux::fs::MetadataExt, raw::c_char, raw::c_uchar, unix::fs::FileTypeExt,
+            unix::fs::PermissionsExt,
         },
         path::Path,
         str::FromStr,
@@ -28,24 +29,25 @@ mod platform {
 
     use clap::ArgMatches;
     use linux_raw_sys::ioctl::BLKGETSIZE64;
-    use uucore::libc::{ioctl, lseek, read, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
+    use uucore::libc::{ioctl, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
     use uuid::Uuid;
 
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
-    const SWAP_VERSION: u8 = 1;
+    const SWAP_VERSION: u32 = 1;
     const MIN_SWAP_PAGES: u128 = 10;
+    const SWAP_LABEL_LENGTH: usize = 16;
 
     #[repr(C)]
     struct SwapHeader {
-        bootbits: [u8; 1024],
-        version: u8,
+        bootbits: [c_char; 1024],
+        version: u32,
         last_page: u32,
         nr_badpages: u32,
-        uuid: [u8; 16],
-        volume_name: [u8; 16],
+        uuid: [c_uchar; 16],
+        volume_name: [c_char; SWAP_LABEL_LENGTH],
         padding: [u32; 117],
-        badpages: [u32; 100],
+        badpages: [u32; 1],
     }
 
     fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u128, std::io::Error> {
@@ -75,79 +77,52 @@ mod platform {
         Ok(devsize)
     }
 
-    unsafe fn check_blocks(
-        file: &mut File,
-        pagesize: usize,
-        pages: u128,
-        verbose: bool,
-    ) -> Result<Vec<u32>, std::io::Error> {
-        let mut bad_pages: Vec<u32> = Vec::new();
-        let mut buffer = vec![0u8; pagesize];
-        let end = pagesize as u64 * pages as u64;
-
-        let fd = file.as_raw_fd();
-        let mut bytes: uucore::libc::ssize_t;
-
-        for current_page in 0..pages {
-            let offset = current_page as u64 * pagesize as u64;
-            if offset > end {
-                break;
-            }
-
-            unsafe {
-                if lseek(fd, offset as i64, uucore::libc::SEEK_SET) < 0 {
-                    panic!("Failed to seek");
-                }
-
-                bytes = read(fd, buffer.as_mut_ptr() as *mut std::ffi::c_void, pagesize);
-                if bytes < 0 || bytes != pagesize as isize {
-                    bad_pages.push(current_page as u32);
-                }
-            }
-            if bad_pages.len() >= 640 {
-                panic!("Too many bad pages detected: {}", bad_pages.len());
-            }
-        }
-        if verbose {
-            println!("{} bad pages", bad_pages.len())
-        }
-        file.seek(SeekFrom::Start(0))?;
-
-        Ok(bad_pages)
-    }
-
     unsafe fn write_signature_page(
         pagesize: usize,
         pages: u128,
         uuid: Uuid,
         label: &str,
-        badpages: &mut Vec<u32>,
+        badpages: [u32; 1],
         verbose: bool,
     ) -> Vec<u8> {
-        //let mut buf = Box::<[u8]>::new_uninit_slice(pagesize);
-        //buf.as_mut_ptr().write_bytes(0, pagesize);
+        let mut header = SwapHeader {
+            bootbits: [0; 1024],
+            version: SWAP_VERSION,
+            last_page: (pages - 1) as u32,
+            nr_badpages: 0, // Assumes no bad pages
+            uuid: *uuid.as_bytes(),
+            volume_name: [0; SWAP_LABEL_LENGTH],
+            padding: [0; 117],
+            badpages,
+        };
+
+        let label_bytes = label.as_bytes();
+        let lblen = label_bytes.len().min(SWAP_LABEL_LENGTH);
+        if label.len() > SWAP_LABEL_LENGTH && verbose {
+            eprintln!("swap label was truncated");
+        }
+
+        let label_buf = unsafe {
+            std::slice::from_raw_parts_mut(
+                header.volume_name.as_mut_ptr() as *mut u8,
+                SWAP_LABEL_LENGTH,
+            )
+        };
+        label_buf[..lblen].copy_from_slice(&label_bytes[..lblen]);
+
         let mut buf = vec![0u8; pagesize];
-        buf.as_mut_ptr().write_bytes(0, pagesize);
 
-        //fill up swap header
-        let swap_hdr = unsafe { &mut *(buf.as_mut_ptr() as *mut SwapHeader) };
-        swap_hdr.version = SWAP_VERSION;
-        swap_hdr.last_page = (pages - 1) as u32;
-        swap_hdr.nr_badpages = badpages.len() as u32;
-        swap_hdr.badpages[..badpages.len()].copy_from_slice(badpages.as_mut_slice());
-        if !uuid.is_nil() {
-            swap_hdr.uuid = *uuid.as_bytes();
-        }
+        let header_bytes = unsafe {
+            std::slice::from_raw_parts(
+                (&header as *const SwapHeader) as *const u8,
+                std::mem::size_of::<SwapHeader>(),
+            )
+        };
 
-        if !label.is_empty() {
-            let lb = label.as_bytes();
-            let lblen = lb.len().min(swap_hdr.volume_name.len());
-            swap_hdr.volume_name[..lblen].copy_from_slice(&lb[..lblen]);
+        buf[0..header_bytes.len()].copy_from_slice(header_bytes);
 
-            if lb.len() > swap_hdr.volume_name.len() && verbose {
-                println!("Label '{}' truncated", label);
-            }
-        }
+        let signature_offset = pagesize - SWAP_SIGNATURE.len();
+        buf[signature_offset..].copy_from_slice(SWAP_SIGNATURE);
 
         buf
     }
@@ -187,7 +162,6 @@ mod platform {
 
     pub fn mkswap(args: &ArgMatches) -> UResult<()> {
         let verbose = args.get_flag("verbose");
-        let checkflag: bool = args.get_flag("check");
         let createflag: bool = args.get_flag("file");
         let filesize: u64 = *args.get_one::<u64>("filesize").unwrap_or(&0);
 
@@ -234,8 +208,8 @@ mod platform {
                 device
             );
         }
-        let stblksize: u64 = stat.st_blksize();
-        let pagesize: u128 = if stblksize == 0 {
+
+        let pagesize: u128 = {
             let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
             if sz <= 0 {
                 sz = unsafe { sysconf(_SC_PAGE_SIZE) };
@@ -244,8 +218,6 @@ mod platform {
                 }
             }
             (sz as u64).into()
-        } else {
-            stblksize.into()
         };
 
         let devsize: u128 = if createflag {
@@ -271,22 +243,12 @@ mod platform {
             ));
         }
 
-        let mut badpages = if checkflag {
-            unsafe { check_blocks(&mut fd, pagesize as usize, pages, verbose)? }
-        } else {
-            vec![0; 100]
-        };
+        let badpages: [u32; 1] = [0; 1]; // Checking not implemented
 
+        eprintln!("pagesize: {pagesize}\npages: {pages}\nuuid: {uuid}\nlabel: {label}\nbadpages: {badpages:?}\nverbose: {verbose}\n");
         // initialize and write swap header information to a buffer
         let mut buf = unsafe {
-            write_signature_page(
-                pagesize as usize,
-                pages,
-                uuid,
-                label,
-                &mut badpages,
-                verbose,
-            )
+            write_signature_page(pagesize as usize, pages, uuid, label, badpages, verbose)
         };
 
         //write swap signature to buffer
@@ -335,8 +297,6 @@ pub fn uu_app() -> Command {
         .infer_long_args(true)
         .arg(
             Arg::new("device")
-                .short('d')
-                .long("device")
                 .action(ArgAction::Set)
                 .help("block device or swap file"),
         )
@@ -353,13 +313,6 @@ pub fn uu_app() -> Command {
                 .long("uuid")
                 .action(ArgAction::Set)
                 .help("set the UUID to use"),
-        )
-        .arg(
-            Arg::new("check")
-                .long("check")
-                .short('c')
-                .action(ArgAction::SetTrue)
-                .help("check the device for bad pages before writing to it"),
         )
         .arg(
             Arg::new("file")
