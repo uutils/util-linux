@@ -23,9 +23,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     if let Some(path) = path {
         if is_mountpoint(path) {
-            println!("{} is a mountpoint", path);
+            println!("{path} is a mountpoint");
         } else {
-            println!("{} is not a mountpoint", path);
+            println!("{path} is not a mountpoint");
         }
     } else {
         // Handle the case where path is not provided
