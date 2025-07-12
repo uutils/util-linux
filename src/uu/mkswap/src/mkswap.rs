@@ -58,7 +58,7 @@ mod platform {
             let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE64 as u64, &mut sz) };
 
             if sz == 0 || err < 0 {
-                let f_size = fs::File::open(format!("/sys/class/block/{}/size", devname))?;
+                let f_size = fs::File::open(format!("/sys/class/block/{devname}/size"))?;
 
                 let reader = BufReader::new(f_size);
                 let vec: Vec<Result<u128, _>> = reader
@@ -146,8 +146,7 @@ mod platform {
             Ok(f) => f,
             Err(e) => {
                 return Err(std::io::Error::other(format!(
-                    "failed to open {}: {}",
-                    device, e
+                    "failed to open {device}: {e}"
                 )))
             }
         };
@@ -192,7 +191,7 @@ mod platform {
 
         let uuid = match args.get_one::<String>("uuid") {
             Some(str) => Uuid::from_str(str)
-                .map_err(|e| USimpleError::new(1, format!("Invalid UUID '{}': {}", str, e)))?, //TODO: more gracious error handling
+                .map_err(|e| USimpleError::new(1, format!("Invalid UUID '{str}': {e}")))?, //TODO: more gracious error handling
             None => Uuid::new_v4(),
         };
 
@@ -205,7 +204,7 @@ mod platform {
                 uucore::util_name(),
                 device,
                 stat.st_uid(),
-                device
+                device,
             );
         }
 
@@ -224,7 +223,7 @@ mod platform {
             filesize as u128
         } else {
             getsize(&fd, &stat, devname).map_err(|e| {
-                USimpleError::new(1, format!("failed to determine size of {}: {}", devname, e))
+                USimpleError::new(1, format!("failed to determine size of {devname}: {e}"))
             })?
         };
 
