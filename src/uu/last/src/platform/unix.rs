@@ -10,7 +10,7 @@ use uucore::error::UIoError;
 use uucore::error::UResult;
 
 use uucore::error::USimpleError;
-use uucore::utmpx::time::OffsetDateTime;
+use uucore::utmpx::time::{OffsetDateTime, UtcOffset};
 use uucore::utmpx::{time, Utmpx};
 
 use std::fmt::Write;
@@ -23,12 +23,38 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
+use parse_datetime::parse_datetime;
+
 fn get_long_usage() -> String {
     format!("If FILE is not specified, use {WTMP_PATH}.  /var/log/wtmp as FILE is common.")
 }
 
 const WTMP_PATH: &str = "/var/log/wtmp";
 static TIME_FORMAT_STR: [&str; 4] = ["notime", "short", "full", "iso"];
+
+fn parse_time_value(time_value: &str) -> UResult<OffsetDateTime> {
+    parse_datetime(time_value).map_or_else(
+        |_| {
+            Err(USimpleError::new(
+                1,
+                format!("invalid time value \"{}\"", time_value),
+            ))
+        },
+        |dt| {
+            UtcOffset::from_whole_seconds(dt.offset().local_minus_utc()).map_or_else(
+                |_| Err(USimpleError::new(2, "failed to extract time zone offset")),
+                |offset| {
+                    let naive = dt.naive_local();
+                    Ok(
+                        OffsetDateTime::from_unix_timestamp(naive.and_utc().timestamp())
+                            .expect("Invalid timestamp")
+                            .replace_offset(offset),
+                    )
+                },
+            )
+        },
+    )
+}
 
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app()
@@ -39,6 +65,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let dns = matches.get_flag(options::DNS);
     let hostlast = matches.get_flag(options::HOSTLAST);
     let nohost = matches.get_flag(options::NO_HOST);
+    let until = parse_time_value(matches.get_one::<String>(options::UNTIL).unwrap())?;
+    let since = parse_time_value(matches.get_one::<String>(options::SINCE).unwrap())?;
     let limit: i32 = if let Some(num) = matches.get_one::<i32>(options::LIMIT) {
         *num
     } else {
@@ -92,6 +120,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         file: file.to_string(),
         users: user,
         time_format,
+        since,
+        until,
     };
 
     last.exec()
@@ -113,6 +143,8 @@ struct Last {
     time_format: String,
     users: Option<Vec<String>>,
     limit: i32,
+    since: OffsetDateTime,
+    until: OffsetDateTime,
 }
 
 fn is_numeric(s: &str) -> bool {
@@ -184,6 +216,10 @@ impl Last {
         let mut counter = 0;
         let mut first_ut_time = None;
         while let Some(ut) = ut_stack.pop() {
+            if ut.login_time() < self.since || ut.login_time() > self.until {
+                continue;
+            }
+
             if ut_stack.is_empty() {
                 // By the end of loop we will have the earliest time
                 // (This avoids getting into issues with the compiler)

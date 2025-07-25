@@ -1201,6 +1201,7 @@ dependencies = [
  "dns-lookup",
  "libc",
  "nix",
+ "parse_datetime",
  "phf",
  "phf_codegen",
  "pretty_assertions",
@@ -1294,6 +1295,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "dns-lookup",
+ "parse_datetime",
  "uucore",
 ]
 

@@ -10,3 +10,4 @@ path = "src/last.rs"
 uucore = { workspace = true, features = ["utmpx"] }
 clap = { workspace = true}
 dns-lookup = { workspace = true }
+parse_datetime = { workspace = true }
