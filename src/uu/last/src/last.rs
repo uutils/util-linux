@@ -95,21 +95,19 @@ pub fn uu_app() -> Command {
         .arg(
             Arg::new(options::SINCE)
                 .short('s')
-                .long("since")
+                .long(options::SINCE)
                 .action(ArgAction::Set)
                 .required(false)
                 .help("display the lines since the specified time")
-                .value_name("time")
                 .default_value("0000-01-01 00:00:00"),
         )
         .arg(
             Arg::new(options::UNTIL)
                 .short('t')
-                .long("until")
+                .long(options::UNTIL)
                 .action(ArgAction::Set)
                 .required(false)
                 .help("display the lines until the specified time")
-                .value_name("time")
                 .default_value("9999-12-31 23:59:59"),
         )
         .arg(Arg::new(options::USER_TTY).action(ArgAction::Append))
