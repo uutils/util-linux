@@ -37,7 +37,7 @@ fn parse_time_value(time_value: &str) -> UResult<OffsetDateTime> {
         |_| {
             Err(USimpleError::new(
                 1,
-                format!("invalid time value \"{}\"", time_value),
+                format!("invalid time value \"{time_value}\""),
             ))
         },
         |dt| {
