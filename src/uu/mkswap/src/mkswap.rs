@@ -15,7 +15,7 @@ const USAGE: &str = help_usage!("mkswap.md");
 mod platform {
     use std::{
         fs::{self, File, Metadata},
-        io::{BufRead, BufReader, Write},
+        io::Write,
         os::{
             fd::AsRawFd, linux::fs::MetadataExt, raw::c_char, raw::c_uchar, unix::fs::FileTypeExt,
             unix::fs::PermissionsExt,
@@ -23,20 +23,39 @@ mod platform {
         path::Path,
         str::FromStr,
     };
-    use uucore::error::{set_exit_code, USimpleError, UUsageError};
+    use uucore::error::{set_exit_code, USimpleError};
 
     use crate::*;
 
     use clap::ArgMatches;
     use linux_raw_sys::ioctl::BLKGETSIZE64;
+    use thiserror::Error;
     use uucore::libc::{ioctl, sysconf, _SC_PAGESIZE, _SC_PAGE_SIZE};
     use uuid::Uuid;
 
     const SWAP_SIGNATURE: &[u8] = "SWAPSPACE2".as_bytes();
     const SWAP_SIGNATURE_SZ: usize = 10;
     const SWAP_VERSION: u32 = 1;
-    const MIN_SWAP_PAGES: u128 = 10;
+    const MIN_SWAP_PAGES: u64 = 10;
     const SWAP_LABEL_LENGTH: usize = 16;
+
+    #[derive(Debug, Error)]
+    pub enum MkSwapError {
+        #[error("Invalid UUID: '{0}'")]
+        InvalidUuid(#[from] uuid::Error),
+
+        #[error("Swap space is too small. Minimum size is {0}KiB.")]
+        DeviceTooSmall(u64),
+
+        #[error("Failed to determine page size.")]
+        PageSizeDetection,
+
+        #[error("Failed to determine size of {0}: {1}")]
+        DeviceSizeDetection(String, std::io::Error),
+
+        #[error("I/O Error: {0}")]
+        Io(#[from] std::io::Error),
+    }
 
     #[repr(C)]
     struct SwapHeader {
@@ -45,33 +64,32 @@ mod platform {
         last_page: u32,
         nr_badpages: u32,
         uuid: [c_uchar; 16],
-        volume_name: [c_char; SWAP_LABEL_LENGTH],
+        volume_name: [u8; SWAP_LABEL_LENGTH],
         padding: [u32; 117],
         badpages: [u32; 1],
     }
 
-    fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u128, std::io::Error> {
-        let devsize: u128;
+    fn getsize(fd: &File, stat: &Metadata, devname: &str) -> Result<u64, std::io::Error> {
+        let devsize: u64;
         /* for block devices, ioctl call with manual size reading as a backup method */
         if stat.file_type().is_block_device() {
-            let mut sz: u128 = 0;
+            let mut sz: u64 = 0;
             let err = unsafe { ioctl(fd.as_raw_fd(), BLKGETSIZE64 as u64, &mut sz) };
 
             if sz == 0 || err < 0 {
-                let f_size = fs::File::open(format!("/sys/class/block/{devname}/size"))?;
+                let path = format!("/sys/class/block/{devname}/size");
 
-                let reader = BufReader::new(f_size);
-                let vec: Vec<Result<u128, _>> = reader
-                    .lines()
-                    .map(|v| v.unwrap().parse::<u128>())
-                    .collect::<Vec<Result<u128, _>>>();
-                sz = vec[0].clone().unwrap_or(0);
+                let buf = fs::read_to_string(path)?;
+                sz = buf
+                    .trim()
+                    .parse::<u64>()
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
                 devsize = sz * 512;
             } else {
                 devsize = sz;
             }
         } else {
-            devsize = stat.st_size() as u128;
+            devsize = stat.st_size();
         }
 
         Ok(devsize)
@@ -79,9 +97,9 @@ mod platform {
 
     unsafe fn write_signature_page(
         pagesize: usize,
-        pages: u128,
+        pages: u64,
         uuid: Uuid,
-        label: &str,
+        label: &String,
         badpages: [u32; 1],
         verbose: bool,
     ) -> Vec<u8> {
@@ -102,13 +120,7 @@ mod platform {
             eprintln!("swap label was truncated");
         }
 
-        let label_buf = unsafe {
-            std::slice::from_raw_parts_mut(
-                header.volume_name.as_mut_ptr() as *mut u8,
-                SWAP_LABEL_LENGTH,
-            )
-        };
-        label_buf[..lblen].copy_from_slice(&label_bytes[..lblen]);
+        header.volume_name[..lblen].copy_from_slice(&label_bytes[..lblen]);
 
         let mut buf = vec![0u8; pagesize];
 
@@ -121,14 +133,14 @@ mod platform {
 
         buf[0..header_bytes.len()].copy_from_slice(header_bytes);
 
-        let signature_offset = pagesize - SWAP_SIGNATURE.len();
+        let signature_offset = pagesize - SWAP_SIGNATURE_SZ;
         buf[signature_offset..].copy_from_slice(SWAP_SIGNATURE);
 
         buf
     }
 
     fn open_device(
-        device: &String,
+        device: &str,
         dev: &Path,
         createflag: bool,
         filesize: u64,
@@ -159,27 +171,28 @@ mod platform {
         Ok(fd)
     }
 
-    pub fn mkswap(args: &ArgMatches) -> UResult<()> {
+    struct MkswapOptions<'a> {
+        verbose: bool,
+        createflag: bool,
+        filesize: u64,
+        dev: &'a Path,
+        devname: &'a str,
+        label: String,
+        uuid: Uuid,
+    }
+
+    fn get_mkswap_opts(args: &ArgMatches) -> Result<MkswapOptions, MkSwapError> {
         let verbose = args.get_flag("verbose");
         let createflag: bool = args.get_flag("file");
         let filesize: u64 = *args.get_one::<u64>("filesize").unwrap_or(&0);
 
-        let device = match args.get_one::<String>("device") {
-            Some(str) => str,
-            None => {
-                return Err(UUsageError::new(
-                    1,
-                    format!(
-                        "Usage: {}\nFor more information, try '--help'.",
-                        format_usage(USAGE)
-                    ),
-                ))
-            }
-        };
+        let device = args
+            .get_one::<String>("device")
+            .expect("missing required argument device");
 
         let label = match args.get_one::<String>("label") {
-            Some(l) => l.as_str(),
-            None => "",
+            Some(l) => l.clone(),
+            None => String::new(),
         };
 
         let dev = Path::new(device.as_str());
@@ -190,69 +203,82 @@ mod platform {
         };
 
         let uuid = match args.get_one::<String>("uuid") {
-            Some(str) => Uuid::from_str(str)
-                .map_err(|e| USimpleError::new(1, format!("Invalid UUID '{str}': {e}")))?, //TODO: more gracious error handling
+            Some(str) => Uuid::from_str(str).map_err(MkSwapError::InvalidUuid)?,
             None => Uuid::new_v4(),
         };
+        Ok(MkswapOptions {
+            verbose,
+            createflag,
+            filesize,
+            dev,
+            devname,
+            label,
+            uuid,
+        })
+    }
 
-        let mut fd = open_device(device, dev, createflag, filesize)?;
+    fn mkswap(opts: MkswapOptions) -> Result<(), MkSwapError> {
+        let mut fd = open_device(
+            opts.dev.to_str().unwrap_or(opts.devname),
+            opts.dev,
+            opts.createflag,
+            opts.filesize,
+        )?;
 
         let stat = fd.metadata()?;
         if stat.st_uid() != 0 {
             println!(
                 "{}: {}: insecure file owner {}, fix with: chown 0:0 {}",
                 uucore::util_name(),
-                device,
+                opts.devname,
                 stat.st_uid(),
-                device,
+                opts.devname,
             );
         }
 
-        let pagesize: u128 = {
+        let pagesize: u64 = {
             let mut sz = unsafe { sysconf(_SC_PAGESIZE) };
             if sz <= 0 {
                 sz = unsafe { sysconf(_SC_PAGE_SIZE) };
                 if sz <= 0 {
-                    return Err(USimpleError::new(1, "Can't determine system pagesize"));
+                    return Err(MkSwapError::PageSizeDetection);
                 }
             }
-            (sz as u64).into()
+            sz as u64
         };
 
-        let devsize: u128 = if createflag {
-            filesize as u128
+        let devsize: u64 = if opts.createflag {
+            opts.filesize
         } else {
-            getsize(&fd, &stat, devname).map_err(|e| {
-                USimpleError::new(1, format!("failed to determine size of {devname}: {e}"))
-            })?
+            getsize(&fd, &stat, opts.devname)
+                .map_err(|e| MkSwapError::DeviceSizeDetection(opts.devname.to_string(), e))?
         };
 
-        let pages: u128 = devsize / pagesize;
+        let pages = devsize / pagesize;
 
         if pages < MIN_SWAP_PAGES {
-            if createflag {
-                fs::remove_file(dev)?;
+            if opts.createflag {
+                fs::remove_file(opts.dev)?;
             }
-            return Err(USimpleError::new(
-                1,
-                format!(
-                    "swap space needs to be at least {}KiB",
-                    MIN_SWAP_PAGES * pagesize / 1024
-                ),
+            return Err(MkSwapError::DeviceTooSmall(
+                MIN_SWAP_PAGES * pagesize / 1024,
             ));
         }
 
         let badpages: [u32; 1] = [0; 1]; // Checking not implemented
 
-        eprintln!("pagesize: {pagesize}\npages: {pages}\nuuid: {uuid}\nlabel: {label}\nbadpages: {badpages:?}\nverbose: {verbose}\n");
+        eprintln!("pagesize: {pagesize}\npages: {pages}\nuuid: {}\nlabel: {}\nbadpages: {badpages:?}\nverbose: {}\n", opts.uuid, opts.label, opts.verbose);
         // initialize and write swap header information to a buffer
-        let mut buf = unsafe {
-            write_signature_page(pagesize as usize, pages, uuid, label, badpages, verbose)
+        let buf = unsafe {
+            write_signature_page(
+                pagesize as usize,
+                pages,
+                opts.uuid,
+                &opts.label,
+                badpages,
+                opts.verbose,
+            )
         };
-
-        //write swap signature to buffer
-        let _ = &buf[(pagesize as usize - SWAP_SIGNATURE_SZ)..pagesize as usize]
-            .copy_from_slice(SWAP_SIGNATURE);
 
         fd.write_all(&buf)?;
         fd.flush()?;
@@ -260,14 +286,14 @@ mod platform {
 
         println!(
             "Setting up swapspace version 1, size = {}KiB\n{}{}, UUID={}",
-            (((pages - 1) * pagesize as u128) / 1024),
-            if label.is_empty() {
+            (((pages - 1) * pagesize) / 1024),
+            if opts.label.is_empty() {
                 "No label"
             } else {
                 "LABEL="
             },
-            &label[..label.len().min(16)], //truncate given too long of a label.
-            uuid
+            &opts.label[..opts.label.len().min(16)], //truncate given too long of a label.
+            opts.uuid
         );
 
         Ok(())
@@ -275,7 +301,8 @@ mod platform {
 
     pub fn run(args: impl uucore::Args) -> UResult<()> {
         let matches = uu_app().try_get_matches_from(args)?;
-        if let Err(e) = mkswap(&matches) {
+        let opts = get_mkswap_opts(&matches).map_err(|e| USimpleError::new(1, format!("{e}")))?;
+        if let Err(e) = mkswap(opts) {
             set_exit_code(2);
             uucore::show_error!("{}", e);
         };
@@ -296,6 +323,7 @@ pub fn uu_app() -> Command {
         .infer_long_args(true)
         .arg(
             Arg::new("device")
+                .required(true)
                 .action(ArgAction::Set)
                 .help("block device or swap file"),
         )

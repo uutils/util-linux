@@ -32,7 +32,7 @@ mod linux {
     }
     #[test]
     fn test_empty_args() {
-        new_ucmd!().fails().code_is(2).stderr_contains("Usage:");
+        new_ucmd!().fails().code_is(1).stderr_contains("Usage:");
     }
 
     #[test]
@@ -41,7 +41,7 @@ mod linux {
         at.touch("empty");
         ucmd.arg("empty")
             .fails()
-            .stderr_contains("swap space needs to be at least");
+            .stderr_contains("Swap space is too small. Minimum size is");
     }
 
     #[test]
@@ -50,7 +50,7 @@ mod linux {
         at.write_bytes("swap", &[0; 4096]);
         ucmd.arg("swap")
             .fails()
-            .stderr_contains("swap space needs to be at least");
+            .stderr_contains("Swap space is too small.");
     }
 
     #[test]
@@ -92,7 +92,7 @@ mod linux {
             .stdout_contains("Setting up swapspace version 1");
     }
 
-    ///test truncation on a label that is above the 16 byte maximum
+    /// test truncation on a label that is above the 16 byte maximum
     #[test]
     fn test_long_label() {
         let (at, mut ucmd) = at_and_ucmd!();
@@ -116,8 +116,8 @@ mod linux {
             .arg("-u")
             .arg("078d9a95+4c1e-4961-b8a5-3f9d27586645")
             .fails()
-            .code_is(2)
-            .stderr_contains("Invalid UUID '078d9a95+4c1e-4961-b8a5-3f9d27586645':");
+            .code_is(1)
+            .stderr_contains("Invalid UUID");
     }
 
     #[test]

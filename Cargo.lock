@@ -1433,6 +1433,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "linux-raw-sys 0.9.4",
+ "thiserror",
  "uucore",
  "uuid",
 ]
