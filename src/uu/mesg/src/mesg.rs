@@ -69,6 +69,17 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(not(target_family = "unix"))]
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`mesg` is available only on Unix platforms.",
+    ))
+}
+
 pub fn uu_app() -> Command {
     Command::new(uucore::util_name())
         .version(crate_version!())
@@ -88,15 +99,4 @@ pub fn uu_app() -> Command {
                 .value_parser(PossibleValuesParser::new(["y", "n"]))
                 .action(ArgAction::Set),
         )
-}
-
-#[cfg(not(target_family = "unix"))]
-#[uucore::main]
-pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let _matches: ArgMatches = uu_app().try_get_matches_from(args)?;
-
-    Err(uucore::error::USimpleError::new(
-        1,
-        "`mesg` is available only on Unix platforms.",
-    ))
 }
