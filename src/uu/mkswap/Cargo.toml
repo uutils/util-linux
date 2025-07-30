@@ -1,0 +1,21 @@
+[package]
+name = "uu_mkswap"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/mkswap.rs"
+
+[[bin]]
+name = "mkswap"
+path = "src/main.rs"
+
+[dependencies]
+clap = {workspace = true}
+linux-raw-sys.workspace = true
+thiserror.workspace = true
+uucore = {workspace = true, features = ["libc"]}
+uuid = { version = "1.16.0", features = ["v4"] }
+
+
+
