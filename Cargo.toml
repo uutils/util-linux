@@ -1,7 +1,7 @@
 # util-linux (uutils)
 # * see the repository LICENSE, README, and CONTRIBUTING files for more information
 
-# spell-checker:ignore (libs) bigdecimal datetime fundu gethostid kqueue libselinux mangen memmap procfs uuhelp
+# spell-checker:ignore (libs) bigdecimal datetime fundu gethostid kqueue libselinux mangen memmap uuhelp
 
 [package]
 name = "util-linux"
@@ -120,7 +120,6 @@ nix = { workspace = true, features = ["term"] }
 xattr = { workspace = true }
 
 [target.'cfg(any(target_os = "linux", target_os = "android"))'.dev-dependencies]
-procfs = { version = "0.17", default-features = false }
 rlimit = "0.10.1"
 
 [build-dependencies]
