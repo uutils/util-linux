@@ -85,9 +85,8 @@ fn main() {
             process::exit(1);
         }
 
-        let util = match util_os.to_str() {
-            Some(util) => util,
-            None => not_found(&util_os),
+        let Some(util) = util_os.to_str() else {
+            not_found(&util_os)
         };
 
         if util == "completion" {
@@ -106,9 +105,8 @@ fn main() {
                 if util == "--help" || util == "-h" {
                     // see if they want help on a specific util
                     if let Some(util_os) = args.next() {
-                        let util = match util_os.to_str() {
-                            Some(util) => util,
-                            None => not_found(&util_os),
+                        let Some(util) = util_os.to_str() else {
+                            not_found(&util_os)
                         };
 
                         match utils.get(util) {
