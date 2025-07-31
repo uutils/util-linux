@@ -33,26 +33,16 @@ const WTMP_PATH: &str = "/var/log/wtmp";
 static TIME_FORMAT_STR: [&str; 4] = ["notime", "short", "full", "iso"];
 
 fn parse_time_value(time_value: &str) -> UResult<OffsetDateTime> {
-    parse_datetime(time_value).map_or_else(
-        |_| {
-            Err(USimpleError::new(
-                1,
-                format!("invalid time value \"{time_value}\""),
-            ))
-        },
-        |dt| {
-            UtcOffset::from_whole_seconds(dt.offset().local_minus_utc()).map_or_else(
-                |_| Err(USimpleError::new(2, "failed to extract time zone offset")),
-                |offset| {
-                    let naive = dt.naive_local();
-                    Ok(
-                        OffsetDateTime::from_unix_timestamp(naive.and_utc().timestamp())
-                            .expect("Invalid timestamp")
-                            .replace_offset(offset),
-                    )
-                },
-            )
-        },
+    let value = parse_datetime(time_value)
+        .map_err(|_| USimpleError::new(1, format!("invalid time value \"{time_value}\"")))?;
+
+    let offset = UtcOffset::from_whole_seconds(value.offset().local_minus_utc())
+        .map_err(|_| USimpleError::new(2, "failed to extract time zone offset"))?;
+
+    Ok(
+        OffsetDateTime::from_unix_timestamp(value.naive_local().and_utc().timestamp())
+            .expect("Invalid timestamp")
+            .replace_offset(offset),
     )
 }
 
@@ -65,8 +55,25 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let dns = matches.get_flag(options::DNS);
     let hostlast = matches.get_flag(options::HOSTLAST);
     let nohost = matches.get_flag(options::NO_HOST);
-    let until = parse_time_value(matches.get_one::<String>(options::UNTIL).unwrap())?;
-    let since = parse_time_value(matches.get_one::<String>(options::SINCE).unwrap())?;
+
+    /*
+    default_value 9999-12-31 23:59:59")
+    */
+
+    let since = parse_time_value(
+        &matches
+            .get_one::<String>(options::SINCE)
+            .cloned()
+            .unwrap_or_else(|| "0000-01-01 00:00:00".to_string()),
+    )?;
+
+    let until = parse_time_value(
+        &matches
+            .get_one::<String>(options::UNTIL)
+            .cloned()
+            .unwrap_or_else(|| "9999-12-31 23:59:59".to_string()),
+    )?;
+
     let limit: i32 = if let Some(num) = matches.get_one::<i32>(options::LIMIT) {
         *num
     } else {
