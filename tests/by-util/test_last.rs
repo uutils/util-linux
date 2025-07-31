@@ -132,3 +132,35 @@ fn test_display_hostname_last_column() {
 
     assert_eq!(output_expected, output_result);
 }
+
+#[test]
+#[cfg(all(unix))]
+fn test_since_only_shows_entries_after_time() {
+    let expected_entry_time = "16:29";
+    let unexpected_entry_time = "16:24";
+
+    new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
+        .arg("--since")
+        .arg("2025-03-08 16:28")
+        .succeeds()
+        .stdout_contains(expected_entry_time)
+        .stdout_does_not_contain(unexpected_entry_time);
+}
+
+#[test]
+#[cfg(all(unix))]
+fn test_until_only_shows_entries_before_time() {
+    let expected_entry_time = "16:24";
+    let unexpected_entry_time = "16:29";
+
+    new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
+        .arg("--until")
+        .arg("2025-03-08 16:28")
+        .succeeds()
+        .stdout_contains(expected_entry_time)
+        .stdout_does_not_contain(unexpected_entry_time);
+}
