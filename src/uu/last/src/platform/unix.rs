@@ -56,10 +56,6 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let hostlast = matches.get_flag(options::HOSTLAST);
     let nohost = matches.get_flag(options::NO_HOST);
 
-    /*
-    default_value 9999-12-31 23:59:59")
-    */
-
     let since = parse_time_value(
         &matches
             .get_one::<String>(options::SINCE)
