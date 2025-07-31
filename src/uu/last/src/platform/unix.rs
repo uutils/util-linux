@@ -32,20 +32,6 @@ fn get_long_usage() -> String {
 const WTMP_PATH: &str = "/var/log/wtmp";
 static TIME_FORMAT_STR: [&str; 4] = ["notime", "short", "full", "iso"];
 
-fn parse_time_value(time_value: &str) -> UResult<OffsetDateTime> {
-    let value = parse_datetime(time_value)
-        .map_err(|_| USimpleError::new(1, format!("invalid time value \"{time_value}\"")))?;
-
-    let offset = UtcOffset::from_whole_seconds(value.offset().local_minus_utc())
-        .map_err(|_| USimpleError::new(2, "failed to extract time zone offset"))?;
-
-    Ok(
-        OffsetDateTime::from_unix_timestamp(value.naive_local().and_utc().timestamp())
-            .expect("Invalid timestamp")
-            .replace_offset(offset),
-    )
-}
-
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app()
         .after_help(get_long_usage())
@@ -128,6 +114,20 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     };
 
     last.exec()
+}
+
+fn parse_time_value(time_value: &str) -> UResult<OffsetDateTime> {
+    let value = parse_datetime(time_value)
+        .map_err(|_| USimpleError::new(1, format!("invalid time value \"{time_value}\"")))?;
+
+    let offset = UtcOffset::from_whole_seconds(value.offset().local_minus_utc())
+        .map_err(|_| USimpleError::new(2, "failed to extract time zone offset"))?;
+
+    Ok(
+        OffsetDateTime::from_unix_timestamp(value.naive_local().and_utc().timestamp())
+            .expect("Invalid timestamp")
+            .replace_offset(offset),
+    )
 }
 
 const RUN_LEVEL_STR: &str = "runlevel";
