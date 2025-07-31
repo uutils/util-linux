@@ -42,18 +42,21 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let hostlast = matches.get_flag(options::HOSTLAST);
     let nohost = matches.get_flag(options::NO_HOST);
 
+    let since_default = "0000-01-01 00:00:00".to_string();
+    let until_default = "9999-12-31 23:59:59".to_string();
+
     let since = parse_time_value(
         &matches
             .get_one::<String>(options::SINCE)
             .cloned()
-            .unwrap_or_else(|| "0000-01-01 00:00:00".to_string()),
+            .unwrap_or_else(|| since_default),
     )?;
 
     let until = parse_time_value(
         &matches
             .get_one::<String>(options::UNTIL)
             .cloned()
-            .unwrap_or_else(|| "9999-12-31 23:59:59".to_string()),
+            .unwrap_or_else(|| until_default),
     )?;
 
     let limit: i32 = if let Some(num) = matches.get_one::<i32>(options::LIMIT) {
