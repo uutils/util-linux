@@ -15,6 +15,8 @@ mod options {
     pub const LIMIT: &str = "limit";
     pub const DNS: &str = "dns";
     pub const TIME_FORMAT: &str = "time-format";
+    pub const SINCE: &str = "since";
+    pub const UNTIL: &str = "until";
     pub const USER_TTY: &str = "username";
     pub const FILE: &str = "file";
 }
@@ -89,6 +91,22 @@ pub fn uu_app() -> Command {
                 .required(false)
                 .help("show timestamps in the specified <format>: notime|short|full|iso")
                 .default_value("short"),
+        )
+        .arg(
+            Arg::new(options::SINCE)
+                .short('s')
+                .long(options::SINCE)
+                .action(ArgAction::Set)
+                .required(false)
+                .help("display the lines since the specified time"),
+        )
+        .arg(
+            Arg::new(options::UNTIL)
+                .short('t')
+                .long(options::UNTIL)
+                .action(ArgAction::Set)
+                .required(false)
+                .help("display the lines until the specified time"),
         )
         .arg(Arg::new(options::USER_TTY).action(ArgAction::Append))
 }
