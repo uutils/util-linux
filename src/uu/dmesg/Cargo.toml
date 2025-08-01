@@ -17,7 +17,7 @@ regex = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
 chrono = "0.4.38"
-parse_datetime = "0.10.0"
+parse_datetime = "0.11.0"
 
 [features]
 fixed-boot-time = []
