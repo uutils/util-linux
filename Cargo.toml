@@ -73,7 +73,7 @@ uucore = "0.1.0"
 uuid = { version = "1.16.0", features = ["rng-rand"] }
 windows = { version = "0.61.1" }
 xattr = "1.3.1"
-parse_datetime = "0.10.0"
+parse_datetime = "0.11.0"
 
 [dependencies]
 clap = { workspace = true }
