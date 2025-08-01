@@ -49,14 +49,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         &matches
             .get_one::<String>(options::SINCE)
             .cloned()
-            .unwrap_or_else(|| since_default),
+            .unwrap_or(since_default),
     )?;
 
     let until = parse_time_value(
         &matches
             .get_one::<String>(options::UNTIL)
             .cloned()
-            .unwrap_or_else(|| until_default),
+            .unwrap_or(until_default),
     )?;
 
     let limit: i32 = if let Some(num) = matches.get_one::<i32>(options::LIMIT) {

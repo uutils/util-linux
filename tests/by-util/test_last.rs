@@ -134,7 +134,7 @@ fn test_display_hostname_last_column() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn test_since_only_shows_entries_after_time() {
     let expected_entry_time = "16:29";
     let unexpected_entry_time = "16:24";
@@ -150,7 +150,7 @@ fn test_since_only_shows_entries_after_time() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn test_until_only_shows_entries_before_time() {
     let expected_entry_time = "16:24";
     let unexpected_entry_time = "16:29";
