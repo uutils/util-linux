@@ -11,13 +11,13 @@ name = "dmesg"
 path = "src/main.rs"
 
 [dependencies]
-clap = { workspace = true }
-uucore = { workspace = true }
-regex = { workspace = true }
-serde_json = { workspace = true }
-serde = { workspace = true }
 chrono = "0.4.38"
+clap = { workspace = true }
 parse_datetime = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uucore = { workspace = true }
 
 [features]
 fixed-boot-time = []
