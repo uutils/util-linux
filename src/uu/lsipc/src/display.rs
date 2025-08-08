@@ -246,7 +246,10 @@ pub(crate) fn describe_size(size: u64, in_bytes: bool) -> Option<Cow<'static, CS
     Some(Cow::Owned(CString::new(size_desc(size, in_bytes)).unwrap()))
 }
 
-pub(crate) fn describe_owner(users: &mut UserDbRecordRef, uid: libc::uid_t) -> Option<Cow<CStr>> {
+pub(crate) fn describe_owner(
+    users: &mut UserDbRecordRef,
+    uid: libc::uid_t,
+) -> Option<Cow<'_, CStr>> {
     if let Some(name) = users.for_id(uid).name() {
         Some(Cow::Borrowed(name))
     } else {
