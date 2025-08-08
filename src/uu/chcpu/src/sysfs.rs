@@ -217,10 +217,12 @@ impl SysFSCpu {
                 .map_err(|err| ChCpuError::io0("write standard output", err));
         }
 
-        if let Some(enabled_cpu_list) = enabled_cpu_list {
-            if previous_config && !configure && enabled_cpu_list.0.contains(&cpu_index) {
-                return Err(ChCpuError::CpuIsEnabled(cpu_index));
-            }
+        if let Some(enabled_cpu_list) = enabled_cpu_list
+            && previous_config
+            && !configure
+            && enabled_cpu_list.0.contains(&cpu_index)
+        {
+            return Err(ChCpuError::CpuIsEnabled(cpu_index));
         }
 
         if let Err(err) = self.write_value(&configure_path, u8::from(configure)) {

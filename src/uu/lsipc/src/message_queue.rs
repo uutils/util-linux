@@ -341,11 +341,11 @@ pub(crate) fn describe(
     let now = time_of_day()?;
     let sys_v_ipc = SysVIpc::new(id)?;
 
-    if let Some(id) = id {
-        if sys_v_ipc.0.len() != 1 {
-            eprintln!("id {id} not found");
-            return Ok(());
-        }
+    if let Some(id) = id
+        && sys_v_ipc.0.len() != 1
+    {
+        eprintln!("id {id} not found");
+        return Ok(());
     }
 
     table.set_name(c"messages")?;
