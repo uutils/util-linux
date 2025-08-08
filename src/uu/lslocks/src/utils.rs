@@ -275,22 +275,23 @@ impl LockInfo {
 
         let range = start..end;
 
-        if let Some(pid_locks) = pid_locks {
-            if command_name.is_none() && !blocked {
-                let lock_compare = |lock: &&LockInfo| {
-                    lock.range == range
-                        && lock.inode == inode
-                        && lock.device_id == device_id
-                        && lock.mandatory == mandatory
-                        && lock.blocked == blocked
-                        && lock.kind == kind
-                        && lock.mode == mode
-                };
+        if let Some(pid_locks) = pid_locks
+            && command_name.is_none()
+            && !blocked
+        {
+            let lock_compare = |lock: &&LockInfo| {
+                lock.range == range
+                    && lock.inode == inode
+                    && lock.device_id == device_id
+                    && lock.mandatory == mandatory
+                    && lock.blocked == blocked
+                    && lock.kind == kind
+                    && lock.mode == mode
+            };
 
-                if let Some(found) = pid_locks.iter().find(lock_compare) {
-                    process_id = found.process_id;
-                    command_name = found.command_name.clone();
-                }
+            if let Some(found) = pid_locks.iter().find(lock_compare) {
+                process_id = found.process_id;
+                command_name = found.command_name.clone();
             }
         }
 
