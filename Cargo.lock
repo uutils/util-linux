@@ -327,6 +327,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dns-lookup"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "853d5bcf0b73bd5e6d945b976288621825c7166e9f06c5a035ae1aaf42d1b64f"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "socket2",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "dtor"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,7 +1242,7 @@ dependencies = [
  "clap_complete",
  "clap_mangen",
  "ctor",
- "dns-lookup",
+ "dns-lookup 3.0.0",
  "libc",
  "nix",
  "parse_datetime",
@@ -1327,7 +1339,7 @@ name = "uu_last"
 version = "0.0.1"
 dependencies = [
  "clap",
- "dns-lookup",
+ "dns-lookup 3.0.0",
  "parse_datetime",
  "uucore",
 ]
@@ -1449,7 +1461,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9032bf981784f22fcc5ddc7e74b7cf3bae3d5f44a48d2054138ed38068b9f4e0"
 dependencies = [
  "clap",
- "dns-lookup",
+ "dns-lookup 2.1.1",
  "fluent",
  "fluent-bundle",
  "libc",
