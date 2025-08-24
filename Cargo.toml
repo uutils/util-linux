@@ -49,7 +49,7 @@ feat_common_core = [
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
 clap_complete = "4.4"
 clap_mangen = "0.2"
-dns-lookup = "2.0.4"
+dns-lookup = "3.0.0"
 errno = "0.3"
 libc = "0.2.171"
 libmount-sys = "0.1.1"
