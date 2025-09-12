@@ -43,6 +43,10 @@ mod test_nologin;
 #[path = "by-util/test_blockdev.rs"]
 mod test_blockdev;
 
+#[cfg(feature = "cal")]
+#[path = "by-util/test_cal.rs"]
+mod test_cal;
+
 #[cfg(feature = "ctrlaltdel")]
 #[path = "by-util/test_ctrlaltdel.rs"]
 mod test_ctrlaltdel;
