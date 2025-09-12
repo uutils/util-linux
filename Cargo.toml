@@ -32,6 +32,7 @@ feat_common_core = [
   "ctrlaltdel",
   "dmesg",
   "fsfreeze",
+  "hexdump",
   "last",
   "lscpu",
   "lsipc",
@@ -99,6 +100,7 @@ chcpu = { optional = true, version = "0.0.1", package = "uu_chcpu", path = "src/
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
+hexdump = { optional = true, version = "0.0.1", package = "uu_hexdump", path = "src/uu/hexdump" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
 lsipc = { optional = true, version = "0.0.1", package = "uu_lsipc", path = "src/uu/lsipc" }

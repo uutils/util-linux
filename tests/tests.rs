@@ -79,6 +79,10 @@ mod test_dmesg;
 #[path = "by-util/test_fsfreeze.rs"]
 mod test_fsfreeze;
 
+#[cfg(feature = "hexdump")]
+#[path = "by-util/test_hexdump.rs"]
+mod test_hexdump;
+
 #[cfg(feature = "mcookie")]
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;

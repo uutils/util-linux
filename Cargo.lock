@@ -1359,6 +1359,7 @@ dependencies = [
  "uu_ctrlaltdel",
  "uu_dmesg",
  "uu_fsfreeze",
+ "uu_hexdump",
  "uu_last",
  "uu_lscpu",
  "uu_lsipc",
@@ -1440,6 +1441,14 @@ dependencies = [
  "linux-raw-sys 0.11.0",
  "regex",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_hexdump"
+version = "0.0.1"
+dependencies = [
+ "clap",
  "uucore",
 ]
 
