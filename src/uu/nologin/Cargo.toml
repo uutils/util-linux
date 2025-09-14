@@ -1,0 +1,15 @@
+[package]
+name = "uu_nologin"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/nologin.rs"
+
+[[bin]]
+name = "nologin"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
