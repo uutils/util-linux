@@ -35,6 +35,10 @@ mod test_mesg;
 #[path = "by-util/test_mountpoint.rs"]
 mod test_mountpoint;
 
+#[cfg(feature = "nologin")]
+#[path = "by-util/test_nologin.rs"]
+mod test_nologin;
+
 #[cfg(feature = "blockdev")]
 #[path = "by-util/test_blockdev.rs"]
 mod test_blockdev;

@@ -39,6 +39,7 @@ feat_common_core = [
   "mcookie",
   "mesg",
   "mountpoint",
+  "nologin",
   "renice",
   "rev",
   "setsid",
@@ -102,6 +103,7 @@ lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/
 mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "src/uu/mcookie" }
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
+nologin = { optional = true, version = "0.0.1", package = "uu_nologin", path = "src/uu/nologin" }
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
