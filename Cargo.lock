@@ -127,6 +127,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bstr"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "234113d19d0d7d613b40e86fb654acf958910802bcceab913a4f9e7cda03b1a4"
+dependencies = [
+ "memchr",
+ "regex-automata",
+ "serde",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -269,7 +280,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec09e802f5081de6157da9a75701d6c713d8dc3ba52571fd4bd25f412644e8a6"
 dependencies = [
  "ctor-proc-macro",
- "dtor",
+ "dtor 0.0.6",
+]
+
+[[package]]
+name = "ctor"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67773048316103656a637612c4a62477603b777d91d9c62ff2290f9cde178fdb"
+dependencies = [
+ "ctor-proc-macro",
+ "dtor 0.1.0",
 ]
 
 [[package]]
@@ -344,7 +365,16 @@ version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97cbdf2ad6846025e8e25df05171abfb30e3ababa12ee0a0e44b9bbe570633a8"
 dependencies = [
- "dtor-proc-macro",
+ "dtor-proc-macro 0.0.5",
+]
+
+[[package]]
+name = "dtor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e58a0764cddb55ab28955347b45be00ade43d4d6f3ba4bf3dc354e4ec9432934"
+dependencies = [
+ "dtor-proc-macro 0.0.6",
 ]
 
 [[package]]
@@ -352,6 +382,12 @@ name = "dtor-proc-macro"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
+
+[[package]]
+name = "dtor-proc-macro"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f678cf4a922c215c63e0de95eb1ff08a958a81d47e485cf9da1e27bf6305cfa5"
 
 [[package]]
 name = "dunce"
@@ -378,7 +414,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -539,6 +575,47 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
+
+[[package]]
+name = "jiff"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be1f93b8b1eb69c77f24bbb0afdf66f54b632ee39af40ca21c4365a1d7347e49"
+dependencies = [
+ "jiff-static",
+ "jiff-tzdb-platform",
+ "log",
+ "portable-atomic",
+ "portable-atomic-util",
+ "serde",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "jiff-static"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03343451ff899767262ec32146f6d559dd759fdadf42ff0e227c7c48f72594b4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "jiff-tzdb"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1283705eb0a21404d2bfd6eef2a7593d240bc42a0bdb39db0ad6fa2ec026524"
+
+[[package]]
+name = "jiff-tzdb-platform"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "875a5a69ac2bab1a891711cf5eccbec1ce0341ea805560dcd90b7a2e925132e8"
+dependencies = [
+ "jiff-tzdb",
+]
 
 [[package]]
 name = "js-sys"
@@ -771,6 +848,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e57fef6bc5981e38c2ce2d63bfa546861309f875b8a75f092d1d54ae2d64f266"
 dependencies = [
  "siphasher",
+]
+
+[[package]]
+name = "portable-atomic"
+version = "1.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483"
+
+[[package]]
+name = "portable-atomic-util"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8a2f0d8d040d7848a709caf78912debcc3f33ee4b3cac47d73d1e1069e83507"
+dependencies = [
+ "portable-atomic",
 ]
 
 [[package]]
@@ -1100,7 +1192,7 @@ dependencies = [
  "getrandom",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1252,7 +1344,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
- "ctor",
+ "ctor 0.4.3",
  "dns-lookup 3.0.0",
  "libc",
  "nix",
@@ -1285,7 +1377,7 @@ dependencies = [
  "uu_rev",
  "uu_setsid",
  "uu_uuidgen",
- "uucore",
+ "uucore 0.1.0",
  "uuid",
  "uutests",
  "xattr",
@@ -1299,7 +1391,7 @@ dependencies = [
  "linux-raw-sys 0.10.0",
  "regex",
  "sysinfo",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1311,7 +1403,7 @@ dependencies = [
  "rangemap",
  "syscall-numbers",
  "thiserror",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1319,7 +1411,7 @@ name = "uu_ctrlaltdel"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1332,7 +1424,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1343,7 +1435,7 @@ dependencies = [
  "linux-raw-sys 0.10.0",
  "regex",
  "sysinfo",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1353,7 +1445,7 @@ dependencies = [
  "clap",
  "dns-lookup 3.0.0",
  "parse_datetime",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1365,7 +1457,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1376,7 +1468,7 @@ dependencies = [
  "errno",
  "libc",
  "smartcols-sys",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1387,7 +1479,7 @@ dependencies = [
  "libc",
  "libmount-sys",
  "smartcols-sys",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1397,7 +1489,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1407,7 +1499,7 @@ dependencies = [
  "clap",
  "md-5",
  "rand",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1416,7 +1508,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "nix",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1424,7 +1516,7 @@ name = "uu_mountpoint"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1432,7 +1524,7 @@ name = "uu_nologin"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1441,7 +1533,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "libc",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1449,7 +1541,7 @@ name = "uu_rev"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1458,7 +1550,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "libc",
- "uucore",
+ "uucore 0.1.0",
 ]
 
 [[package]]
@@ -1469,7 +1561,7 @@ dependencies = [
  "nix",
  "rand",
  "thiserror",
- "uucore",
+ "uucore 0.1.0",
  "uuid",
  "windows",
 ]
@@ -1491,7 +1583,31 @@ dependencies = [
  "thiserror",
  "time",
  "unic-langid",
- "uucore_procs",
+ "uucore_procs 0.1.0",
+ "wild",
+]
+
+[[package]]
+name = "uucore"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7203e48e80ac344450cba5323d8b4a71967ec1e81ae4022775ada90d2b0e08ac"
+dependencies = [
+ "bstr",
+ "clap",
+ "dns-lookup 3.0.0",
+ "fluent",
+ "fluent-bundle",
+ "fluent-syntax",
+ "jiff",
+ "libc",
+ "nix",
+ "number_prefix",
+ "os_display",
+ "thiserror",
+ "time",
+ "unic-langid",
+ "uucore_procs 0.2.2",
  "wild",
 ]
 
@@ -1503,7 +1619,18 @@ checksum = "c933945fdac5b7779eae1fc746146e61f5b0298deb6ede002ce0b6e93e1b3bfc"
 dependencies = [
  "proc-macro2",
  "quote",
- "uuhelp_parser",
+ "uuhelp_parser 0.1.0",
+]
+
+[[package]]
+name = "uucore_procs"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "449e64ce116ed0cc8c5897bd8706d36aed1ec027b647494df4eae6996d8d59de"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "uuhelp_parser 0.2.2",
 ]
 
 [[package]]
@@ -1511,6 +1638,12 @@ name = "uuhelp_parser"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "beda381dd5c7927f8682f50b055b0903bb694ba5a4b27fad1b4934bc4fbf7b8d"
+
+[[package]]
+name = "uuhelp_parser"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c9e4945611996e885dc4eeae23f3d6f20cfb6e8f4bad4985c2222bbcf9a9745"
 
 [[package]]
 name = "uuid"
@@ -1539,12 +1672,11 @@ dependencies = [
 
 [[package]]
 name = "uutests"
-version = "0.1.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12453ee52c9cffa6bf2c74f9f35ed0c824b846cb0b4bdee829d8150332e7204c"
+checksum = "20482dada0c118dfe1eafe971195c170c4e9ab5a2409ead9b9b1833f7a54b1d2"
 dependencies = [
- "ctor",
- "glob",
+ "ctor 0.5.0",
  "libc",
  "nix",
  "pretty_assertions",
@@ -1552,8 +1684,7 @@ dependencies = [
  "regex",
  "rlimit",
  "tempfile",
- "time",
- "uucore",
+ "uucore 0.2.2",
  "xattr",
 ]
 
