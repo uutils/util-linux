@@ -268,22 +268,12 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec09e802f5081de6157da9a75701d6c713d8dc3ba52571fd4bd25f412644e8a6"
-dependencies = [
- "ctor-proc-macro",
- "dtor 0.0.6",
-]
-
-[[package]]
-name = "ctor"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67773048316103656a637612c4a62477603b777d91d9c62ff2290f9cde178fdb"
 dependencies = [
  "ctor-proc-macro",
- "dtor 0.1.0",
+ "dtor",
 ]
 
 [[package]]
@@ -342,27 +332,12 @@ dependencies = [
 
 [[package]]
 name = "dtor"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97cbdf2ad6846025e8e25df05171abfb30e3ababa12ee0a0e44b9bbe570633a8"
-dependencies = [
- "dtor-proc-macro 0.0.5",
-]
-
-[[package]]
-name = "dtor"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e58a0764cddb55ab28955347b45be00ade43d4d6f3ba4bf3dc354e4ec9432934"
 dependencies = [
- "dtor-proc-macro 0.0.6",
+ "dtor-proc-macro",
 ]
-
-[[package]]
-name = "dtor-proc-macro"
-version = "0.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
 
 [[package]]
 name = "dtor-proc-macro"
@@ -1325,7 +1300,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
- "ctor 0.4.3",
+ "ctor",
  "dns-lookup",
  "libc",
  "nix",
@@ -1619,7 +1594,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20482dada0c118dfe1eafe971195c170c4e9ab5a2409ead9b9b1833f7a54b1d2"
 dependencies = [
- "ctor 0.5.0",
+ "ctor",
  "libc",
  "nix",
  "pretty_assertions",
