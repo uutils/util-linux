@@ -11,7 +11,7 @@ use uucore::error::UResult;
 
 use uucore::error::USimpleError;
 use uucore::utmpx::time::{OffsetDateTime, UtcOffset};
-use uucore::utmpx::{time, Utmpx};
+use uucore::utmpx::{time, Utmpx, UtmpxRecord};
 
 use std::fmt::Write;
 use std::fs;
@@ -217,7 +217,10 @@ impl Last {
         // For 'last' output, older output needs to be printed last (FILO), as
         // UtmpxIter does not implement Rev trait. A better implementation
         // might include implementing UtmpxIter as doubly linked
-        Utmpx::iter_all_records_from(&self.file).for_each(|ut| ut_stack.push(ut));
+        Utmpx::iter_all_records_from(&self.file).for_each(|ut| {
+            let UtmpxRecord::Traditional(utmpx) = ut;
+            ut_stack.push(*utmpx);
+        });
 
         let mut counter = 0;
         let mut first_ut_time = None;
