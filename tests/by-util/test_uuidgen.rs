@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use uuid::Uuid;
-use uutests::{new_ucmd, util::TestScenario, util::UCommand, util_name};
+use uutests::{new_ucmd, util::UCommand};
 
 fn assert_ver_eq(cmd: &mut UCommand, ver: uuid::Version) {
     let uuid = Uuid::parse_str(

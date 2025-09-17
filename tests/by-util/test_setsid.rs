@@ -7,9 +7,8 @@
 mod unix {
     use uutests::new_ucmd;
     use uutests::util::get_tests_binary;
-    use uutests::util::TestScenario;
     use uutests::util::UCommand;
-    use uutests::util_name;
+
     #[test]
     fn test_invalid_arg() {
         new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
@@ -170,8 +169,6 @@ mod unix {
 #[cfg(not(target_family = "unix"))]
 mod non_unix {
     use uutests::new_ucmd;
-    use uutests::util::TestScenario;
-    use uutests::util_name;
 
     #[test]
     fn unsupported_platforms() {
