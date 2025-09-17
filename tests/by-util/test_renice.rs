@@ -5,8 +5,6 @@
 // spell-checker:ignore (words) symdir somefakedir
 
 use uutests::new_ucmd;
-use uutests::util::TestScenario;
-use uutests::util_name;
 
 #[test]
 fn test_invalid_arg() {

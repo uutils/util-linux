@@ -4,8 +4,6 @@
 // file that was distributed with this source code.
 
 use uutests::new_ucmd;
-use uutests::util::TestScenario;
-use uutests::util_name;
 
 #[test]
 fn test_invalid_arg() {
@@ -28,8 +26,6 @@ mod linux {
     use regex::Regex;
 
     use uutests::new_ucmd;
-    use uutests::util::TestScenario;
-    use uutests::util_name;
 
     #[test]
     fn test_fails_on_first_error() {
@@ -62,8 +58,6 @@ mod linux {
 #[cfg(not(target_os = "linux"))]
 mod non_linux {
     use uutests::new_ucmd;
-    use uutests::util::TestScenario;
-    use uutests::util_name;
 
     #[test]
     fn test_fails_on_unsupported_platforms() {
