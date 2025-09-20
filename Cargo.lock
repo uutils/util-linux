@@ -1331,6 +1331,7 @@ dependencies = [
  "uu_nologin",
  "uu_renice",
  "uu_rev",
+ "uu_setpgid",
  "uu_setsid",
  "uu_uuidgen",
  "uucore",
@@ -1497,6 +1498,16 @@ name = "uu_rev"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "uucore",
+]
+
+[[package]]
+name = "uu_setpgid"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
+ "nix",
  "uucore",
 ]
 
