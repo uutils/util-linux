@@ -55,6 +55,10 @@ mod test_renice;
 #[path = "by-util/test_rev.rs"]
 mod test_rev;
 
+#[cfg(feature = "setpgid")]
+#[path = "by-util/test_setpgid.rs"]
+mod test_setpgid;
+
 #[cfg(feature = "setsid")]
 #[path = "by-util/test_setsid.rs"]
 mod test_setsid;

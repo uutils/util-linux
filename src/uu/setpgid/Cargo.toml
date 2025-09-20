@@ -1,0 +1,17 @@
+[package]
+name = "uu_setpgid"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/setpgid.rs"
+
+[[bin]]
+name = "setpgid"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+libc = { workspace = true }
+nix = { workspace = true, features = ["process"] }
