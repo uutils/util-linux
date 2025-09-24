@@ -27,6 +27,7 @@ uudoc = []
 
 feat_common_core = [
   "blockdev",
+  "cal",
   "chcpu",
   "ctrlaltdel",
   "dmesg",
@@ -48,6 +49,7 @@ feat_common_core = [
 ]
 
 [workspace.dependencies]
+chrono = "0.4"
 clap = { version = "4.4", features = ["wrap_help", "cargo"] }
 clap_complete = "4.4"
 clap_mangen = "0.2"
@@ -92,6 +94,7 @@ uucore = { workspace = true }
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
+cal = { optional = true, version = "0.0.1", package = "uu_cal", path = "src/uu/cal" }
 chcpu = { optional = true, version = "0.0.1", package = "uu_chcpu", path = "src/uu/chcpu" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }

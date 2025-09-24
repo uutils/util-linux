@@ -1,0 +1,18 @@
+[package]
+name = "uu_cal"
+version = "0.0.1"
+description = "cal ~ display a calendar"
+
+edition = "2021"
+
+[lib]
+path = "src/cal.rs"
+
+[[bin]]
+name = "cal"
+path = "src/main.rs"
+
+[dependencies]
+chrono = { workspace = true }
+clap = { workspace = true }
+uucore = { workspace = true }

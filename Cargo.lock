@@ -1316,6 +1316,7 @@ dependencies = [
  "tempfile",
  "textwrap",
  "uu_blockdev",
+ "uu_cal",
  "uu_chcpu",
  "uu_ctrlaltdel",
  "uu_dmesg",
@@ -1348,6 +1349,15 @@ dependencies = [
  "linux-raw-sys 0.11.0",
  "regex",
  "sysinfo",
+ "uucore",
+]
+
+[[package]]
+name = "uu_cal"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "clap",
  "uucore",
 ]
 
