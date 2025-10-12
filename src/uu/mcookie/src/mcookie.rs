@@ -14,9 +14,8 @@ use rand::RngCore;
 use uucore::{
     error::{UResult, USimpleError},
     format_usage, help_about, help_usage,
+    parser::parse_size,
 };
-mod size;
-use size::Size;
 
 mod options {
     pub const FILE: &str = "file";
@@ -43,14 +42,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         .collect();
 
     let max_size = if let Some(size_str) = matches.get_one::<String>(options::MAX_SIZE) {
-        match Size::parse(size_str) {
-            Ok(size) => {
-                let mut s = size.size_bytes();
-                if s == 0 {
-                    s = MAX_DEFAULT;
-                }
-                s
-            }
+        match parse_size::parse_size_u64(size_str) {
+            Ok(0) => MAX_DEFAULT,
+            Ok(size) => size,
             Err(_) => {
                 return Err(USimpleError::new(1, "Failed to parse max-size value"));
             }
