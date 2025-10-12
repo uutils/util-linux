@@ -4,6 +4,7 @@
 // file that was distributed with this source code.
 
 use std::{collections::HashSet, fs, path::PathBuf};
+use uucore::parser::parse_size;
 
 pub struct CpuVulnerability {
     pub name: String,
@@ -93,25 +94,7 @@ impl CacheSize {
     }
 
     fn parse(s: &str) -> Self {
-        // Yes, this will break if we ever reach a point where caches exceed terabytes in size...
-        const EXPONENTS: [(char, u32); 4] = [('K', 1), ('M', 2), ('G', 3), ('T', 4)];
-
-        // If we only have numbers, treat it as a raw amount of bytes and parse as-is
-        if s.chars().all(char::is_numeric) {
-            return Self(s.parse::<u64>().expect("Could not parse cache size"));
-        };
-
-        for (suffix, exponent) in EXPONENTS {
-            if s.ends_with(suffix) {
-                let nums = s.strip_suffix(suffix).unwrap();
-                let value = nums.parse::<u64>().expect("Could not parse cache size");
-                let multiplier = 1024_u64.pow(exponent);
-
-                return Self(value * multiplier);
-            }
-        }
-
-        panic!("No known suffix in cache size string");
+        Self(parse_size::parse_size_u64(s).expect("Could not parse cache size"))
     }
 
     pub fn size_bytes(&self) -> u64 {
