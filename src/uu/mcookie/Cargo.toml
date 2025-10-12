@@ -11,7 +11,7 @@ name = "mcookie"
 path = "src/main.rs"
 
 [dependencies]
-uucore = { workspace = true }
+uucore = { workspace = true, features = ["parser"] }
 clap = { workspace = true }
 md-5 = { workspace = true }
 rand = { workspace = true }
