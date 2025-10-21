@@ -1,0 +1,16 @@
+[package]
+name = "uu_hexdump"
+version = "0.0.1"
+edition = "2021"
+description = "hexdump ~ display file contents in hexadecimal, decimal, octal, or ascii"
+
+[lib]
+path = "src/hexdump.rs"
+
+[[bin]]
+name = "hexdump"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+uucore = { workspace = true, features = ["parser"] }
