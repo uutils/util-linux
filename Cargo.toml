@@ -160,10 +160,10 @@ lto = true
 [profile.release-fast]
 inherits = "release"
 panic = "abort"
+codegen-units = 1
 
 # A release-like profile that is as small as possible.
 [profile.release-small]
-inherits = "release"
+inherits = "release-fast"
 opt-level = "z"
-panic = "abort"
 strip = true
