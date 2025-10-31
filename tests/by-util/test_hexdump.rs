@@ -46,7 +46,7 @@ fn test_hexdump_canonical_format() {
 #[cfg(unix)]
 fn test_hexdump_one_byte_char() {
     let input = b"Hello \t\n\0\x07\x08\x0B\x0C\r\x80\xFF";
-    let expected = vec![
+    let expected = [
         "0000000   H   e   l   l   o      \\t  \\n  \\0  \\a  \\b  \\v  \\f  \\r 200 377\n",
         "0000010\n",
     ];
@@ -113,7 +113,7 @@ fn test_hexdump_two_bytes_octal() {
 #[test]
 #[cfg(unix)]
 fn test_hexdump_multiple_formats() {
-    let expected = vec![
+    let expected = [
         "00000000  41 42                                             |AB|\n",
         "0000000    4241                                                        \n",
         "00000000  41 42                                             |AB|\n",
@@ -130,21 +130,21 @@ fn test_hexdump_multiple_formats() {
 #[test]
 #[cfg(unix)]
 fn test_hexdump_squeezing() {
-    let input = vec![
+    let input = [
         "AAAAAAAAAAAAAAAA",
         "AAAAAAAAAAAAAAAA",
         "AAAAAAAAAAAAAAAA",
         "AAAAAAAA",
     ];
 
-    let expected_no_squeezing = vec![
+    let expected_no_squeezing = [
         "00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|\n",
         "00000010  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|\n",
         "00000020  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|\n",
         "00000030  41 41 41 41 41 41 41 41                           |AAAAAAAA|\n",
         "00000038\n",
     ];
-    let expected_with_squeezing = vec![
+    let expected_with_squeezing = [
         "00000000  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  |AAAAAAAAAAAAAAAA|\n",
         "*\n",
         "00000030  41 41 41 41 41 41 41 41                           |AAAAAAAA|\n",
