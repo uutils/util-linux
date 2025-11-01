@@ -19,7 +19,7 @@ fn test_invalid_dates() {
 
 #[test]
 fn test_iso_week_numbers() {
-    let expected = vec![
+    let expected = [
         "     January 2021      \n",
         "   Mo Tu We Th Fr Sa Su\n",
         "53              1  2  3\n",
@@ -34,7 +34,7 @@ fn test_iso_week_numbers() {
         .succeeds()
         .stdout_is(expected.join(""));
 
-    let expected = vec![
+    let expected = [
         "     January 2015      \n",
         "   Mo Tu We Th Fr Sa Su\n",
         " 1           1  2  3  4\n",
@@ -52,7 +52,7 @@ fn test_iso_week_numbers() {
 
 #[test]
 fn test_us_week_numbers() {
-    let expected = vec![
+    let expected = [
         "     January 2021      \n",
         "   Su Mo Tu We Th Fr Sa\n",
         " 1                 1  2\n",
@@ -70,7 +70,7 @@ fn test_us_week_numbers() {
 
 #[test]
 fn test_julian() {
-    let expected = vec![
+    let expected = [
         "       December 2000       \n",
         "Sun Mon Tue Wed Thu Fri Sat\n",
         "                    336 337\n",
@@ -85,7 +85,7 @@ fn test_julian() {
         .succeeds()
         .stdout_is(expected.join(""));
 
-    let expected = vec![
+    let expected = [
         "        February 2024         \n",
         "   Mon Tue Wed Thu Fri Sat Sun\n",
         " 5              32  33  34  35\n",
@@ -162,7 +162,7 @@ fn test_zero_months_displays_one() {
 
 #[test]
 fn test_color() {
-    let expected = vec![
+    let expected = [
         "     March 2024     \n",
         "Su Mo Tu We Th Fr Sa\n",
         "                1  2\n",
@@ -177,7 +177,7 @@ fn test_color() {
         .succeeds()
         .stdout_is(expected.join(""));
 
-    let expected = vec![
+    let expected = [
         "     March 2024     \n",
         "Su Mo Tu We Th Fr Sa\n",
         "                1  2\n",
