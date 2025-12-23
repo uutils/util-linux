@@ -637,9 +637,9 @@ checksum = "cd945864f07fe9f5371a27ad7b52a172b4b499999f1d97574c9fa68373937e12"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.12.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b83b49c75b50cb715b09d337b045481493a8ada2bb3e872f2bae71db45b27696"
+checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "log"
@@ -1385,7 +1385,7 @@ name = "uu_blockdev"
 version = "0.0.1"
 dependencies = [
  "clap",
- "linux-raw-sys 0.12.0",
+ "linux-raw-sys 0.12.1",
  "regex",
  "sysinfo",
  "uucore 0.2.2",
@@ -1438,7 +1438,7 @@ name = "uu_fsfreeze"
 version = "0.0.1"
 dependencies = [
  "clap",
- "linux-raw-sys 0.12.0",
+ "linux-raw-sys 0.12.1",
  "regex",
  "sysinfo",
  "uucore 0.2.2",
