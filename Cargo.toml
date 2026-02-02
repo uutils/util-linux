@@ -134,7 +134,7 @@ nix = { workspace = true, features = ["term"] }
 xattr = { workspace = true }
 
 [target.'cfg(any(target_os = "linux", target_os = "android"))'.dev-dependencies]
-rlimit = "0.10.1"
+rlimit = "0.11.0"
 
 [build-dependencies]
 phf_codegen = { workspace = true }
