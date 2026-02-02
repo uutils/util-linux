@@ -1012,6 +1012,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlimit"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f35ee2729c56bb610f6dba436bf78135f728b7373bdffae2ec815b2d3eb98cc3"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "roff"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1362,7 +1371,7 @@ dependencies = [
  "pretty_assertions",
  "rand",
  "regex",
- "rlimit",
+ "rlimit 0.11.0",
  "serde",
  "serde_json",
  "tempfile",
@@ -1718,7 +1727,7 @@ dependencies = [
  "pretty_assertions",
  "rand",
  "regex",
- "rlimit",
+ "rlimit 0.10.2",
  "tempfile",
  "uucore 0.5.0",
  "xattr",
