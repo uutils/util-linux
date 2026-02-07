@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "adler2"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -154,17 +160,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bstr"
-version = "1.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "234113d19d0d7d613b40e86fb654acf958910802bcceab913a4f9e7cda03b1a4"
-dependencies = [
- "memchr",
- "regex-automata",
- "serde",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -290,6 +285,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
+name = "crc32fast"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -413,6 +417,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "flate2"
+version = "1.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
+dependencies = [
+ "crc32fast",
+ "miniz_oxide",
+]
+
+[[package]]
 name = "fluent"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -490,6 +504,12 @@ name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "iana-time-zone"
@@ -699,6 +719,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
+name = "miniz_oxide"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
+dependencies = [
+ "adler2",
+ "simd-adler32",
+]
+
+[[package]]
 name = "nix"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -772,12 +802,6 @@ checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "number_prefix"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "objc2-core-foundation"
@@ -921,6 +945,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "procfs"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25485360a54d6861439d60facef26de713b1e126bf015ec8f98239467a2b82f7"
+dependencies = [
+ "bitflags",
+ "chrono",
+ "flate2",
+ "procfs-core",
+ "rustix",
+]
+
+[[package]]
+name = "procfs-core"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6401bf7b6af22f78b563665d15a22e9aef27775b79b149a66ca022468a4e405"
+dependencies = [
+ "bitflags",
+ "chrono",
+ "hex",
 ]
 
 [[package]]
@@ -1121,6 +1169,12 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "simd-adler32"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
 
 [[package]]
 name = "siphasher"
@@ -1397,7 +1451,7 @@ dependencies = [
  "uu_setpgid",
  "uu_setsid",
  "uu_uuidgen",
- "uucore 0.2.2",
+ "uucore",
  "uuid",
  "uutests",
  "xattr",
@@ -1411,7 +1465,7 @@ dependencies = [
  "linux-raw-sys 0.12.1",
  "regex",
  "sysinfo",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1420,7 +1474,7 @@ version = "0.0.1"
 dependencies = [
  "chrono",
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1432,7 +1486,7 @@ dependencies = [
  "rangemap",
  "syscall-numbers",
  "thiserror",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1440,7 +1494,7 @@ name = "uu_ctrlaltdel"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1453,7 +1507,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1464,7 +1518,7 @@ dependencies = [
  "linux-raw-sys 0.12.1",
  "regex",
  "sysinfo",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1472,7 +1526,7 @@ name = "uu_hexdump"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1482,7 +1536,7 @@ dependencies = [
  "clap",
  "dns-lookup",
  "parse_datetime",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1494,7 +1548,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1505,7 +1559,7 @@ dependencies = [
  "errno",
  "libc",
  "smartcols-sys",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1516,7 +1570,7 @@ dependencies = [
  "libc",
  "libmount-sys",
  "smartcols-sys",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1526,7 +1580,7 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1536,7 +1590,7 @@ dependencies = [
  "clap",
  "md-5",
  "rand",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1545,7 +1599,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "nix",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1553,7 +1607,7 @@ name = "uu_mountpoint"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1561,7 +1615,7 @@ name = "uu_nologin"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1570,7 +1624,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "libc",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1578,7 +1632,7 @@ name = "uu_rev"
 version = "0.0.1"
 dependencies = [
  "clap",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1588,7 +1642,7 @@ dependencies = [
  "clap",
  "libc",
  "nix",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1597,7 +1651,7 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "libc",
- "uucore 0.2.2",
+ "uucore",
 ]
 
 [[package]]
@@ -1608,19 +1662,18 @@ dependencies = [
  "nix",
  "rand",
  "thiserror",
- "uucore 0.2.2",
+ "uucore",
  "uuid",
  "windows",
 ]
 
 [[package]]
 name = "uucore"
-version = "0.2.2"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7203e48e80ac344450cba5323d8b4a71967ec1e81ae4022775ada90d2b0e08ac"
+checksum = "b157ba598d7f7ed06f6dbc62999edb9d730b4d3fb58e503d8ad6d5fbe1e04391"
 dependencies = [
  "bigdecimal",
- "bstr",
  "clap",
  "dns-lookup",
  "fluent",
@@ -1631,46 +1684,13 @@ dependencies = [
  "libc",
  "nix",
  "num-traits",
- "number_prefix",
  "os_display",
+ "procfs",
  "thiserror",
  "time",
  "unic-langid",
- "uucore_procs 0.2.2",
+ "uucore_procs",
  "wild",
-]
-
-[[package]]
-name = "uucore"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b157ba598d7f7ed06f6dbc62999edb9d730b4d3fb58e503d8ad6d5fbe1e04391"
-dependencies = [
- "clap",
- "dns-lookup",
- "fluent",
- "fluent-bundle",
- "fluent-syntax",
- "jiff",
- "libc",
- "nix",
- "os_display",
- "thiserror",
- "time",
- "unic-langid",
- "uucore_procs 0.6.0",
- "wild",
-]
-
-[[package]]
-name = "uucore_procs"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "449e64ce116ed0cc8c5897bd8706d36aed1ec027b647494df4eae6996d8d59de"
-dependencies = [
- "proc-macro2",
- "quote",
- "uuhelp_parser",
 ]
 
 [[package]]
@@ -1682,12 +1702,6 @@ dependencies = [
  "proc-macro2",
  "quote",
 ]
-
-[[package]]
-name = "uuhelp_parser"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c9e4945611996e885dc4eeae23f3d6f20cfb6e8f4bad4985c2222bbcf9a9745"
 
 [[package]]
 name = "uuid"
@@ -1728,7 +1742,7 @@ dependencies = [
  "regex",
  "rlimit 0.11.0",
  "tempfile",
- "uucore 0.6.0",
+ "uucore",
  "xattr",
 ]
 
