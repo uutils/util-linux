@@ -10,7 +10,7 @@ use std::{
 
 use clap::{crate_version, Arg, ArgAction, Command};
 use md5::{Digest, Md5};
-use rand::RngCore;
+use rand::Rng;
 use uucore::{
     error::{UResult, USimpleError},
     format_usage, help_about, help_usage,
