@@ -14,10 +14,10 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
+        if: runner.os == 'Linux'
         shell: bash
-        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
+        run: sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
       - run: cargo check
 
   test:
@@ -28,10 +28,10 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         shell: bash
-        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
+        if: runner.os == 'Linux'
+        run: sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
       - run: cargo test
 
   fmt:
@@ -39,10 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update --quiet
       - run: sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
-      - run: rustup component add rustfmt
       - run: cargo fmt --all -- --check
 
   clippy:
@@ -53,11 +51,10 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         shell: bash
-        run: case ${{ matrix.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
-      - run: rustup component add clippy
+        if: runner.os == 'Linux'
+        run: sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
       - run: cargo clippy -- -D warnings
 
   coverage:
@@ -78,10 +75,10 @@ jobs:
       run: |
         ## VARs setup
         outputs() { step_id="vars"; for var in "$@" ; do echo steps.${step_id}.outputs.${var}="${!var}"; echo "${var}=${!var}" >> $GITHUB_OUTPUT; done; }
-        # toolchain
-        TOOLCHAIN="nightly" ## default to "nightly" toolchain (required for certain required unstable compiler flags) ## !maint: refactor when stable channel has needed support
+        # unlock nightly features
+        echo "RUSTC_BOOTSTRAP=1" >> "${GITHUB_ENV}"
         # * specify gnu-type TOOLCHAIN for windows; `grcov` requires gnu-style code coverage data files
-        case ${{ matrix.job.os }} in windows-*) TOOLCHAIN="$TOOLCHAIN-x86_64-pc-windows-gnu" ;; esac;
+        rustc.exe --version && TOOLCHAIN="$TOOLCHAIN-x86_64-pc-windows-gnu" ||:
         # * use requested TOOLCHAIN if specified
         if [ -n "${{ matrix.job.toolchain }}" ]; then TOOLCHAIN="${{ matrix.job.toolchain }}" ; fi
         outputs TOOLCHAIN
@@ -92,10 +89,9 @@ jobs:
 
     - name: Install dependencies
       shell: bash
-      run: case ${{ matrix.job.os }} in ubuntu-*) sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev ;; esac;
+      if: runner.os == 'Linux'
+      run: sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
 
-    - name: rust toolchain ~ install
-      uses: dtolnay/rust-toolchain@nightly
     - name: Install llvm-tools-preview
       run: rustup component add llvm-tools-preview
     - name: Test
@@ -110,12 +106,13 @@ jobs:
       id: build_grcov
       shell: bash
       run: |
-        git clone https://github.com/mozilla/grcov.git ~/grcov/
+        git clone --depth=1 https://github.com/mozilla/grcov.git ~/grcov/
         cd ~/grcov
         # Hardcode the version of crossbeam-epoch. See
         # https://github.com/uutils/coreutils/issues/3680
-        sed -i -e "s|tempfile =|crossbeam-epoch = \"=0.9.8\"\ntempfile =|" Cargo.toml
-        cargo install --path .
+        # sed -i does not on macOS
+        sed -i.bak -e "s|tempfile =|crossbeam-epoch = \"=0.9.8\"\ntempfile =|" Cargo.toml
+        cargo install --path . --locked
         cd -
 # Uncomment when the upstream issue
 # https://github.com/mozilla/grcov/issues/849 is fixed
