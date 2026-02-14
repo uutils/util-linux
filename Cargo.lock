@@ -883,13 +883,12 @@ dependencies = [
 
 [[package]]
 name = "parse_datetime"
-version = "0.11.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5b77d27257a460cefd73a54448e5f3fd4db224150baf6ca3e02eedf4eb2b3e9"
+checksum = "413775a7eac2261d2211a79d10ef275e5b6f7b527eec42ad09adce2ffa92b6e5"
 dependencies = [
- "chrono",
+ "jiff",
  "num-traits",
- "regex",
  "winnow",
 ]
 
@@ -1288,7 +1287,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0136791f7c95b1f6dd99f9cc786b91bb81c3800b639b3478e561ddb7be95e5f1"
 dependencies = [
  "fastrand",
- "getrandom 0.3.2",
+ "getrandom 0.4.1",
  "once_cell",
  "rustix",
  "windows-sys 0.60.2",
