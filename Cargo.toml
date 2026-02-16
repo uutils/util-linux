@@ -42,6 +42,7 @@ feat_common_core = [
   "mesg",
   "mountpoint",
   "nologin",
+  "pivot_root",
   "renice",
   "rev",
   "setpgid",
@@ -110,6 +111,7 @@ mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 nologin = { optional = true, version = "0.0.1", package = "uu_nologin", path = "src/uu/nologin" }
+pivot_root = { optional = true, version = "0.0.1", package = "uu_pivot_root", path = "src/uu/pivot_root" }
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setpgid = { optional = true, version = "0.0.1", package = "uu_setpgid", path = "src/uu/setpgid" }
