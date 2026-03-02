@@ -47,6 +47,7 @@ feat_common_core = [
   "setpgid",
   "setsid",
   "uuidgen",
+  "wall",
 ]
 
 [workspace.dependencies]
@@ -86,10 +87,10 @@ clap = { workspace = true }
 clap_complete = { workspace = true }
 clap_mangen = { workspace = true }
 dns-lookup = { workspace = true }
-parse_datetime = {workspace = true}
+parse_datetime = { workspace = true }
 phf = { workspace = true }
 serde = { workspace = true }
-serde_json  = { workspace = true }
+serde_json = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
 
@@ -113,13 +114,16 @@ nologin = { optional = true, version = "0.0.1", package = "uu_nologin", path = "
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setpgid = { optional = true, version = "0.0.1", package = "uu_setpgid", path = "src/uu/setpgid" }
-setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
-uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
+setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path = "src/uu/setsid" }
+uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path = "src/uu/uuidgen" }
+wall = { optional = true, version = "0.0.1", package = "uu_wall", path = "src/uu/wall" }
 
 [dev-dependencies]
 ctor = "0.6.0"
 # dmesg test require fixed-boot-time feature turned on.
-dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = ["fixed-boot-time"] }
+dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = [
+  "fixed-boot-time",
+] }
 libc = { workspace = true }
 pretty_assertions = "1"
 rand = { workspace = true }

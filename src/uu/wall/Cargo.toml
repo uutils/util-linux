@@ -1,0 +1,18 @@
+[package]
+name = "uu_wall"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/wall.rs"
+
+[[bin]]
+name = "wall"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+libc = { workspace = true }
+chrono = { workspace = true }
+unicode-width = "0.2.2"
