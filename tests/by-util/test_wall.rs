@@ -14,7 +14,7 @@ mod tests {
             .arg("fooblywoobly") // assuming this group doesnt exist
             .fails()
             .code_is(1)
-            .stderr_contains("wall: invalid group argument");
+            .stderr_is("wall: invalid group argument\n");
     }
 
     #[test]
@@ -24,7 +24,7 @@ mod tests {
             .arg("99999") // assuming this group doesnt exist
             .fails()
             .code_is(1)
-            .stderr_contains("wall: 99999: unknown gid");
+            .stderr_is("wall: 99999: unknown gid\n");
     }
 
     #[test]
@@ -34,7 +34,7 @@ mod tests {
             .arg("some text to wall")
             .succeeds()
             .code_is(0)
-            .stderr_contains("wall: --nobanner is available only for root");
+            .stderr_is("wall: --nobanner is available only for root\n");
     }
 
     #[test]
@@ -44,7 +44,7 @@ mod tests {
             .arg("0")
             .fails()
             .code_is(1)
-            .stderr_contains("wall: invalid timeout argument: 0");
+            .stderr_is("wall: invalid timeout argument: 0\n");
     }
 
     #[test]
