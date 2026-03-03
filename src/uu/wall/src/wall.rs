@@ -105,7 +105,7 @@ mod unix {
                 }
             };
 
-            let whom = unsafe {
+            let user = unsafe {
                 let ruid = libc::getuid();
                 let pw = libc::getpwuid(ruid);
                 if !pw.is_null() && !(*pw).pw_name.is_null() {
@@ -116,7 +116,7 @@ mod unix {
                 }
             };
 
-            let whereat = unsafe {
+            let tty = unsafe {
                 let tty_ptr = libc::ttyname(libc::STDOUT_FILENO);
                 if tty_ptr.is_null() {
                     "somewhere".to_string()
@@ -127,7 +127,7 @@ mod unix {
             };
 
             let date = DateTime::<Local>::from(SystemTime::now()).format("%a %b %e %T %Y");
-            let banner = format!("Broadcast message from {whom}@{hostname} ({whereat}) ({date}):");
+            let banner = format!("Broadcast message from {user}@{hostname} ({tty}) ({date}):");
 
             blank(&mut buf);
             buf += &banner;
@@ -196,7 +196,6 @@ mod unix {
     }
 
     // Determine if user is in specified group
-    #[allow(clippy::cast_sign_loss)]
     fn is_gr_member(user: &[c_char], gid: gid_t) -> bool {
         // make sure user exists in database
         let pw = unsafe { libc::getpwnam(user.as_ptr()) };
