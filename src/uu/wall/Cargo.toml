@@ -2,6 +2,7 @@
 name = "uu_wall"
 version = "0.0.1"
 edition = "2021"
+description = "wall ~ Write a mesage to all users."
 
 [lib]
 path = "src/wall.rs"
@@ -11,8 +12,8 @@ name = "wall"
 path = "src/main.rs"
 
 [dependencies]
-uucore = { workspace = true }
+uucore = { workspace = true, features = ["process", "entries"] }
 clap = { workspace = true }
 libc = { workspace = true }
 chrono = { workspace = true }
-unicode-width = "0.2.2"
+unicode-width = { workspace = true }

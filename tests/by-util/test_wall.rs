@@ -14,7 +14,7 @@ mod tests {
             .arg("fooblywoobly") // assuming this group doesnt exist
             .fails()
             .code_is(1)
-            .stderr_is("wall: invalid group argument\n");
+            .stderr_is("wall: fooblywoobly: unknown group\n");
     }
 
     #[test]
@@ -24,7 +24,7 @@ mod tests {
             .arg("99999") // assuming this group doesnt exist
             .fails()
             .code_is(1)
-            .stderr_is("wall: 99999: unknown gid\n");
+            .stderr_is("wall: 99999: unknown group\n");
     }
 
     #[test]

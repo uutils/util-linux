@@ -76,6 +76,7 @@ sysinfo = "0.38"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
+unicode-width = { version = "0.2.2", default-features = false }
 uucore = "0.2.2"
 uuid = { version = "1.16.0", features = ["rng-rand"] }
 uutests = "0.6.0"

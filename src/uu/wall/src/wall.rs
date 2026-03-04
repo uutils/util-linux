@@ -2,27 +2,30 @@ use clap::{crate_version, Arg, ArgAction, Command};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 #[cfg(unix)]
-use uucore::error::USimpleError;
+use uucore::{
+    entries::{Group, Locate},
+    error::USimpleError,
+    process,
+};
 
 const ABOUT: &str = help_about!("wall.md");
 const USAGE: &str = help_usage!("wall.md");
 
 #[cfg(unix)]
 mod unix {
-    use super::{UResult, USimpleError};
+    use super::process;
 
-    use chrono::{DateTime, Local};
-    use libc::{c_char, gid_t};
+    use uucore::entries::{uid2usr, Locate, Passwd};
+    use uucore::utmpx::Utmpx;
+
     use std::{
-        ffi::{CStr, CString},
-        fmt::Write as fw,
+        ffi::CStr,
         fs::OpenOptions,
         io::{BufRead, BufReader, Read, Write},
-        str::FromStr,
         sync::{mpsc, Arc},
-        time::{Duration, SystemTime},
+        time::Duration,
     };
-    use unicode_width::UnicodeWidthChar;
+    use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
     const TERM_WIDTH: usize = 79;
     const BLANK: &str = unsafe { str::from_utf8_unchecked(&[b' '; TERM_WIDTH]) };
@@ -35,50 +38,30 @@ mod unix {
     // if group is specified, only print to memebers of the group.
     pub fn wall<R: Read>(
         input: R,
-        group: Option<gid_t>,
+        group: Option<libc::gid_t>,
         timeout: Option<&u64>,
         print_banner: bool,
     ) {
         let msg = makemsg(input, print_banner);
         let mut seen_ttys = Vec::with_capacity(16);
-        loop {
-            // get next user entry and check it is valid
-            let entry = unsafe {
-                let utmpptr = libc::getutxent();
-                if utmpptr.is_null() {
-                    break;
-                }
-                &*utmpptr
-            };
-
-            if entry.ut_user[0] == 0 || entry.ut_type != libc::USER_PROCESS {
+        for record in Utmpx::iter_all_records() {
+            if !record.is_user_process() {
                 continue;
             }
 
             // make sure device is valid
-            let first = entry.ut_line[0].cast_unsigned();
-            if first == 0 || first == b':' {
+            let tty = record.tty_device();
+            if tty.is_empty() || tty.starts_with(':') {
                 continue;
             }
 
             // check group membership
             if let Some(gid) = group {
-                if !is_gr_member(&entry.ut_user, gid) {
-                    continue;
+                match Passwd::locate(record.user().as_str()) {
+                    Ok(pw) if pw.gid == gid || pw.belongs_to().contains(&gid) => {}
+                    _ => continue,
                 }
             }
-
-            // get tty
-            let tty = unsafe {
-                let len = entry
-                    .ut_line
-                    .iter()
-                    .position(|&c| c == 0)
-                    .unwrap_or(entry.ut_line.len());
-
-                let bytes = std::slice::from_raw_parts(entry.ut_line.as_ptr().cast(), len);
-                str::from_utf8_unchecked(bytes).to_owned()
-            };
 
             // output message to device
             if !seen_ttys.contains(&tty) {
@@ -88,7 +71,6 @@ mod unix {
                 seen_ttys.push(tty);
             }
         }
-        unsafe { libc::endutxent() };
     }
 
     // Create the banner and sanitise input
@@ -105,16 +87,7 @@ mod unix {
                 }
             };
 
-            let user = unsafe {
-                let ruid = libc::getuid();
-                let pw = libc::getpwuid(ruid);
-                if !pw.is_null() && !(*pw).pw_name.is_null() {
-                    CStr::from_ptr((*pw).pw_name).to_string_lossy().into_owned()
-                } else {
-                    eprintln!("cannot get passwd uid");
-                    "<someone>".to_string()
-                }
-            };
+            let user = uid2usr(process::getuid()).unwrap_or("<someone>".to_string());
 
             let tty = unsafe {
                 let tty_ptr = libc::ttyname(libc::STDOUT_FILENO);
@@ -126,14 +99,14 @@ mod unix {
                 }
             };
 
-            let date = DateTime::<Local>::from(SystemTime::now()).format("%a %b %e %T %Y");
+            let date = chrono::Local::now().format("%a %b %e %T %Y");
             let banner = format!("Broadcast message from {user}@{hostname} ({tty}) ({date}):");
 
             blank(&mut buf);
             buf += &banner;
             buf.extend(std::iter::repeat_n(
                 ' ',
-                TERM_WIDTH.saturating_sub(banner.len()),
+                TERM_WIDTH.saturating_sub(banner.width()),
             ));
             buf += "\x07\x07\r\n";
         }
@@ -153,6 +126,8 @@ mod unix {
     // - wraps lines by TERM_WIDTH
     // - escapes control characters
     fn sanitise_line(line: &str) -> String {
+        use std::fmt::Write;
+
         let mut buf = String::with_capacity(line.len());
         let mut col = 0;
 
@@ -179,7 +154,7 @@ mod unix {
                 }
                 _ => {
                     buf.push(ch);
-                    col += ch.width_cjk().unwrap_or_default();
+                    col += ch.width().unwrap_or_default();
                 }
             }
 
@@ -193,63 +168,6 @@ mod unix {
         // fill rest of line with spaces
         buf.extend(std::iter::repeat_n(' ', TERM_WIDTH.saturating_sub(col)));
         buf + "\r\n"
-    }
-
-    // Determine if user is in specified group
-    fn is_gr_member(user: &[c_char], gid: gid_t) -> bool {
-        // make sure user exists in database
-        let pw = unsafe { libc::getpwnam(user.as_ptr()) };
-        if pw.is_null() {
-            return false;
-        }
-
-        // if so, check if primary group matches
-        let group = unsafe { (*pw).pw_gid };
-        if gid == group {
-            return true;
-        }
-
-        // on macos, getgrouplist takes c_int as its group argument
-        #[cfg(target_os = "macos")]
-        let group = group.cast_signed();
-
-        // otherwise check gid is in list of supplementary groups user belongs to
-        let mut ngroups = 16;
-        let mut groups = vec![0; ngroups as usize];
-        while unsafe {
-            libc::getgrouplist(user.as_ptr(), group, groups.as_mut_ptr(), &raw mut ngroups)
-        } == -1
-        {
-            // ret -1 means buffer was too small so we resize
-            // according to the returned ngroups value
-            groups.resize(ngroups as usize, 0);
-        }
-
-        #[cfg(target_os = "macos")]
-        let gid = gid.cast_signed();
-        groups.contains(&gid)
-    }
-
-    // Try to get corresponding group gid.
-    pub fn get_group_gid(group: &String) -> UResult<gid_t> {
-        // first we try as a group name
-        let Ok(cname) = CString::from_str(group) else {
-            return Err(USimpleError::new(1, "invalid group argument"));
-        };
-
-        let gr = unsafe { libc::getgrnam(cname.as_ptr()) };
-        if !gr.is_null() {
-            return Ok(unsafe { (*gr).gr_gid });
-        }
-
-        // otherwise, try as literal gid
-        let Ok(gid) = group.parse::<gid_t>() else {
-            return Err(USimpleError::new(1, "invalid group argument"));
-        };
-        if unsafe { libc::getgrgid(gid) }.is_null() {
-            return Err(USimpleError::new(1, format!("{group}: unknown gid")));
-        }
-        Ok(gid)
     }
 
     // Write to the tty device
@@ -337,7 +255,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     // get nobanner flag and check if user is root
     let flag = args.get_flag("nobanner");
-    let print_banner = if flag && unsafe { libc::geteuid() } != 0 {
+    let print_banner = if flag && process::geteuid() != 0 {
         eprintln!("wall: --nobanner is available only for root");
         true
     } else {
@@ -347,7 +265,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // if group exists, map to corresponding gid
     let group = args
         .get_one::<String>("group")
-        .map(unix::get_group_gid)
+        .map(|g| {
+            Group::locate(g.as_str())
+                .map(|g| g.gid)
+                .map_err(|_| USimpleError::new(1, format!("{g}: unknown group")))
+        })
         .transpose()?;
 
     // If we have a single input arg and it exists on disk, treat as a file.
@@ -365,14 +287,12 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             // When we are not root, but suid or sgid, refuse to read files
             // (e.g. device files) that the user may not have access to.
             // After all, our invoker can easily do "wall < file" instead of "wall file".
-            unsafe {
-                let uid = libc::getuid();
-                if uid > 0 && (uid != libc::geteuid() || libc::getgid() != libc::getegid()) {
-                    return Err(USimpleError::new(
-                        1,
-                        format!("will not read {fname} - use stdin"),
-                    ));
-                }
+            let uid = process::getuid();
+            if uid > 0 && (uid != process::geteuid() || process::getgid() != process::getegid()) {
+                return Err(USimpleError::new(
+                    1,
+                    format!("will not read {fname} - use stdin"),
+                ));
             }
 
             let Ok(f) = File::open(p) else {
