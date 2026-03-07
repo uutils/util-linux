@@ -78,9 +78,12 @@ mod unix {
         let mut buf = String::with_capacity(256);
         if print_banner {
             let hostname = unsafe {
-                let mut buf = [0; 256];
-                let ret = libc::gethostname(buf.as_mut_ptr(), buf.len());
-                if ret == 0 {
+                let max = libc::sysconf(libc::_SC_HOST_NAME_MAX);
+                let len = if max > 0 { max as usize } else { 64 };
+
+                let mut buf = vec![0; len + 1];
+                let ret = libc::gethostname(buf.as_mut_ptr(), len);
+                if buf[0] != 0 && ret == 0 {
                     CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned()
                 } else {
                     "unknown".to_string()
