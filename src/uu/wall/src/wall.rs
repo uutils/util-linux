@@ -144,7 +144,7 @@ mod unix {
                     buf.push((ch as u8 ^ 0x40) as char);
                     col += 2;
                 }
-                _ if (0x80_u8..=0x9F).contains(&(ch as u8)) => {
+                _ if (0x80..=0x9F).contains(&(ch as u32)) => {
                     let _ = write!(buf, "\\x{:02X}", ch as u8);
                     col += 4;
                 }
@@ -212,7 +212,7 @@ pub fn uu_app() -> Command {
             Arg::new("group")
                 .short('g')
                 .long("group")
-                .help("only send mesage to group"),
+                .help("only send message to group"),
         )
         .arg(
             Arg::new("nobanner")
