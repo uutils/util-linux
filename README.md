@@ -14,6 +14,7 @@ We are rewriting [these tools](https://github.com/util-linux/util-linux) in Rust
 First, reimplement the most important tools from util-linux:
 
 ## System Information
+
 - `dmesg`: Displays kernel messages.
 - `lscpu`: Shows CPU architecture information.
   Started
@@ -23,6 +24,7 @@ First, reimplement the most important tools from util-linux:
 - `lsns`: Lists namespaces.
 
 ## Hardware Management
+
 - `chcpu`: Manages CPU state.
 - `rtcwake`: Manages system sleep states.
 - `zramctl`: Manages zram devices.
@@ -30,6 +32,7 @@ First, reimplement the most important tools from util-linux:
 - `chmem`: Manages kernel memory usage.
 
 ## Filesystem Tools
+
 - `findmnt`: Lists mounted filesystems.
 - `mountpoint`: Checks if a directory is a mountpoint.
   Started
@@ -40,6 +43,7 @@ First, reimplement the most important tools from util-linux:
 - `wipefs`: Wipes filesystem signatures.
 
 ## Partition Management
+
 - `blkdiscard`: Discards sectors on a device.
 - `blkid`: Identifies block device attributes.
 - `blkzone`: Manages zoned block device parameters.
@@ -52,6 +56,7 @@ First, reimplement the most important tools from util-linux:
 - `resizepart`: Resizes a partition.
 
 ## Process and Resource Management
+
 - `runuser`: Runs a shell with different user/group IDs.
 - `sulogin`: Provides single-user mode login.
 - `chrt`: Manages real-time process attributes.
@@ -63,6 +68,7 @@ First, reimplement the most important tools from util-linux:
 - `uclampset`: Manages process utilization clamping.
 
 ## User and Session Management
+
 - `su`: Changes user ID or becomes superuser.
 - `agetty`: Manages TTYs for login prompts.
 - `ctrlaltdel`: Configures Ctrl-Alt-Del action.
@@ -74,14 +80,17 @@ First, reimplement the most important tools from util-linux:
 - `setsid`: Runs a program in a new session.
 - `setterm`: Sets terminal attributes.
 - `getty`: Manages virtual console login prompts.
+- `wall`: Writes a message to all logged-in users.
 
 ## Networking and IPC
+
 - `ipcmk`: Creates IPC resources.
 - `ipcrm`: Removes IPC resources.
 - `ipcs`: Shows IPC facilities status.
 - `nsenter`: Enters different namespaces.
 
 ## Utility Tools
+
 - `lsblk`: Lists block devices.
 - `fallocate`: Preallocates file space.
 - `flock`: Manages file locks.
@@ -102,7 +111,8 @@ First, reimplement the most important tools from util-linux:
 - `uuidgen`: Generate different types of UUID.
 
 Note:
-* /bin/more is already implemented in https://github.com/uutils/coreutils
+
+- /bin/more is already implemented in https://github.com/uutils/coreutils
 
 Project:
 http://www.kernel.org/pub/linux/utils/util-linux/
