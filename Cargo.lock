@@ -429,7 +429,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -639,7 +639,7 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1112,7 +1112,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1285,7 +1285,7 @@ dependencies = [
  "getrandom 0.4.1",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1724,9 +1724,9 @@ dependencies = [
 
 [[package]]
 name = "uucore"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b157ba598d7f7ed06f6dbc62999edb9d730b4d3fb58e503d8ad6d5fbe1e04391"
+checksum = "a8038531f506a34ab4612b93f97d5f40759768cd34a83fd2af041b84fcbde474"
 dependencies = [
  "clap",
  "dns-lookup",
@@ -1737,10 +1737,11 @@ dependencies = [
  "libc",
  "nix",
  "os_display",
+ "rustc-hash",
  "thiserror",
  "time",
  "unic-langid",
- "uucore_procs 0.6.0",
+ "uucore_procs 0.7.0",
  "wild",
 ]
 
@@ -1757,9 +1758,9 @@ dependencies = [
 
 [[package]]
 name = "uucore_procs"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daa291a52608ac5a2f8539e119666e021baa6b8c01f22f02ed201bbae54cbbc0"
+checksum = "0f63e2d5083ff0983193a33e2d57fd271c7e3e3e7df8e46e8f471865647b2cbc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1798,9 +1799,9 @@ dependencies = [
 
 [[package]]
 name = "uutests"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83559c0581b560419248e130b8d8a3d362ae1f4d0a150ac5c493cc0acdb1ae31"
+checksum = "25b8a1598ddd20230a5df59d642e2e5741b0b90038bde8684c984515f947fda5"
 dependencies = [
  "ctor",
  "libc",
@@ -1810,7 +1811,7 @@ dependencies = [
  "regex",
  "rlimit",
  "tempfile",
- "uucore 0.6.0",
+ "uucore 0.7.0",
  "xattr",
 ]
 
