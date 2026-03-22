@@ -4,7 +4,6 @@
 // file that was distributed with this source code.
 
 use std::io::{self, Write};
-#[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
@@ -25,7 +24,6 @@ use crate::escape::escape_octal;
 /// ```text
 /// <source> <target> <fstype> <options> 0 0
 /// ```
-#[cfg(target_os = "linux")]
 pub fn write_mtab_to(
     path: &Path,
     source: &str,
@@ -71,7 +69,6 @@ pub fn write_mtab_to(
 ///
 /// This is a convenience wrapper around [`write_mtab_to`] that uses the
 /// standard path `/etc/mtab`.
-#[cfg(target_os = "linux")]
 pub fn write_mtab(source: &str, target: &str, fs_type: &str, opts: &str) -> io::Result<()> {
     write_mtab_to(Path::new("/etc/mtab"), source, target, fs_type, opts)
 }

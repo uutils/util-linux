@@ -1,4 +1,3 @@
-#[cfg(target_os = "linux")]
 use crate::errors::MountError;
 use crate::escape::unescape_octal;
 #[cfg(target_os = "linux")]

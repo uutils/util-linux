@@ -16,6 +16,7 @@ use uucore::{error::UResult, format_usage, help_about, help_usage};
 mod errors;
 mod escape;
 mod fstab;
+#[cfg(target_os = "linux")]
 mod mtab;
 #[cfg(target_os = "linux")]
 use errors::MountError;
@@ -24,6 +25,7 @@ pub use fstab::{
     parse_fstab_contents, resolve_label_from, resolve_partlabel_from, resolve_partuuid_from,
     resolve_single_argument_from, resolve_spec, resolve_uuid_from, FsTabEntry, ResolvedMount,
 };
+#[cfg(target_os = "linux")]
 pub use mtab::write_mtab_to;
 
 const ABOUT: &str = help_about!("mount.md");
