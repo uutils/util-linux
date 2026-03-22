@@ -46,6 +46,7 @@ feat_common_core = [
   "rev",
   "setpgid",
   "setsid",
+  "taskset",
   "uuidgen",
 ]
 
@@ -114,6 +115,7 @@ renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "sr
 rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/rev" }
 setpgid = { optional = true, version = "0.0.1", package = "uu_setpgid", path = "src/uu/setpgid" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
+taskset = { optional = true, version = "0.0.1", package = "uu_taskset", path = "src/uu/taskset" }
 uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
 
 [dev-dependencies]
