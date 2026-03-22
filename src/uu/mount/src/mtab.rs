@@ -7,8 +7,6 @@ use std::io::{self, Write};
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
-use crate::escape::escape_octal;
-
 /// Append a mount entry to the file at `path`.
 ///
 /// If `path` is a symbolic link the function returns `Ok(())` without writing
@@ -63,6 +61,20 @@ pub fn write_mtab_to(
 
     // The exclusive lock is released automatically when `file` drops here.
     Ok(())
+}
+
+fn escape_octal(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for byte in s.bytes() {
+        match byte {
+            b' ' => escaped.push_str(r"\040"),
+            b'\t' => escaped.push_str(r"\011"),
+            b'\n' => escaped.push_str(r"\012"),
+            b'\\' => escaped.push_str(r"\134"),
+            _ => escaped.push(byte as char),
+        }
+    }
+    escaped
 }
 
 /// Append a mount entry to `/etc/mtab`.

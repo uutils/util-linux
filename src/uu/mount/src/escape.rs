@@ -25,19 +25,3 @@ pub(crate) fn unescape_octal(s: &str) -> String {
     }
     String::from_utf8_lossy(&result).into_owned()
 }
-
-/// Escape characters that would otherwise break the whitespace-separated mount
-/// table format.
-pub(crate) fn escape_octal(s: &str) -> String {
-    let mut escaped = String::with_capacity(s.len());
-    for byte in s.bytes() {
-        match byte {
-            b' ' => escaped.push_str(r"\040"),
-            b'\t' => escaped.push_str(r"\011"),
-            b'\n' => escaped.push_str(r"\012"),
-            b'\\' => escaped.push_str(r"\134"),
-            _ => escaped.push(byte as char),
-        }
-    }
-    escaped
-}
