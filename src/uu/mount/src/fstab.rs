@@ -1,5 +1,7 @@
+#[cfg(target_os = "linux")]
 use crate::errors::MountError;
 use crate::escape::unescape_octal;
+#[cfg(target_os = "linux")]
 use std::path::Path;
 
 /// Case-insensitive prefix strip that preserves the original case of the
@@ -76,6 +78,7 @@ pub fn parse_fstab_contents(contents: &str) -> Vec<FsTabEntry> {
 }
 
 /// Read and parse an fstab-formatted file.
+#[cfg(target_os = "linux")]
 pub fn parse_fstab_path(path: &Path) -> Result<Vec<FsTabEntry>, MountError> {
     let contents = std::fs::read_to_string(path)
         .map_err(|err| MountError::FstabRead(path.display().to_string(), err))?;
