@@ -378,7 +378,10 @@ fn test_mkdir_creates_missing_target() {
         ])
         .succeeds();
 
-    assert!(target.is_dir(), "--mkdir should create the target directory");
+    assert!(
+        target.is_dir(),
+        "--mkdir should create the target directory"
+    );
 }
 
 /// `--test-opts` should filter `--all` entries using options from the chosen fstab.
@@ -445,7 +448,10 @@ fn test_all_with_mkdir_creates_missing_target() {
         ])
         .succeeds();
 
-    assert!(target.is_dir(), "--all --mkdir should create the target directory");
+    assert!(
+        target.is_dir(),
+        "--all --mkdir should create the target directory"
+    );
 }
 
 /// `--fork` should be accepted with `--all` and still mount all matching entries.
@@ -507,7 +513,12 @@ fn test_make_rprivate_fake_succeeds() {
 
     let dir = TempDir::new().unwrap();
     new_ucmd!()
-        .args(&["--fake", "--make-rprivate", "--target", dir.path().to_str().unwrap()])
+        .args(&[
+            "--fake",
+            "--make-rprivate",
+            "--target",
+            dir.path().to_str().unwrap(),
+        ])
         .succeeds();
 }
 

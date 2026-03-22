@@ -3,17 +3,21 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, Arg, ArgAction, ArgGroup, ArgMatches, Command};
-use std::collections::{HashMap, HashSet};
-use uucore::{
-    error::{UError, UResult},
-    format_usage, help_about, help_usage,
-};
+#[cfg(target_os = "linux")]
+use clap::ArgMatches;
+use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
+#[cfg(target_os = "linux")]
+use std::collections::HashMap;
+use std::collections::HashSet;
+#[cfg(target_os = "linux")]
+use uucore::error::UError;
+use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 mod errors;
 mod escape;
 mod fstab;
 mod mtab;
+#[cfg(target_os = "linux")]
 use errors::MountError;
 use escape::unescape_octal;
 pub use fstab::{
@@ -244,6 +248,7 @@ pub fn fstype_matches_filter(fs_type: &str, filter: &str) -> bool {
     included.contains(&fs_type)
 }
 
+#[cfg(target_os = "linux")]
 fn canonical_device_path(path: &str) -> Option<String> {
     let path = std::path::Path::new(path);
     if !path.exists() {
@@ -254,6 +259,7 @@ fn canonical_device_path(path: &str) -> Option<String> {
         .map(|resolved| resolved.to_string_lossy().into_owned())
 }
 
+#[cfg(target_os = "linux")]
 fn source_match_candidates(source: &str) -> HashSet<String> {
     let mut candidates = HashSet::from([source.to_string()]);
     if let Some(resolved) = resolve_spec(source) {
@@ -268,6 +274,7 @@ fn source_match_candidates(source: &str) -> HashSet<String> {
     candidates
 }
 
+#[cfg(target_os = "linux")]
 pub fn is_already_mounted(entry: &FsTabEntry, mounts: &[MountEntry]) -> bool {
     let expected_sources = source_match_candidates(&entry.fs_spec);
     mounts.iter().any(|mount| {
@@ -276,6 +283,7 @@ pub fn is_already_mounted(entry: &FsTabEntry, mounts: &[MountEntry]) -> bool {
     })
 }
 
+#[cfg(target_os = "linux")]
 fn read_mount_labels() -> HashMap<String, String> {
     let mut labels = HashMap::new();
     let Ok(entries) = std::fs::read_dir("/dev/disk/by-label") else {
@@ -292,18 +300,21 @@ fn read_mount_labels() -> HashMap<String, String> {
     labels
 }
 
+#[cfg(target_os = "linux")]
 fn mount_label<'a>(entry: &MountEntry, labels: &'a HashMap<String, String>) -> Option<&'a str> {
     source_match_candidates(&entry.source)
         .into_iter()
         .find_map(|source| labels.get(&source).map(String::as_str))
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PropagationChange {
     pub name: &'static str,
     pub flags: libc::c_ulong,
 }
 
+#[cfg(target_os = "linux")]
 pub fn collect_propagation_changes(enabled: &[&str]) -> Vec<PropagationChange> {
     enabled
         .iter()
@@ -345,6 +356,7 @@ pub fn collect_propagation_changes(enabled: &[&str]) -> Vec<PropagationChange> {
         .collect()
 }
 
+#[cfg(target_os = "linux")]
 fn selected_propagation_changes(matches: &ArgMatches) -> Vec<PropagationChange> {
     let mut enabled = Vec::new();
     for option in [
@@ -364,6 +376,7 @@ fn selected_propagation_changes(matches: &ArgMatches) -> Vec<PropagationChange> 
     collect_propagation_changes(&enabled)
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone, Copy)]
 struct MountInvocation<'a> {
     source: Option<&'a str>,
@@ -371,9 +384,14 @@ struct MountInvocation<'a> {
     lookup_arg: Option<&'a str>,
 }
 
+#[cfg(target_os = "linux")]
 fn resolve_mount_invocation<'a>(matches: &'a ArgMatches) -> UResult<MountInvocation<'a>> {
-    let source_opt = matches.get_one::<String>(options::SOURCE).map(String::as_str);
-    let target_opt = matches.get_one::<String>(options::TARGET).map(String::as_str);
+    let source_opt = matches
+        .get_one::<String>(options::SOURCE)
+        .map(String::as_str);
+    let target_opt = matches
+        .get_one::<String>(options::TARGET)
+        .map(String::as_str);
     let arg1 = matches
         .get_one::<String>(options::POSITIONAL_SOURCE)
         .map(String::as_str);
@@ -433,6 +451,7 @@ fn resolve_mount_invocation<'a>(matches: &'a ArgMatches) -> UResult<MountInvocat
     Ok(invocation)
 }
 
+#[cfg(target_os = "linux")]
 fn ensure_mount_point(target: &str) -> Result<(), MountError> {
     use std::os::unix::fs::DirBuilderExt;
 
@@ -796,8 +815,12 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         let cli_target = target.or(lookup_arg);
 
         let resolved = match (label, uuid, partlabel, partuuid) {
-            (Some(lbl), None, None, None) => fstab::resolve_label_from(lbl, cli_target, &fstab_entries)?,
-            (None, Some(id), None, None) => fstab::resolve_uuid_from(id, cli_target, &fstab_entries)?,
+            (Some(lbl), None, None, None) => {
+                fstab::resolve_label_from(lbl, cli_target, &fstab_entries)?
+            }
+            (None, Some(id), None, None) => {
+                fstab::resolve_uuid_from(id, cli_target, &fstab_entries)?
+            }
             (None, None, Some(lbl), None) => {
                 fstab::resolve_partlabel_from(lbl, cli_target, &fstab_entries)?
             }
@@ -893,7 +916,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                         continue;
                     }
                 }
-                let label = labels.as_ref().and_then(|labels| mount_label(&entry, labels));
+                let label = labels
+                    .as_ref()
+                    .and_then(|labels| mount_label(&entry, labels));
                 println!("{}", format_mount_listing(&entry, label));
             }
         }
