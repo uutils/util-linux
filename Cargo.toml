@@ -59,7 +59,7 @@ errno = "0.3"
 libc = "0.2.171"
 libmount-sys = "0.1.1"
 linux-raw-sys = { version = "0.12.0", features = ["ioctl"] }
-md-5 = "0.10.6"
+md-5 = "0.11.0"
 nix = { version = "0.31", default-features = false }
 parse_datetime = "0.11.0"
 phf = "0.13.0"
