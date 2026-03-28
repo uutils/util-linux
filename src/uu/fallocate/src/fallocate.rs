@@ -4,10 +4,14 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
+#[cfg(target_os = "linux")]
 use std::fs::OpenOptions;
+#[cfg(target_os = "linux")]
 use std::io;
+#[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
 use uucore::error::{UResult, USimpleError};
+#[cfg(target_os = "linux")]
 use uucore::parser::parse_size;
 use uucore::{format_usage, help_about, help_usage};
 
@@ -28,6 +32,7 @@ mod options {
     pub const FILENAME: &str = "filename";
 }
 
+#[cfg(target_os = "linux")]
 fn parse_length_or_offset(s: &str) -> Result<u64, String> {
     parse_size::parse_size_u64(s).map_err(|e| format!("failed to parse size: {e}"))
 }
@@ -222,6 +227,7 @@ fn dig_holes_in_file(file: &std::fs::File, offset: u64, length: Option<u64>) -> 
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn humanize_bytes(bytes: u64) -> String {
     const UNITS: &[(u64, &str)] = &[
         (1 << 60, "EiB"),
@@ -236,7 +242,7 @@ fn humanize_bytes(bytes: u64) -> String {
         if bytes >= threshold {
             let value = bytes as f64 / threshold as f64;
             // Match util-linux format: whole numbers without decimal
-            if bytes % threshold == 0 {
+            if bytes.is_multiple_of(threshold) {
                 return format!("{} {}", bytes / threshold, unit);
             }
             return format!("{value:.1} {unit}");

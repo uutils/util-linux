@@ -16,6 +16,7 @@ fn test_missing_length() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_basic_allocate() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -26,6 +27,7 @@ fn test_basic_allocate() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_allocate_with_offset() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -38,6 +40,7 @@ fn test_allocate_with_offset() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_keep_size() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -51,6 +54,7 @@ fn test_keep_size() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_verbose() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -63,6 +67,7 @@ fn test_verbose() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_posix_mode() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -83,6 +88,7 @@ fn test_mutually_exclusive_modes() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_punch_hole() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -100,6 +106,7 @@ fn test_punch_hole() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_size_suffixes() {
     let (at, mut ucmd) = at_and_ucmd!();
 
@@ -112,6 +119,7 @@ fn test_size_suffixes() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn test_nonexistent_file_for_punch() {
     new_ucmd!()
         .args(&["-p", "-l", "4096", "nonexistent"])
