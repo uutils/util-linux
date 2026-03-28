@@ -31,6 +31,7 @@ feat_common_core = [
   "chcpu",
   "ctrlaltdel",
   "dmesg",
+  "fallocate",
   "fsfreeze",
   "hexdump",
   "last",
@@ -99,6 +100,7 @@ cal = { optional = true, version = "0.0.1", package = "uu_cal", path = "src/uu/c
 chcpu = { optional = true, version = "0.0.1", package = "uu_chcpu", path = "src/uu/chcpu" }
 ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", path = "src/uu/ctrlaltdel" }
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
+fallocate = { optional = true, version = "0.0.1", package = "uu_fallocate", path = "src/uu/fallocate" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 hexdump = { optional = true, version = "0.0.1", package = "uu_hexdump", path = "src/uu/hexdump" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
