@@ -1368,9 +1368,9 @@ dependencies = [
 
 [[package]]
 name = "syscall-numbers"
-version = "4.0.2"
+version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e88dcf8be2fd556b3cebd02689c424dced834317c7e38328eadfcfcab00b785"
+checksum = "586ceb725d61ce8bf7c52b8e6ac0919563493f514efe7f8588b8e618b3f5f042"
 
 [[package]]
 name = "sysinfo"
