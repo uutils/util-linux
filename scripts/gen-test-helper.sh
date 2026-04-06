@@ -10,7 +10,6 @@ BINARY="$PROJECT_DIR/target/release/util-linux"
 
 mkdir -p .test-helpers
 
-
 for util in "${UTILS[@]}"; do
     cat > ".test-helpers/$util" <<EOF
 #!/bin/bash
