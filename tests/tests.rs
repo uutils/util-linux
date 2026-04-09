@@ -39,6 +39,10 @@ mod test_mountpoint;
 #[path = "by-util/test_nologin.rs"]
 mod test_nologin;
 
+#[cfg(feature = "pivot_root")]
+#[path = "by-util/test_pivot_root.rs"]
+mod test_pivot_root;
+
 #[cfg(feature = "blockdev")]
 #[path = "by-util/test_blockdev.rs"]
 mod test_blockdev;
