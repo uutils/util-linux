@@ -16,7 +16,7 @@ repository = "https://github.com/uutils/util-linux"
 readme = "README.md"
 keywords = ["util-linux", "uutils", "cross-platform", "cli", "utility"]
 categories = ["command-line-utilities"]
-rust-version = "1.70.0"
+rust-version = "1.94.0"
 edition = "2021"
 
 build = "build.rs"
