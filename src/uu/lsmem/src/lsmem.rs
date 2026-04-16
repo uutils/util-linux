@@ -12,9 +12,10 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
+use uulinux::join_under_root;
 
 const ABOUT: &str = help_about!("lsmem.md");
 const USAGE: &str = help_usage!("lsmem.md");
@@ -783,12 +784,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     }
 
     if let Some(sysroot) = matches.get_one::<String>(options::SYSROOT) {
-        opts.sysmem = format!(
-            "{}{}{}",
-            sysroot.trim_end_matches(MAIN_SEPARATOR),
-            MAIN_SEPARATOR,
-            opts.sysmem.trim_start_matches(MAIN_SEPARATOR)
-        );
+        opts.sysmem = join_under_root(Path::new(sysroot), Path::new(&opts.sysmem))
+            .display()
+            .to_string();
     }
 
     read_info(&mut lsmem, &mut opts);
