@@ -21,7 +21,7 @@ const MEMORY_BLOCK_IDS: [usize; 125] = [
 ];
 
 struct TestSysMemory {
-    sysroot: String,
+    sysroot: tempfile::TempDir,
 }
 
 /// Builds up a fake /sys/devices/system/memory filesystem.
@@ -35,11 +35,9 @@ struct TestSysMemory {
 /// And removes it automatically after the reference is dropped.
 impl TestSysMemory {
     fn new() -> Self {
-        let random = rand::random::<u32>();
-        let sysroot = Path::new(&env!("CARGO_MANIFEST_DIR"))
-            .join("target")
-            .join(format!("testsysmem-{random}"));
+        let sysroot = tempfile::tempdir().unwrap();
         let sysmem = sysroot
+            .path()
             .join("sys")
             .join("devices")
             .join("system")
@@ -60,21 +58,13 @@ impl TestSysMemory {
             write_file_content(&node_dir, ".gitkeep", "");
         }
 
-        TestSysMemory {
-            sysroot: sysroot.display().to_string(),
-        }
-    }
-}
-
-impl Drop for TestSysMemory {
-    fn drop(&mut self) {
-        std::fs::remove_dir_all(&self.sysroot).unwrap();
+        TestSysMemory { sysroot }
     }
 }
 
 fn sysroot_test_with_args(test_root: &TestSysMemory, expected_output: &str, args: &[&str]) {
     let mut cmd = new_ucmd!();
-    cmd.arg("-s").arg(&test_root.sysroot);
+    cmd.arg("-s").arg(test_root.sysroot.path());
     for arg in args {
         cmd.arg(arg);
     }
