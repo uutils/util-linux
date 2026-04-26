@@ -3,3 +3,4 @@ syntax: glob
 /target/
 
 .test-helpers
+.reference

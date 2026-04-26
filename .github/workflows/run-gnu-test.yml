@@ -39,14 +39,30 @@ jobs:
           ./autogen.sh
           ./configure
           make -j$(nproc) check-programs
+      - name: Download test baseline if exists
+        id: download-test-baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: gnu-test-failures
+          path: uutils-util-linux/.reference/
+
       - name: Run GNU tests
         env:
           GNU_PROJECT_DIR: ${{ github.workspace }}/gnu-util-linux
         run: |
           cd uutils-util-linux
           ./scripts/run-tests.sh
-        
 
+      - name: Update test baseline
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd uutils-util-linux
+          ./scripts/check-new-gnu-failures.sh --update-baseline
 
-
-
+      - name: Upload test baseline artifact
+        if: github.ref == 'refs/heads/main' || steps.download-test-baseline.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gnu-test-failures
+          path: uutils-util-linux/.reference/gnu-test-failures.txt
