@@ -1652,6 +1652,7 @@ dependencies = [
  "serde_json",
  "sysinfo",
  "uucore 0.2.2",
+ "uulinux",
 ]
 
 [[package]]
@@ -1684,6 +1685,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uucore 0.2.2",
+ "uulinux",
 ]
 
 [[package]]
@@ -1872,6 +1874,10 @@ checksum = "1409d2323564d9b8d01192a77a0604a46bf29eb42e9b535aca34dec65482652b"
 dependencies = [
  "rand",
 ]
+
+[[package]]
+name = "uulinux"
+version = "0.0.1"
 
 [[package]]
 name = "uutests"
