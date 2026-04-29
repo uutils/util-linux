@@ -1547,6 +1547,7 @@ dependencies = [
  "uu_lsmem",
  "uu_mcookie",
  "uu_mesg",
+ "uu_mount",
  "uu_mountpoint",
  "uu_nologin",
  "uu_renice",
@@ -1702,6 +1703,16 @@ version = "0.0.1"
 dependencies = [
  "clap",
  "nix 0.31.2",
+ "uucore 0.2.2",
+]
+
+[[package]]
+name = "uu_mount"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
+ "thiserror",
  "uucore 0.2.2",
 ]
 
