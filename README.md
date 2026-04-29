@@ -14,92 +14,89 @@ We are rewriting [these tools](https://github.com/util-linux/util-linux) in Rust
 First, reimplement the most important tools from util-linux:
 
 ## System Information
-- `dmesg`: Displays kernel messages.
-- `lscpu`: Shows CPU architecture information.
-  Started
-- `lsipc`: Lists IPC facilities.
-- `lslocks`: Lists system locks.
-- `lsmem`: Lists memory ranges and status.
-- `lsns`: Lists namespaces.
+- [ ] `dmesg`: Displays kernel messages. (started)
+- [ ] `lscpu`: Shows CPU architecture information. (started)
+- [ ] `lsipc`: Lists IPC facilities. (started)
+- [ ] `lslocks`: Lists system locks. (started)
+- [ ] `lsmem`: Lists memory ranges and status. (started)
+- [ ] `lsns`: Lists namespaces.
 
 ## Hardware Management
-- `chcpu`: Manages CPU state.
-- `rtcwake`: Manages system sleep states.
-- `zramctl`: Manages zram devices.
-- `wdctl`: Shows watchdog status.
-- `chmem`: Manages kernel memory usage.
+- [ ] `chcpu`: Manages CPU state. (started)
+- [ ] `rtcwake`: Manages system sleep states.
+- [ ] `zramctl`: Manages zram devices.
+- [ ] `wdctl`: Shows watchdog status.
+- [ ] `chmem`: Manages kernel memory usage.
 
 ## Filesystem Tools
-- `findmnt`: Lists mounted filesystems.
-- `mountpoint`: Checks if a directory is a mountpoint.
-  Started
-- `fsck`: Checks and repairs filesystems.
-- `fsfreeze`: Freezes/unfreezes filesystems.
-  Done
-- `fstrim`: Discards unused blocks on filesystems.
-- `wipefs`: Wipes filesystem signatures.
+- [ ] `findmnt`: Lists mounted filesystems.
+- [ ] `mountpoint`: Checks if a directory is a mountpoint. (started)
+- [ ] `fsck`: Checks and repairs filesystems.
+- [x] `fsfreeze`: Freezes/unfreezes filesystems.
+- [ ] `fstrim`: Discards unused blocks on filesystems.
+- [ ] `wipefs`: Wipes filesystem signatures.
 
 ## Partition Management
-- `blkdiscard`: Discards sectors on a device.
-- `blkid`: Identifies block device attributes.
-- `blkzone`: Manages zoned block device parameters.
-- `blockdev`: Performs block device operations.
-- `mkswap`: Sets up swap space.
-- `swaplabel`: Manages swap space labels.
-- `addpart`: Adds a partition.
-- `delpart`: Deletes a partition.
-- `partx`: Manages partition entries.
-- `resizepart`: Resizes a partition.
+- [ ] `blkdiscard`: Discards sectors on a device.
+- [ ] `blkid`: Identifies block device attributes.
+- [ ] `blkzone`: Manages zoned block device parameters.
+- [ ] `blockdev`: Performs block device operations. (started)
+- [ ] `mkswap`: Sets up swap space.
+- [ ] `swaplabel`: Manages swap space labels.
+- [ ] `addpart`: Adds a partition.
+- [ ] `delpart`: Deletes a partition.
+- [ ] `partx`: Manages partition entries.
+- [ ] `resizepart`: Resizes a partition.
 
 ## Process and Resource Management
-- `runuser`: Runs a shell with different user/group IDs.
-- `sulogin`: Provides single-user mode login.
-- `chrt`: Manages real-time process attributes.
-- `ionice`: Sets process I/O scheduling class/priority.
-- `kill`: Sends signals to processes.
-- `renice`: Alters process priority.
-- `prlimit`: Sets/gets process resource limits.
-- `taskset`: Sets/gets process CPU affinity.
-- `uclampset`: Manages process utilization clamping.
+- [ ] `runuser`: Runs a shell with different user/group IDs.
+- [ ] `sulogin`: Provides single-user mode login.
+- [ ] `chrt`: Manages real-time process attributes.
+- [ ] `ionice`: Sets process I/O scheduling class/priority.
+- [ ] `kill`: Sends signals to processes.
+- [ ] `renice`: Alters process priority. (started)
+- [ ] `prlimit`: Sets/gets process resource limits.
+- [ ] `taskset`: Sets/gets process CPU affinity.
+- [ ] `uclampset`: Manages process utilization clamping.
 
 ## User and Session Management
-- `su`: Changes user ID or becomes superuser.
-- `agetty`: Manages TTYs for login prompts.
-- `ctrlaltdel`: Configures Ctrl-Alt-Del action.
-- `pivot_root`: Changes the root filesystem.
-- `switch_root`: Switches to a different root filesystem.
-- `last`: Lists last logged-in users.
-- `lslogins`: Displays user information.
-- `mesg`: Controls write access to terminal.
-- `setsid`: Runs a program in a new session.
-- `setterm`: Sets terminal attributes.
-- `getty`: Manages virtual console login prompts.
+- [ ] `su`: Changes user ID or becomes superuser.
+- [ ] `agetty`: Manages TTYs for login prompts.
+- [x] `ctrlaltdel`: Configures Ctrl-Alt-Del action.
+- [ ] `pivot_root`: Changes the root filesystem.
+- [ ] `switch_root`: Switches to a different root filesystem.
+- [ ] `last`: Lists last logged-in users. (started)
+- [ ] `lslogins`: Displays user information.
+- [x] `mesg`: Controls write access to terminal.
+- [ ] `setsid`: Runs a program in a new session. (started)
+- [ ] `setterm`: Sets terminal attributes.
+- [ ] `getty`: Manages virtual console login prompts.
 
 ## Networking and IPC
-- `ipcmk`: Creates IPC resources.
-- `ipcrm`: Removes IPC resources.
-- `ipcs`: Shows IPC facilities status.
-- `nsenter`: Enters different namespaces.
+- [ ] `ipcmk`: Creates IPC resources.
+- [ ] `ipcrm`: Removes IPC resources.
+- [ ] `ipcs`: Shows IPC facilities status.
+- [ ] `nsenter`: Enters different namespaces.
 
 ## Utility Tools
-- `lsblk`: Lists block devices.
-- `fallocate`: Preallocates file space.
-- `flock`: Manages file locks.
-- `getopt`: Parses command options.
-- `hardlink`: Creates hard links.
-- `mcookie`: Generates random numbers.
-- `namei`: Follows a pathname to its endpoint.
-- `rename`: Renames files.
-- `rev`: Reverses lines in a file.
-- `setarch`: Sets architecture emulation.
-- `setpriv`: Runs a program with different privileges.
-- `unshare`: Runs a program with unshared namespaces.
-- `utmpdump`: Dumps UTMP/WTMP files.
-- `whereis`: Locates binaries, sources, and manuals.
-- `ldattach`: Attaches line discipline to a serial line.
-- `readprofile`: Reads kernel profiling info.
-- `i386, linux32, linux64, x86_64`: Set personality flags for execution environment.
-- `uuidgen`: Generate different types of UUID.
+- [ ] `lsblk`: Lists block devices.
+- [ ] `fallocate`: Preallocates file space.
+- [ ] `flock`: Manages file locks.
+- [ ] `getopt`: Parses command options.
+- [ ] `hardlink`: Creates hard links.
+- [x] `mcookie`: Generates random numbers.
+- [ ] `namei`: Follows a pathname to its endpoint.
+- [ ] `rename`: Renames files.
+- [x] `rev`: Reverses lines in a file.
+- [ ] `setarch`: Sets architecture emulation.
+- [ ] `setpriv`: Runs a program with different privileges.
+- [ ] `unshare`: Runs a program with unshared namespaces.
+- [ ] `utmpdump`: Dumps UTMP/WTMP files.
+- [ ] `whereis`: Locates binaries, sources, and manuals.
+- [ ] `ldattach`: Attaches line discipline to a serial line.
+- [ ] `readprofile`: Reads kernel profiling info.
+- [ ] `i386, linux32, linux64, x86_64`: Set personality flags for execution environment.
+- [ ] `uuidgen`: Generate different types of UUID. (started)
 
 Note:
 * /bin/more is already implemented in https://github.com/uutils/coreutils
