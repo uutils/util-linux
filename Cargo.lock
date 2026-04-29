@@ -1538,6 +1538,7 @@ dependencies = [
  "uu_chcpu",
  "uu_ctrlaltdel",
  "uu_dmesg",
+ "uu_fallocate",
  "uu_fsfreeze",
  "uu_hexdump",
  "uu_last",
@@ -1610,6 +1611,15 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "uucore 0.2.2",
+]
+
+[[package]]
+name = "uu_fallocate"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
  "uucore 0.2.2",
 ]
 
