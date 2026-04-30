@@ -1545,6 +1545,7 @@ dependencies = [
  "uu_lsipc",
  "uu_lslocks",
  "uu_lsmem",
+ "uu_lsns",
  "uu_mcookie",
  "uu_mesg",
  "uu_mountpoint",
@@ -1685,6 +1686,15 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "uucore 0.2.2",
+]
+
+[[package]]
+name = "uu_lsns"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "smartcols-sys",
  "uucore 0.2.2",
 ]
 

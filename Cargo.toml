@@ -38,6 +38,7 @@ feat_common_core = [
   "lsipc",
   "lslocks",
   "lsmem",
+  "lsns",  
   "mcookie",
   "mesg",
   "mountpoint",
@@ -110,6 +111,7 @@ lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/
 lsipc = { optional = true, version = "0.0.1", package = "uu_lsipc", path = "src/uu/lsipc" }
 lslocks = { optional = true, version = "0.0.1", package = "uu_lslocks", path = "src/uu/lslocks" }
 lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/uu/lsmem" }
+lsns = { optional = true, version = "0.0.1", package = "uu_lsns", path = "src/uu/lsns" }
 mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "src/uu/mcookie" }
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
