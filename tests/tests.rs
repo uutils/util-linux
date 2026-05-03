@@ -8,7 +8,7 @@ use std::env;
 pub const TESTS_BINARY: &str = env!("CARGO_BIN_EXE_util-linux");
 
 // Use the ctor attribute to run this function before any tests
-#[ctor::ctor]
+#[ctor::ctor(unsafe)]
 fn init() {
     unsafe {
         // Necessary for uutests to be able to find the binary
