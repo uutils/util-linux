@@ -23,7 +23,7 @@ build = "build.rs"
 
 [features]
 default = ["feat_common_core"]
-uudoc = []
+uudoc = ["dep:uuhelp_parser", "dep:zip"]
 
 feat_common_core = [
   "blockdev",
@@ -76,10 +76,12 @@ tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
 uucore = "0.2.2"
+uuhelp_parser = "0.2.2"
 uuid = { version = "1.16.0", features = ["rng-rand"] }
 uutests = "0.8.0"
 windows = { version = "0.62.2" }
 xattr = "1.3.1"
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [dependencies]
 clap = { workspace = true }
@@ -92,6 +94,8 @@ serde = { workspace = true }
 serde_json  = { workspace = true }
 textwrap = { workspace = true }
 uucore = { workspace = true }
+uuhelp_parser = { workspace = true, optional = true }
+zip = { workspace = true, optional = true }
 
 #
 blockdev = { optional = true, version = "0.0.1", package = "uu_blockdev", path = "src/uu/blockdev" }
