@@ -3,8 +3,13 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use std::{collections::HashSet, fs, path::PathBuf};
+use std::{
+    collections::HashSet,
+    fs,
+    path::{Path, PathBuf},
+};
 use uucore::parser::parse_size;
+use uulinux::join_under_root;
 
 pub struct CpuVulnerability {
     pub name: String,
@@ -42,13 +47,16 @@ pub enum CacheType {
 }
 
 impl CpuTopology {
-    pub fn new() -> Self {
+    pub fn new(root: &Path) -> Self {
         let mut out: Vec<Cpu> = vec![];
 
-        let online_cpus = parse_cpu_list(&read_online_cpus());
+        let online_cpus = parse_cpu_list(&read_online_cpus(root));
 
         for cpu_index in online_cpus {
-            let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/"));
+            let cpu_dir = join_under_root(
+                root,
+                &PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/")),
+            );
 
             let pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
                 .unwrap()
@@ -62,7 +70,7 @@ impl CpuTopology {
                 .parse::<usize>()
                 .unwrap();
 
-            let caches = read_cpu_caches(cpu_index);
+            let caches = read_cpu_caches(root, cpu_index);
 
             out.push(Cpu {
                 _index: cpu_index,
@@ -120,15 +128,19 @@ impl CacheSize {
 }
 
 // TODO: respect `--hex` option and output the bitmask instead of human-readable range
-pub fn read_online_cpus() -> String {
-    fs::read_to_string("/sys/devices/system/cpu/online")
+pub fn read_online_cpus(root: &Path) -> String {
+    let path = join_under_root(root, Path::new("/sys/devices/system/cpu/online"));
+    fs::read_to_string(path)
         .expect("Could not read sysfs")
         .trim()
         .to_string()
 }
 
-fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
-    let cpu_dir = PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/"));
+fn read_cpu_caches(root: &Path, cpu_index: usize) -> Vec<CpuCache> {
+    let cpu_dir = join_under_root(
+        root,
+        &PathBuf::from(format!("/sys/devices/system/cpu/cpu{cpu_index}/")),
+    );
     let cache_dir = fs::read_dir(cpu_dir.join("cache")).unwrap();
     let cache_paths = cache_dir
         .flatten()
@@ -170,16 +182,18 @@ fn read_cpu_caches(cpu_index: usize) -> Vec<CpuCache> {
     caches
 }
 
-pub fn read_freq_boost_state() -> Option<bool> {
-    fs::read_to_string("/sys/devices/system/cpu/cpufreq/boost")
+pub fn read_freq_boost_state(root: &Path) -> Option<bool> {
+    let path = join_under_root(root, Path::new("/sys/devices/system/cpu/cpufreq/boost"));
+    fs::read_to_string(path)
         .map(|content| content.trim() == "1")
         .ok()
 }
 
-pub fn read_cpu_vulnerabilities() -> Vec<CpuVulnerability> {
+pub fn read_cpu_vulnerabilities(root: &Path) -> Vec<CpuVulnerability> {
     let mut out: Vec<CpuVulnerability> = vec![];
 
-    if let Ok(dir) = fs::read_dir("/sys/devices/system/cpu/vulnerabilities") {
+    let path = join_under_root(root, Path::new("/sys/devices/system/cpu/vulnerabilities"));
+    if let Ok(dir) = fs::read_dir(path) {
         let mut files: Vec<_> = dir
             .flatten()
             .map(|x| x.path())
@@ -203,8 +217,9 @@ pub fn read_cpu_vulnerabilities() -> Vec<CpuVulnerability> {
     out
 }
 
-pub fn read_cpu_byte_order() -> Option<&'static str> {
-    if let Ok(byte_order) = fs::read_to_string("/sys/kernel/cpu_byteorder") {
+pub fn read_cpu_byte_order(root: &Path) -> Option<&'static str> {
+    let path = join_under_root(root, Path::new("/sys/kernel/cpu_byteorder"));
+    if let Ok(byte_order) = fs::read_to_string(path) {
         match byte_order.trim() {
             "big" => return Some("Big Endian"),
             "little" => return Some("Little Endian"),
