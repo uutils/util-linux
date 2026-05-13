@@ -1,0 +1,68 @@
+
+name: Run GNU Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  native:
+    name: Run GNU tests (native)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code (uutils/util-linux)
+        uses: actions/checkout@v6
+        with:
+          path: uutils-util-linux
+      - name: Checkout code (util-linux/util-linux)
+        uses: actions/checkout@v6
+        with:
+          repository: util-linux/util-linux
+          path: gnu-util-linux
+          ref: v2.41.4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./uutils-util-linux -> target"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update --quiet
+          sudo apt-get install -y \
+            build-essential autoconf automake autopoint pkg-config \
+            libtool gettext bison \
+            bc socat ntp iproute2 squashfs-tools \
+            libcap-ng-dev libpam-dev libudev-dev python3-dev libmount-dev libclang-dev libsmartcols-dev curl
+      - name: Build GNU tests
+        run: |
+          cd gnu-util-linux
+          ./autogen.sh
+          ./configure
+          make -j$(nproc) check-programs
+      - name: Download test baseline if exists
+        id: download-test-baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: gnu-test-failures
+          path: uutils-util-linux/.reference/
+
+      - name: Run GNU tests
+        env:
+          GNU_PROJECT_DIR: ${{ github.workspace }}/gnu-util-linux
+        run: |
+          cd uutils-util-linux
+          ./scripts/run-tests.sh
+
+      - name: Update test baseline
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd uutils-util-linux
+          ./scripts/check-new-gnu-failures.sh --update-baseline
+
+      - name: Upload test baseline artifact
+        if: github.ref == 'refs/heads/main' || steps.download-test-baseline.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gnu-test-failures
+          path: uutils-util-linux/.reference/gnu-test-failures.txt
