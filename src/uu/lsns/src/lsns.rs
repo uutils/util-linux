@@ -13,6 +13,7 @@ use std::fs::DirEntry;
 
 use clap::{Command, crate_version};
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 use uucore::entries;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
@@ -79,6 +80,7 @@ struct Lsns {
     namespaces: Vec<Namespace>,
 }
 
+#[cfg(target_os = "linux")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches = uu_app().try_get_matches_from(args)?;
@@ -144,6 +146,7 @@ fn parse_process_stat(stat: &str) -> Option<u32> {
     Some(pid)
 }
 
+#[cfg(target_os = "linux")]
 fn get_uid_from_entry(entry: &DirEntry) -> Option<u32> {
     let f = entry.metadata().ok()?;
     let uid = f.st_uid();
