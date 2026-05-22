@@ -90,3 +90,20 @@ mod test_mcookie;
 #[cfg(feature = "uuidgen")]
 #[path = "by-util/test_uuidgen.rs"]
 mod test_uuidgen;
+
+#[test]
+fn test_list() {
+    let out = std::process::Command::new(TESTS_BINARY)
+        .arg("--list")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(!lines.is_empty());
+    // Can be replaced with lines.is_sorted() starting with Rust 1.82.
+    assert!(lines.windows(2).all(|w| w[0] <= w[1]));
+    // Spot-check a few utilities that should always be present.
+    assert!(lines.contains(&"rev"));
+    assert!(lines.contains(&"dmesg"));
+}
