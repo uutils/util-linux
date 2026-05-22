@@ -28,11 +28,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update --quiet
+          # omit preinstalled tools <https://github.com/actions/runner-images/tree/main/images/ubuntu>
           sudo apt-get install -y \
-            build-essential autoconf automake autopoint pkg-config \
-            libtool gettext bison \
-            bc socat ntp iproute2 squashfs-tools \
-            libcap-ng-dev libpam-dev libudev-dev python3-dev libmount-dev libclang-dev libsmartcols-dev curl
+            autopoint gettext bc socat ntp squashfs-tools \
+            libcap-ng-dev libpam-dev libudev-dev python3-dev libmount-dev libclang-dev libsmartcols-dev
       - name: Build GNU tests
         run: |
           cd gnu-util-linux
