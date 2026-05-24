@@ -87,6 +87,10 @@ mod test_hexdump;
 #[path = "by-util/test_mcookie.rs"]
 mod test_mcookie;
 
+#[cfg(feature = "taskset")]
+#[path = "by-util/test_taskset.rs"]
+mod test_taskset;
+
 #[cfg(feature = "uuidgen")]
 #[path = "by-util/test_uuidgen.rs"]
 mod test_uuidgen;
