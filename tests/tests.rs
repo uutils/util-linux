@@ -75,6 +75,10 @@ mod test_last;
 #[path = "by-util/test_dmesg.rs"]
 mod test_dmesg;
 
+#[cfg(feature = "fallocate")]
+#[path = "by-util/test_fallocate.rs"]
+mod test_fallocate;
+
 #[cfg(feature = "fsfreeze")]
 #[path = "by-util/test_fsfreeze.rs"]
 mod test_fsfreeze;
