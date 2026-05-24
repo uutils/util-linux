@@ -1,0 +1,18 @@
+[package]
+name = "uu_pivot_root"
+version = "0.0.1"
+edition = "2021"
+description = "change the root filesystem"
+
+[lib]
+path = "src/pivot_root.rs"
+
+[[bin]]
+name = "pivot_root"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+libc = { workspace = true }
+uucore = { workspace = true }
+thiserror = { workspace = true }
