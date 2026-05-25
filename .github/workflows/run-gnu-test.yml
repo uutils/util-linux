@@ -37,6 +37,7 @@ jobs:
           cd gnu-util-linux
           ./autogen.sh
           ./configure
+          make libsmartcols/src/filter-parser.c libsmartcols/src/filter-scanner.c
           make -j$(nproc) check-programs
       - name: Download test baseline if exists
         id: download-test-baseline
