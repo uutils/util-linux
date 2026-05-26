@@ -7,6 +7,7 @@
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
 mod errors;
+#[cfg(target_os = "linux")]
 mod smartcols;
 
 use std::fs::DirEntry;
@@ -15,10 +16,12 @@ use clap::{Command, crate_version};
 use std::fs;
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
+#[cfg(target_os = "linux")]
 use uucore::entries;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 use crate::errors::LsnsError;
+#[cfg(target_os = "linux")]
 use crate::smartcols::{Table, TableOperations};
 
 const ABOUT: &str = help_about!("lsns.md");
@@ -80,7 +83,6 @@ struct Lsns {
     namespaces: Vec<Namespace>,
 }
 
-#[cfg(target_os = "linux")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches = uu_app().try_get_matches_from(args)?;
@@ -146,6 +148,11 @@ fn parse_process_stat(stat: &str) -> Option<u32> {
     Some(pid)
 }
 
+#[cfg(not(target_os = "linux"))]
+fn get_uid_from_entry(_entry: &DirEntry) -> Option<u32> {
+    unimplemented!()
+}
+
 #[cfg(target_os = "linux")]
 fn get_uid_from_entry(entry: &DirEntry) -> Option<u32> {
     let f = entry.metadata().ok()?;
@@ -153,8 +160,14 @@ fn get_uid_from_entry(entry: &DirEntry) -> Option<u32> {
     Some(uid)
 }
 
+#[cfg(not(target_os = "linux"))]
+fn get_pid_from_entry(_entry: &DirEntry) -> Option<u64> {
+    unimplemented!()
+}
+
 /// Check if a directory entry in /proc represents a process.
 /// If so, returns the PID, None otherwise
+#[cfg(target_os = "linux")]
 fn get_pid_from_entry(entry: &DirEntry) -> Option<u64> {
     let file_name = entry.file_name();
     let name = file_name.to_str()?;
@@ -167,9 +180,15 @@ fn get_pid_from_entry(entry: &DirEntry) -> Option<u64> {
         .then(|| name.parse::<u64>().ok())?
 }
 
+#[cfg(not(target_os = "linux"))]
+fn get_ns_ino(_pid: u32, _nsname: &str) -> Option<u64> {
+    unimplemented!()
+}
+
 /// Get namespace inode number for a process
 ///
 /// Reads /proc/[pid]/ns/[nsname] and returns the namespace's inode
+#[cfg(target_os = "linux")]
 fn get_ns_ino(pid: u32, nsname: &str) -> Option<u64> {
     let ns_path = format!("/proc/{}/ns/{}", pid, nsname);
 
@@ -440,6 +459,7 @@ impl NamespaceType {
 }
 
 /// Display namespaces in default format using smartcols
+#[cfg(target_os = "linux")]
 fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     use smartcols_sys::{SCOLS_FL_RIGHT, SCOLS_FL_TRUNC};
 
@@ -518,7 +538,13 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     Ok(())
 }
 
+#[cfg(not(target_os = "linux"))]
+fn display_namespaces(_lsns: &Lsns) -> Result<(), LsnsError> {
+    unimplemented!()
+}
+
 /// Get username from cache, querying the system if not cached
+#[cfg(target_os = "linux")]
 fn get_username_from_cache(cache: &mut std::collections::HashMap<u32, String>, uid: u32) -> String {
     cache
         .entry(uid)
@@ -527,4 +553,12 @@ fn get_username_from_cache(cache: &mut std::collections::HashMap<u32, String>, u
             entries::uid2usr(uid).unwrap_or_else(|_| uid.to_string())
         })
         .clone()
+}
+
+#[cfg(not(target_os = "linux"))]
+fn get_username_from_cache(
+    _cache: &mut std::collections::HashMap<u32, String>,
+    _uid: u32,
+) -> String {
+    unimplemented!()
 }
