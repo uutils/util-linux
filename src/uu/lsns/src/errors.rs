@@ -17,7 +17,7 @@ pub enum LsnsError {
     /// Invalid namespace type index
     InvalidNamespaceType(usize),
     /// Unsupported platform
-    #[allow(dead_code)]
+    #[cfg(not(target_os = "linux"))]
     UnsupportedPlatform,
     /// Invalid namespace inode format
     InvalidNamespaceInodeFormat(String),
@@ -57,6 +57,7 @@ impl fmt::Display for LsnsError {
             Self::IOError(message, err) => write!(f, "{message}: {err}"),
             Self::NulError(message, err) => write!(f, "{message}: {err}"),
             Self::InvalidNamespaceType(idx) => write!(f, "Invalid namespace type index: {}", idx),
+            #[cfg(not(target_os = "linux"))]
             Self::UnsupportedPlatform => write!(f, "lsns is only supported on Linux"),
             Self::InvalidNamespaceInodeFormat(s) => {
                 write!(f, "Invalid namespace inode format: {}", s)
