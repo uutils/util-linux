@@ -10,12 +10,13 @@ mod errors;
 #[cfg(target_os = "linux")]
 mod smartcols;
 
-use std::fs::DirEntry;
-
 use clap::{Command, crate_version};
-use std::{fs, ffi::{CString}};
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
+use std::{
+    ffi::CString,
+    fs::{self, DirEntry, read_dir},
+};
 #[cfg(target_os = "linux")]
 use uucore::entries;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
@@ -43,9 +44,9 @@ enum NamespaceType {
 
 // Struct to store process information
 struct Process {
-    // Process ID - unique identifier for this process
-    pid: u32,
-    // User ID - the user that owns this process
+    // Unique identifier for this process
+    pid: i32,
+    // ID of the user that owns this process
     uid: u32,
     // Namespace inode IDs for each namespace type
     ns_ids: [u64; 8],
@@ -54,7 +55,6 @@ struct Process {
 }
 
 impl Process {
-    /// Creates a new instance with the given PID
     pub fn new() -> Self {
         Self {
             pid: 0,
@@ -66,18 +66,19 @@ impl Process {
 }
 
 struct Namespace {
-    // Namespace ID - unique identifier for this namespace
+    // Unique identifier for this namespace
     id: u32,
     // Namespace type
     ns_type: NamespaceType,
     // Number of processes in this namespace
     nprocs: u32,
     // Representative process (lowest PID) - used for display
-    representative_pid: Option<u32>,
-    // Fallback UID for namespaces without processes (persistent namespaces)
+    representative_pid: Option<i32>,
+    // Fallback UID for namespaces without processes (for persistent namespaces)
     uid_fallback: u32,
 }
 
+/// The main struct for lsns
 struct Lsns {
     processes: Vec<Process>,
     namespaces: Vec<Namespace>,
@@ -111,39 +112,37 @@ pub fn uu_app() -> Command {
 
 /// Read information of all the processes from /proc
 fn read_processes(path: &str, lsns: &mut Lsns) -> Result<(), LsnsError> {
-    let entries = std::fs::read_dir(path)?;
+    let entries = read_dir(path)?;
 
     for entry in entries {
-        let _entry: DirEntry = match entry {
-            Ok(e) => e,
-            Err(_) => continue,
+        let Ok(entry) = entry else {
+            continue;
         };
 
-        let pid: u64 = match get_pid_from_entry(&_entry) {
-            Some(p) => p,
-            None => continue,
+        let Some(pid) = get_pid_from_entry(&entry) else {
+            continue;
         };
 
-        let process = match read_process(&_entry, pid as i32) {
-            Some(p) => p,
-            None => continue,
+        let Some(process) = read_process(&entry, pid) else {
+            continue;
         };
         lsns.processes.push(process);
     }
+
     Ok(())
 }
 
-/// Parse /proc/[pid]/stat content to extract PID
+/// Parse /proc/[pid]/stat content to extract various fields. Currently only extracts PID.
 ///
 /// Format: PID (COMMAND) STATE PPID ...
 /// The command name can contain spaces and parentheses
-fn parse_process_stat(stat: &str) -> Option<u32> {
+fn parse_process_stat(stat: &str) -> Option<i32> {
     // Find the first '(' - marks start of command name
     let lparen_pos = stat.find('(')?;
 
     // Extract PID (everything before the '(')
     let pid_str = stat[..lparen_pos].trim();
-    let pid: u32 = pid_str.parse().ok()?;
+    let pid: i32 = pid_str.parse().ok()?;
 
     Some(pid)
 }
@@ -161,14 +160,14 @@ fn get_uid_from_entry(entry: &DirEntry) -> Option<u32> {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn get_pid_from_entry(_entry: &DirEntry) -> Option<u64> {
+fn get_pid_from_entry(_entry: &DirEntry) -> Option<i32> {
     unimplemented!()
 }
 
 /// Check if a directory entry in /proc represents a process.
 /// If so, returns the PID, None otherwise
 #[cfg(target_os = "linux")]
-fn get_pid_from_entry(entry: &DirEntry) -> Option<u64> {
+fn get_pid_from_entry(entry: &DirEntry) -> Option<i32> {
     let file_name = entry.file_name();
     let name = file_name.to_str()?;
 
@@ -177,7 +176,7 @@ fn get_pid_from_entry(entry: &DirEntry) -> Option<u64> {
     name.chars()
         .next()?
         .is_ascii_digit()
-        .then(|| name.parse::<u64>().ok())?
+        .then(|| name.parse::<i32>().ok())?
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -189,7 +188,7 @@ fn get_ns_ino(_pid: u32, _nsname: &str) -> Option<u64> {
 ///
 /// Reads /proc/[pid]/ns/[nsname] and returns the namespace's inode
 #[cfg(target_os = "linux")]
-fn get_ns_ino(pid: u32, nsname: &str) -> Option<u64> {
+fn get_ns_ino(pid: i32, nsname: &str) -> Option<u64> {
     let ns_path = format!("/proc/{}/ns/{}", pid, nsname);
 
     // Get the namespace inode by stat'ing the namespace file
@@ -203,7 +202,7 @@ fn get_ns_ino(pid: u32, nsname: &str) -> Option<u64> {
 ///
 /// Tries to read from /proc/[pid]/cmdline first (full command line),
 /// falls back to /proc/[pid]/comm (just the command name)
-fn get_process_command(pid: u32) -> String {
+fn get_process_command(pid: i32) -> String {
     // Try cmdline first (full command with arguments)
     let cmdline_path = format!("/proc/{}/cmdline", pid);
     if let Ok(content) = fs::read(&cmdline_path) {
@@ -235,7 +234,7 @@ fn get_process_command(pid: u32) -> String {
 /// Read process information from /proc/[pid] for a single process
 fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
     let mut process = Process::new();
-    process.pid = pid as u32;
+    process.pid = pid;
 
     process.uid = get_uid_from_entry(entry)?;
 
@@ -484,7 +483,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     let mut username_cache = std::collections::HashMap::new();
 
     // Build process lookup map for O(1) access by PID
-    let process_map: std::collections::HashMap<u32, &Process> =
+    let process_map: std::collections::HashMap<i32, &Process> =
         lsns.processes.iter().map(|p| (p.pid, p)).collect();
 
     // Add each namespace as a row
