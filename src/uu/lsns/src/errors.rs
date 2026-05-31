@@ -12,6 +12,8 @@ use uucore::error::UError;
 pub enum LsnsError {
     /// Generic I/O error with context message
     IOError(String, std::io::Error),
+    /// CString conversion error (null byte in string)
+    NulError(String, std::ffi::NulError),
 }
 
 impl LsnsError {
@@ -38,6 +40,7 @@ impl fmt::Display for LsnsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::IOError(message, err) => write!(f, "{message}: {err}"),
+            Self::NulError(message, err) => write!(f, "{message}: {err}"),
         }
     }
 }
@@ -58,5 +61,12 @@ impl std::error::Error for LsnsError {}
 impl From<std::io::Error> for LsnsError {
     fn from(err: std::io::Error) -> Self {
         Self::IOError(String::new(), err)
+    }
+}
+
+// Implement From trait for automatic conversion from std::ffi::NulError
+impl From<std::ffi::NulError> for LsnsError {
+    fn from(err: std::ffi::NulError) -> Self {
+        Self::NulError(String::new(), err)
     }
 }

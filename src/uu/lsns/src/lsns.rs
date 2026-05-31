@@ -13,7 +13,7 @@ mod smartcols;
 use std::fs::DirEntry;
 
 use clap::{Command, crate_version};
-use std::fs;
+use std::{fs, ffi::{CString}};
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 #[cfg(target_os = "linux")]
@@ -510,16 +510,16 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
         let command = rep_proc.map(|p| p.command.as_str()).unwrap_or("");
 
         // Set cell data
-        let ns_str = std::ffi::CString::new(ns.id.to_string()).unwrap();
-        let type_str = std::ffi::CString::new(ns_type).unwrap();
-        let nprocs_str = std::ffi::CString::new(ns.nprocs.to_string()).unwrap();
+        let ns_str = CString::new(ns.id.to_string())?;
+        let type_str = CString::new(ns_type)?;
+        let nprocs_str = CString::new(ns.nprocs.to_string())?;
         let pid_str = if rep_pid > 0 {
-            std::ffi::CString::new(rep_pid.to_string()).unwrap()
+            CString::new(rep_pid.to_string())?
         } else {
-            std::ffi::CString::new("").unwrap()
+            CString::new("")?
         };
-        let user_str = std::ffi::CString::new(user).unwrap();
-        let command_str = std::ffi::CString::new(command).unwrap();
+        let user_str = CString::new(user)?;
+        let command_str = CString::new(command)?;
 
         line.set_data(0, &ns_str)?;
         line.set_data(1, &type_str)?;
