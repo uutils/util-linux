@@ -14,8 +14,9 @@ use clap::{Command, crate_version};
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 use std::{
+    collections::HashMap,
     ffi::CString,
-    fs::{self, DirEntry, read_dir},
+    fs::{self, DirEntry, read_dir, read_to_string},
 };
 #[cfg(target_os = "linux")]
 use uucore::entries;
@@ -67,7 +68,7 @@ impl Process {
 
 struct Namespace {
     // Unique identifier for this namespace
-    id: u32,
+    id: u64,
     // Namespace type
     ns_type: NamespaceType,
     // Number of processes in this namespace
@@ -262,6 +263,7 @@ fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
     Some(process)
 }
 
+/// Read namespace information
 fn read_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
     read_assigned_namespaces(lsns);
 
@@ -275,7 +277,7 @@ fn read_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
 /// Read and organize namespaces from the processes we've collected
 fn read_assigned_namespaces(lsns: &mut Lsns) {
     // Key: namespace inode, Value: index in lsns.namespaces vector
-    let mut namespace_map: std::collections::HashMap<u64, usize> = std::collections::HashMap::new();
+    let mut namespace_map: HashMap<u64, usize> = HashMap::new();
 
     // Iterate through all processes we collected
     for proc_id in 0..lsns.processes.len() {
@@ -298,10 +300,8 @@ fn read_assigned_namespaces(lsns: &mut Lsns) {
                 idx
             } else {
                 // This is a new namespace - create it
-
-                // Create the new namespace
                 let namespace = Namespace {
-                    id: ns_inode as u32, // Cast to match your Namespace.id type
+                    id: ns_inode, // Cast to match your Namespace.id type
                     ns_type: NamespaceType::from_index(ns_type_id),
                     nprocs: 0, // Will increment as we add processes
                     representative_pid: Some(process.pid), // Set initial representative
@@ -318,7 +318,7 @@ fn read_assigned_namespaces(lsns: &mut Lsns) {
                 idx
             };
 
-            // Now increment the process count for this namespace
+            // Increment the process count for this namespace
             lsns.namespaces[ns_idx].nprocs += 1;
 
             // Update representative process (keep the lowest PID)
@@ -338,7 +338,7 @@ fn read_assigned_namespaces(lsns: &mut Lsns) {
 /// Read namespaces that are bind-mounted to the filesystem (persistent namespaces)
 fn read_persistent_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
     // Read the mount table from /proc/self/mountinfo
-    let mountinfo = fs::read_to_string("/proc/self/mountinfo")?;
+    let mountinfo = read_to_string("/proc/self/mountinfo")?;
 
     // Parse each line of the mount table
     for line in mountinfo.lines() {
@@ -402,7 +402,7 @@ fn read_persistent_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
         // Create a minimal namespace entry for persistent namespaces
         // These namespaces have no processes (nprocs = 0) and no representative
         let namespace = Namespace {
-            id: ns_inode as u32,
+            id: ns_inode,
             ns_type: NamespaceType::from_index(ns_type_idx),
             nprocs: 0,                // Persistent namespace - no processes
             representative_pid: None, // No representative process
@@ -434,7 +434,7 @@ fn parse_namespace_inode(mount_root: &str) -> Option<u64> {
 
 /// Check if a namespace with this inode already exists
 fn namespace_exists(lsns: &Lsns, ns_inode: u64) -> bool {
-    lsns.namespaces.iter().any(|ns| ns.id as u64 == ns_inode)
+    lsns.namespaces.iter().any(|ns| ns.id == ns_inode)
 }
 
 /// Helper to convert namespace type index to enum
@@ -480,11 +480,10 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     table.new_column(c"COMMAND", 0.0, SCOLS_FL_TRUNC)?;
 
     // Build username cache once before displaying
-    let mut username_cache = std::collections::HashMap::new();
+    let mut username_cache = HashMap::new();
 
     // Build process lookup map for O(1) access by PID
-    let process_map: std::collections::HashMap<i32, &Process> =
-        lsns.processes.iter().map(|p| (p.pid, p)).collect();
+    let process_map: HashMap<i32, &Process> = lsns.processes.iter().map(|p| (p.pid, p)).collect();
 
     // Add each namespace as a row
     for ns in &lsns.namespaces {
@@ -505,7 +504,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
         };
         let user = get_username_from_cache(&mut username_cache, uid);
 
-        // Get command (empty for namespaces without processes)
+        // Get command (empty for namespaces without processes - persistent namespaces)
         let command = rep_proc.map(|p| p.command.as_str()).unwrap_or("");
 
         // Set cell data
@@ -528,7 +527,6 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
         line.set_data(5, &command_str)?;
     }
 
-    // Print the table
     table.print()?;
 
     Ok(())
@@ -541,7 +539,7 @@ fn display_namespaces(_lsns: &Lsns) -> Result<(), LsnsError> {
 
 /// Get username from cache, querying the system if not cached
 #[cfg(target_os = "linux")]
-fn get_username_from_cache(cache: &mut std::collections::HashMap<u32, String>, uid: u32) -> String {
+fn get_username_from_cache(cache: &mut HashMap<u32, String>, uid: u32) -> String {
     cache
         .entry(uid)
         .or_insert_with(|| {
@@ -552,9 +550,6 @@ fn get_username_from_cache(cache: &mut std::collections::HashMap<u32, String>, u
 }
 
 #[cfg(not(target_os = "linux"))]
-fn get_username_from_cache(
-    _cache: &mut std::collections::HashMap<u32, String>,
-    _uid: u32,
-) -> String {
+fn get_username_from_cache(_cache: &mut HashMap<u32, String>, _uid: u32) -> String {
     unimplemented!()
 }
