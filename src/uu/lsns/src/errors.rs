@@ -16,6 +16,19 @@ pub enum LsnsError {
     NulError(String, std::ffi::NulError),
     /// Invalid namespace type index
     InvalidNamespaceType(usize),
+    /// Unsupported platform
+    #[allow(dead_code)]
+    UnsupportedPlatform,
+    /// Invalid namespace inode format
+    InvalidNamespaceInodeFormat(String),
+    /// Invalid process stat format
+    InvalidProcessStatFormat(String),
+    /// Failed to get UID from directory entry
+    FailedToGetUid(String),
+    /// Failed to get PID from directory entry
+    FailedToGetPid(String),
+    /// Failed to read process information
+    FailedToReadProcess(String),
 }
 
 impl LsnsError {
@@ -44,6 +57,22 @@ impl fmt::Display for LsnsError {
             Self::IOError(message, err) => write!(f, "{message}: {err}"),
             Self::NulError(message, err) => write!(f, "{message}: {err}"),
             Self::InvalidNamespaceType(idx) => write!(f, "Invalid namespace type index: {}", idx),
+            Self::UnsupportedPlatform => write!(f, "lsns is only supported on Linux"),
+            Self::InvalidNamespaceInodeFormat(s) => {
+                write!(f, "Invalid namespace inode format: {}", s)
+            }
+            Self::InvalidProcessStatFormat(s) => {
+                write!(f, "Invalid process stat format: {}", s)
+            }
+            Self::FailedToGetUid(s) => {
+                write!(f, "Failed to get UID from directory entry: {}", s)
+            }
+            Self::FailedToGetPid(s) => {
+                write!(f, "Failed to get PID from directory entry: {}", s)
+            }
+            Self::FailedToReadProcess(s) => {
+                write!(f, "Failed to read process information: {}", s)
+            }
         }
     }
 }

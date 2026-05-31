@@ -120,11 +120,11 @@ fn read_processes(path: &str, lsns: &mut Lsns) -> Result<(), LsnsError> {
             continue;
         };
 
-        let Some(pid) = get_pid_from_entry(&entry) else {
+        let Ok(pid) = get_pid_from_entry(&entry) else {
             continue;
         };
 
-        let Some(process) = read_process(&entry, pid) else {
+        let Ok(process) = read_process(&entry, pid) else {
             continue;
         };
         lsns.processes.push(process);
@@ -137,66 +137,84 @@ fn read_processes(path: &str, lsns: &mut Lsns) -> Result<(), LsnsError> {
 ///
 /// Format: PID (COMMAND) STATE PPID ...
 /// The command name can contain spaces and parentheses
-fn parse_process_stat(stat: &str) -> Option<i32> {
+fn parse_process_stat(stat: &str) -> Result<i32, LsnsError> {
     // Find the first '(' - marks start of command name
-    let lparen_pos = stat.find('(')?;
+    let lparen_pos = stat
+        .find('(')
+        .ok_or_else(|| LsnsError::InvalidProcessStatFormat(stat.to_string()))?;
 
     // Extract PID (everything before the '(')
     let pid_str = stat[..lparen_pos].trim();
-    let pid: i32 = pid_str.parse().ok()?;
+    let pid: i32 = pid_str
+        .parse()
+        .map_err(|_| LsnsError::InvalidProcessStatFormat(stat.to_string()))?;
 
-    Some(pid)
+    Ok(pid)
 }
 
 #[cfg(not(target_os = "linux"))]
-fn get_uid_from_entry(_entry: &DirEntry) -> Option<u32> {
-    unimplemented!()
+fn get_uid_from_entry(_entry: &DirEntry) -> Result<u32, LsnsError> {
+    Err(LsnsError::UnsupportedPlatform)
 }
 
 #[cfg(target_os = "linux")]
-fn get_uid_from_entry(entry: &DirEntry) -> Option<u32> {
-    let f = entry.metadata().ok()?;
+fn get_uid_from_entry(entry: &DirEntry) -> Result<u32, LsnsError> {
+    let f = entry
+        .metadata()
+        .map_err(|e| LsnsError::FailedToGetUid(e.to_string()))?;
     let uid = f.st_uid();
-    Some(uid)
+    Ok(uid)
 }
 
 #[cfg(not(target_os = "linux"))]
-fn get_pid_from_entry(_entry: &DirEntry) -> Option<i32> {
-    unimplemented!()
+fn get_pid_from_entry(_entry: &DirEntry) -> Result<i32, LsnsError> {
+    Err(LsnsError::UnsupportedPlatform)
 }
 
 /// Check if a directory entry in /proc represents a process.
-/// If so, returns the PID, None otherwise
+/// If so, returns the PID, or an error otherwise
 #[cfg(target_os = "linux")]
-fn get_pid_from_entry(entry: &DirEntry) -> Option<i32> {
+fn get_pid_from_entry(entry: &DirEntry) -> Result<i32, LsnsError> {
     let file_name = entry.file_name();
-    let name = file_name.to_str()?;
+    let name = file_name
+        .to_str()
+        .ok_or_else(|| LsnsError::FailedToGetPid("Invalid UTF-8 in filename".to_string()))?;
 
     // Check if name starts with a digit and parse as PID
     // Process directories are numeric PIDs (e.g., "1234")
-    name.chars()
-        .next()?
-        .is_ascii_digit()
-        .then(|| name.parse::<i32>().ok())?
+    let first_char = name
+        .chars()
+        .next()
+        .ok_or_else(|| LsnsError::FailedToGetPid("Empty filename".to_string()))?;
+
+    if !first_char.is_ascii_digit() {
+        return Err(LsnsError::FailedToGetPid(format!(
+            "Not a numeric PID: {}",
+            name
+        )));
+    }
+
+    name.parse::<i32>()
+        .map_err(|_| LsnsError::FailedToGetPid(format!("Failed to parse PID: {}", name)))
 }
 
 #[cfg(not(target_os = "linux"))]
-fn get_ns_ino(_pid: u32, _nsname: &str) -> Option<u64> {
-    unimplemented!()
+fn get_ns_ino(_pid: i32, _nsname: &str) -> Result<u64, LsnsError> {
+    Err(LsnsError::UnsupportedPlatform)
 }
 
 /// Get namespace inode number for a process
 ///
 /// Reads /proc/[pid]/ns/[nsname] and returns the namespace's inode
 #[cfg(target_os = "linux")]
-fn get_ns_ino(pid: i32, nsname: &str) -> Option<u64> {
+fn get_ns_ino(pid: i32, nsname: &str) -> Result<u64, LsnsError> {
     let ns_path = format!("/proc/{}/ns/{}", pid, nsname);
 
     // Get the namespace inode by stat'ing the namespace file
-    let metadata = fs::metadata(&ns_path).ok()?;
+    let metadata = fs::metadata(&ns_path)?;
     let ino = metadata.st_ino();
 
-    Some(ino)
+    Ok(ino)
 }
 
 /// Get the command name for a process
@@ -233,7 +251,7 @@ fn get_process_command(pid: i32) -> String {
 }
 
 /// Read process information from /proc/[pid] for a single process
-fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
+fn read_process(entry: &DirEntry, pid: i32) -> Result<Process, LsnsError> {
     let mut process = Process::new();
     process.pid = pid;
 
@@ -242,17 +260,16 @@ fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
     // Read and parse /proc/[pid]/stat to validate the process
     let stat_path = format!("/proc/{}/stat", pid);
 
-    let stat_content = match fs::read_to_string(&stat_path) {
-        Ok(s) => s,
-        Err(_) => return None,
-    };
+    let stat_content = fs::read_to_string(&stat_path).map_err(|e| {
+        LsnsError::FailedToReadProcess(format!("Failed to read {}: {}", stat_path, e))
+    })?;
 
     let pid = parse_process_stat(&stat_content)?;
     process.pid = pid;
 
     // Get namespace inodes for all namespace types
     for (i, nsname) in NSNAMES.iter().enumerate() {
-        if let Some(ino) = get_ns_ino(pid, nsname) {
+        if let Ok(ino) = get_ns_ino(pid, nsname) {
             process.ns_ids[i] = ino;
         }
     }
@@ -260,7 +277,7 @@ fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
     // Read command name from /proc/[pid]/cmdline (preferred) or /proc/[pid]/comm (fallback)
     process.command = get_process_command(pid);
 
-    Some(process)
+    Ok(process)
 }
 
 /// Read namespace information
@@ -322,7 +339,6 @@ fn read_assigned_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
             lsns.namespaces[ns_idx].nprocs += 1;
 
             // Update representative process (keep the lowest PID)
-            // This matches the C code: if (!ns->proc || ns->proc->pid > proc->pid)
             let should_update = match lsns.namespaces[ns_idx].representative_pid {
                 None => true,                                   // No representative yet
                 Some(current_pid) => process.pid < current_pid, // New process has lower PID
@@ -382,8 +398,8 @@ fn read_persistent_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
         // Parse the namespace inode from the root
         // Format: "type:[inode]"
         let ns_inode = match parse_namespace_inode(mount_root) {
-            Some(ino) => ino,
-            None => continue, // Invalid format, skip
+            Ok(ino) => ino,
+            Err(_) => continue, // Invalid format, skip
         };
 
         // Check if we already know about this namespace
@@ -420,18 +436,24 @@ fn read_persistent_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
 /// Parse namespace inode from mount root string
 ///
 /// Input format: "net:[4026531992]"
-/// Returns: Some(4026531992) or None if invalid
-fn parse_namespace_inode(mount_root: &str) -> Option<u64> {
+/// Returns: Ok(4026531992) or Err if invalid
+fn parse_namespace_inode(mount_root: &str) -> Result<u64, LsnsError> {
     // Find the opening bracket
-    let start = mount_root.find('[')?;
+    let start = mount_root
+        .find('[')
+        .ok_or_else(|| LsnsError::InvalidNamespaceInodeFormat(mount_root.to_string()))?;
     // Find the closing bracket
-    let end = mount_root.find(']')?;
+    let end = mount_root
+        .find(']')
+        .ok_or_else(|| LsnsError::InvalidNamespaceInodeFormat(mount_root.to_string()))?;
 
     // Extract the number between brackets
     let inode_str = &mount_root[start + 1..end];
 
     // Parse to u64
-    inode_str.parse::<u64>().ok()
+    inode_str
+        .parse::<u64>()
+        .map_err(|_| LsnsError::InvalidNamespaceInodeFormat(mount_root.to_string()))
 }
 
 /// Check if a namespace with this inode already exists
@@ -467,7 +489,6 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     // Create table
     let mut table = Table::new()?;
 
-    // Define columns matching the C implementation
     // NS: width_hint=10, right-aligned
     table.new_column(c"NS", 10.0, SCOLS_FL_RIGHT)?;
     // TYPE: width_hint=5, left-aligned
@@ -536,7 +557,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 
 #[cfg(not(target_os = "linux"))]
 fn display_namespaces(_lsns: &Lsns) -> Result<(), LsnsError> {
-    unimplemented!()
+    Err(LsnsError::UnsupportedPlatform)
 }
 
 /// Get username from cache, querying the system if not cached
@@ -553,5 +574,5 @@ fn get_username_from_cache(cache: &mut HashMap<u32, String>, uid: u32) -> String
 
 #[cfg(not(target_os = "linux"))]
 fn get_username_from_cache(_cache: &mut HashMap<u32, String>, _uid: u32) -> String {
-    unimplemented!()
+    "".to_string()
 }
