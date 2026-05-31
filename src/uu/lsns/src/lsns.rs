@@ -264,13 +264,10 @@ fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
 }
 
 fn read_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
-    // Phase 2a: Read namespaces from running processes
     read_assigned_namespaces(lsns);
 
     read_persistent_namespaces(lsns)?;
 
-    // Sort namespaces by inode number (NS column)
-    // This matches the C code: list_sort(&ls->namespaces, cmp_namespaces, NULL);
     lsns.namespaces.sort_by_key(|ns| ns.id);
 
     Ok(())
