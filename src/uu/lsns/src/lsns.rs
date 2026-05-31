@@ -265,7 +265,7 @@ fn read_process(entry: &DirEntry, pid: i32) -> Option<Process> {
 
 /// Read namespace information
 fn read_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
-    read_assigned_namespaces(lsns);
+    read_assigned_namespaces(lsns)?;
 
     read_persistent_namespaces(lsns)?;
 
@@ -275,7 +275,7 @@ fn read_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
 }
 
 /// Read and organize namespaces from the processes we've collected
-fn read_assigned_namespaces(lsns: &mut Lsns) {
+fn read_assigned_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
     // Key: namespace inode, Value: index in lsns.namespaces vector
     let mut namespace_map: HashMap<u64, usize> = HashMap::new();
 
@@ -302,7 +302,7 @@ fn read_assigned_namespaces(lsns: &mut Lsns) {
                 // This is a new namespace - create it
                 let namespace = Namespace {
                     id: ns_inode, // Cast to match your Namespace.id type
-                    ns_type: NamespaceType::from_index(ns_type_id),
+                    ns_type: NamespaceType::from_index(ns_type_id)?,
                     nprocs: 0, // Will increment as we add processes
                     representative_pid: Some(process.pid), // Set initial representative
                     uid_fallback: process.uid, // Fallback UID if no process later
@@ -333,6 +333,8 @@ fn read_assigned_namespaces(lsns: &mut Lsns) {
             }
         }
     }
+
+    Ok(())
 }
 
 /// Read namespaces that are bind-mounted to the filesystem (persistent namespaces)
@@ -403,7 +405,7 @@ fn read_persistent_namespaces(lsns: &mut Lsns) -> Result<(), LsnsError> {
         // These namespaces have no processes (nprocs = 0) and no representative
         let namespace = Namespace {
             id: ns_inode,
-            ns_type: NamespaceType::from_index(ns_type_idx),
+            ns_type: NamespaceType::from_index(ns_type_idx)?,
             nprocs: 0,                // Persistent namespace - no processes
             representative_pid: None, // No representative process
             uid_fallback: 0,          // Default to root (UID 0) for persistent namespaces
@@ -439,17 +441,17 @@ fn namespace_exists(lsns: &Lsns, ns_inode: u64) -> bool {
 
 /// Helper to convert namespace type index to enum
 impl NamespaceType {
-    fn from_index(idx: usize) -> Self {
+    fn from_index(idx: usize) -> Result<Self, LsnsError> {
         match idx {
-            0 => NamespaceType::Cgroup,
-            1 => NamespaceType::Ipc,
-            2 => NamespaceType::Mnt,
-            3 => NamespaceType::Net,
-            4 => NamespaceType::Pid,
-            5 => NamespaceType::User,
-            6 => NamespaceType::Uts,
-            7 => NamespaceType::Time,
-            _ => panic!("Invalid namespace type index: {}", idx),
+            0 => Ok(NamespaceType::Cgroup),
+            1 => Ok(NamespaceType::Ipc),
+            2 => Ok(NamespaceType::Mnt),
+            3 => Ok(NamespaceType::Net),
+            4 => Ok(NamespaceType::Pid),
+            5 => Ok(NamespaceType::User),
+            6 => Ok(NamespaceType::Uts),
+            7 => Ok(NamespaceType::Time),
+            _ => Err(LsnsError::InvalidNamespaceType(idx)),
         }
     }
 }

@@ -14,6 +14,8 @@ pub enum LsnsError {
     IOError(String, std::io::Error),
     /// CString conversion error (null byte in string)
     NulError(String, std::ffi::NulError),
+    /// Invalid namespace type index
+    InvalidNamespaceType(usize),
 }
 
 impl LsnsError {
@@ -41,6 +43,7 @@ impl fmt::Display for LsnsError {
         match self {
             Self::IOError(message, err) => write!(f, "{message}: {err}"),
             Self::NulError(message, err) => write!(f, "{message}: {err}"),
+            Self::InvalidNamespaceType(idx) => write!(f, "Invalid namespace type index: {}", idx),
         }
     }
 }
