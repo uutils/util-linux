@@ -12,10 +12,11 @@ mod smartcols;
 
 use clap::{Command, crate_version};
 #[cfg(target_os = "linux")]
+use std::ffi::CString;
+#[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt;
 use std::{
     collections::HashMap,
-    ffi::CString,
     fs::{self, DirEntry, read_dir, read_to_string},
 };
 #[cfg(target_os = "linux")]
