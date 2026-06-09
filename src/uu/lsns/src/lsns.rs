@@ -102,7 +102,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
     read_namespaces(&mut lsns)?;
 
-    display_namespaces(&lsns)?;
+    display_namespaces(&lsns, noheadings)?;
 
     Ok(())
 }
@@ -491,7 +491,7 @@ impl NamespaceType {
 
 /// Display namespaces in default format using smartcols
 #[cfg(target_os = "linux")]
-fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
+fn display_namespaces(lsns: &Lsns, noheadings: bool) -> Result<(), LsnsError> {
     use smartcols_sys::{SCOLS_FL_RIGHT, SCOLS_FL_TRUNC};
 
     // Initialize smartcols
@@ -499,6 +499,11 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 
     // Create table
     let mut table = Table::new()?;
+
+    // Enable or disable headings based on flag
+    if noheadings {
+        table.enable_headings(false)?;
+    }
 
     // NS: width_hint=10, right-aligned
     table.new_column(c"NS", 10.0, SCOLS_FL_RIGHT)?;
@@ -567,7 +572,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn display_namespaces(_lsns: &Lsns) -> Result<(), LsnsError> {
+fn display_namespaces(_lsns: &Lsns, _noheadings: bool) -> Result<(), LsnsError> {
     Err(LsnsError::UnsupportedPlatform)
 }
 
