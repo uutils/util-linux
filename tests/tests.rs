@@ -27,6 +27,10 @@ mod test_lsmem;
 #[path = "by-util/test_lslocks.rs"]
 mod test_lslocks;
 
+#[cfg(feature = "lsns")]
+#[path = "by-util/test_lsns.rs"]
+mod test_lsns;
+
 #[cfg(feature = "mesg")]
 #[path = "by-util/test_mesg.rs"]
 mod test_mesg;

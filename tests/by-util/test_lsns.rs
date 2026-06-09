@@ -1,0 +1,145 @@
+// This file is part of the uutils util-linux package.
+//
+// For the full copyright and license information, please view the LICENSE
+// file that was distributed with this source code.
+
+use uutests::new_ucmd;
+
+#[test]
+fn test_invalid_arg() {
+    new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_basic_output() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // Check for header columns
+    assert!(stdout.contains("NS"));
+    assert!(stdout.contains("TYPE"));
+    assert!(stdout.contains("NPROCS"));
+    assert!(stdout.contains("PID"));
+    assert!(stdout.contains("USER"));
+    assert!(stdout.contains("COMMAND"));
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_namespace_types() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // We should see at least some common namespace types
+    // Note: Not all may be present on all systems, so we check for at least one
+    let has_namespace = stdout.contains("mnt")
+        || stdout.contains("net")
+        || stdout.contains("pid")
+        || stdout.contains("uts")
+        || stdout.contains("ipc")
+        || stdout.contains("user")
+        || stdout.contains("cgroup");
+
+    assert!(
+        has_namespace,
+        "Expected to see at least one namespace type in output"
+    );
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_output_has_processes() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // The output should have at least one process (the test process itself)
+    // Count lines (excluding header)
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert!(
+        lines.len() >= 2,
+        "Expected at least header line and one namespace entry"
+    );
+}
+
+#[test]
+#[cfg(not(target_os = "linux"))]
+fn test_unsupported_platform() {
+    // On non-Linux platforms, lsns should fail with an appropriate error
+    new_ucmd!().fails();
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_output_format() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // Verify the output has proper table format
+    /*
+        Each line should have multiple columns separated by whitespace.We check
+        for at least 4 columns as the minimum (NS, TYPE, NPROCS, PID). These
+        fields are always present. For mnt namespaces the PID and COMMAND column
+        will be empty.
+    */
+    for line in stdout.lines().skip(1) {
+        // Skip header
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            assert!(
+                columns.len() >= 4,
+                "Each namespace entry should have at least 4 columns"
+            );
+        }
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_namespace_ids_are_numeric() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    /*
+        The first column of each line should be the namespace ID which is an inod number
+        and it should be numeric.
+    */
+
+    // Skip the header line and check that namespace IDs are numeric
+    for line in stdout.lines().skip(1) {
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            if !columns.is_empty() {
+                let ns_id = columns[0];
+                assert!(
+                    ns_id.chars().all(|c| c.is_ascii_digit()),
+                    "Namespace ID should be numeric: {}",
+                    ns_id
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_user_column_not_empty() {
+    let res = new_ucmd!().succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // Check that USER column (5th column) is not empty for entries with processes
+    for line in stdout.lines().skip(1) {
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            if columns.len() >= 5 {
+                // If there's a PID (4th column is not empty), there should be a user
+                if !columns[3].is_empty() && columns[3] != "0" {
+                    assert!(
+                        !columns[4].is_empty(),
+                        "User column should not be empty when PID is present"
+                    );
+                }
+            }
+        }
+    }
+}

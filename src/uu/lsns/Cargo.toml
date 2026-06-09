@@ -1,0 +1,16 @@
+[package]
+name = "uu_lsns"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+path = "src/lsns.rs"
+
+[[bin]]
+name = "lsns"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true, features = ["entries"] }
+clap = { workspace = true }
+smartcols-sys = { workspace = true }
