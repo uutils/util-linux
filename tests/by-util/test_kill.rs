@@ -18,7 +18,7 @@ fn test_non_numerical_pid() {
     let stdout = res.stdout_str();
     let stderr = res.stderr_str();
 
-    assert!(stdout.trim().len() == 0);
+    assert!(stdout.trim().is_empty());
     assert!(stderr.contains("invalid value 'xyz'"));
 }
 
@@ -32,6 +32,6 @@ fn test_pid_doesnt_exist() {
     let stderr = res.stderr_str();
     let error_msg = format!("bash: kill: ({non_existent_pid}) - No such process");
 
-    assert!(stdout.trim().len() == 0);
+    assert!(stdout.trim().is_empty());
     assert!(stderr.contains(error_msg.as_str()));
 }
