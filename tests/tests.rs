@@ -15,6 +15,11 @@ fn init() {
         std::env::set_var("UUTESTS_BINARY_PATH", TESTS_BINARY);
     }
 }
+
+#[cfg(feature = "kill")]
+#[path = "by-util/test_kill.rs"]
+mod test_kill;
+
 #[cfg(feature = "lscpu")]
 #[path = "by-util/test_lscpu.rs"]
 mod test_lscpu;

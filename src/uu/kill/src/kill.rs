@@ -5,7 +5,8 @@
 
 // Remove this if the tool is ported to Non-UNIX platforms.
 
-use clap::{Command, crate_version};
+use clap::{Arg, ArgAction, Command, crate_version, value_parser};
+use uucore::libc;
 #[cfg(target_os = "linux")]
 #[cfg(target_os = "linux")]
 use uucore::{error::UResult, format_usage, help_about, help_usage};
@@ -13,9 +14,16 @@ use uucore::{error::UResult, format_usage, help_about, help_usage};
 const ABOUT: &str = help_about!("kill.md");
 const USAGE: &str = help_usage!("kill.md");
 
+
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let _matches = uu_app().try_get_matches_from(args)?;
+    let matches = uu_app().try_get_matches_from(args)?;
+
+    if let Some(pids) = matches.get_many::<i32>("pid") {
+        for pid in pids {
+            unsafe { libc::kill(*pid, libc::SIGTERM) };
+        }
+    }
 
     Ok(())
 }
@@ -26,4 +34,12 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+        .arg(
+            Arg::new("pid")
+                .help("PID of the process to kill")
+                .required(false)
+                .action(ArgAction::Append)
+                .value_name("PID")
+                .value_parser(value_parser!(i32)),
+        )
 }
