@@ -1,0 +1,15 @@
+[package]
+name = "uu_kill"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+path = "src/kill.rs"
+
+[[bin]]
+name = "kill"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true, features = ["entries"] }
+clap = { workspace = true }
