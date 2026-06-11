@@ -12,7 +12,7 @@ fn test_invalid_arg() {
 
 #[test]
 #[cfg(target_os = "linux")]
-fn test_non_number_pid() {
+fn test_non_numerical_pid() {
     let res = new_ucmd!().arg("xyz").run();
 
     let stdout = res.stdout_str();
@@ -20,4 +20,18 @@ fn test_non_number_pid() {
 
     assert!(stdout.trim().len() == 0);
     assert!(stderr.contains("invalid value 'xyz'"));
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_pid_doesnt_exist() {
+    let non_existent_pid = "1234567890";
+    let res = new_ucmd!().arg(non_existent_pid).run();
+
+    let stdout = res.stdout_str();
+    let stderr = res.stderr_str();
+    let error_msg = format!("bash: kill: ({non_existent_pid}) - No such process");
+
+    assert!(stdout.trim().len() == 0);
+    assert!(stderr.contains(error_msg.as_str()));
 }

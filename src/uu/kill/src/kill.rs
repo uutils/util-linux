@@ -14,7 +14,6 @@ use uucore::{error::UResult, format_usage, help_about, help_usage};
 const ABOUT: &str = help_about!("kill.md");
 const USAGE: &str = help_usage!("kill.md");
 
-
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
@@ -22,6 +21,19 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if let Some(pids) = matches.get_many::<i32>("pid") {
         for pid in pids {
             unsafe { libc::kill(*pid, libc::SIGTERM) };
+
+            let err = std::io::Error::last_os_error().raw_os_error();
+            if let Some(err_no) = err {
+                match err_no {
+                    libc::EPERM => {
+                        eprintln!("bash: kill: ({pid}) - Operation not permitted");
+                    }
+                    libc::ESRCH => {
+                        eprintln!("bash: kill: ({pid}) - No such process");
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 
