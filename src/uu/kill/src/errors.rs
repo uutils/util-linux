@@ -9,7 +9,6 @@ use uucore::error::UError;
 
 #[derive(Debug)]
 pub enum KillError {
-    /// Unsupported platform
     #[cfg(not(target_os = "linux"))]
     UnsupportedPlatform,
     OperationNotPermitted(i32),

@@ -8,7 +8,9 @@
 
 mod errors;
 
-use crate::errors::KillError::{self, NoSuchProcess, OperationNotPermitted};
+use crate::errors::KillError;
+#[cfg(target_os = "linux")]
+use crate::errors::KillError::{NoSuchProcess, OperationNotPermitted};
 use clap::{Arg, ArgAction, Command, crate_version, value_parser};
 use uucore::libc;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
@@ -18,7 +20,7 @@ const USAGE: &str = help_usage!("kill.md");
 
 #[cfg(not(target_os = "linux"))]
 fn kill(pid: i32, signal: i32) -> Result<(), KillError> {
-    Err(UnsupportedPlatform)
+    Err(KillError::UnsupportedPlatform)
 }
 
 #[cfg(target_os = "linux")]
