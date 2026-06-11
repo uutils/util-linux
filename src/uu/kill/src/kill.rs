@@ -19,7 +19,7 @@ const ABOUT: &str = help_about!("kill.md");
 const USAGE: &str = help_usage!("kill.md");
 
 #[cfg(not(target_os = "linux"))]
-fn kill(pid: i32, signal: i32) -> Result<(), KillError> {
+fn kill(_pid: i32, _signal: i32) -> Result<(), KillError> {
     Err(KillError::UnsupportedPlatform)
 }
 
