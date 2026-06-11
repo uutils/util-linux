@@ -7,7 +7,6 @@
 
 use clap::{Arg, ArgAction, Command, crate_version, value_parser};
 use uucore::libc;
-#[cfg(target_os = "linux")]
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("kill.md");
