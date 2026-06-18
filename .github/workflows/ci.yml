@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install dependencies
         if: runner.os == 'Linux'
         shell: bash
@@ -27,7 +27,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install dependencies
         shell: bash
         if: runner.os == 'Linux'
@@ -38,7 +38,7 @@ jobs:
     name: cargo fmt --all -- --check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: sudo apt-get update --quiet
       - run: sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
       - run: cargo fmt --all -- --check
@@ -50,7 +50,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Install dependencies
         shell: bash
         if: runner.os == 'Linux'
@@ -68,7 +68,7 @@ jobs:
           - { os: macos-latest   , features: macos }
           - { os: windows-latest , features: windows }
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Initialize workflow variables
       id: vars
       shell: bash
