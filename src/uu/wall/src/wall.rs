@@ -141,7 +141,7 @@ fn find_logged_users() -> Vec<OsString> {
 
 fn wall_intro_message() -> String {
     let user = "USER";
-    let biding = unistd::gethostname().unwrap_or_else(|_| "".into()); 
+    let biding = unistd::gethostname().unwrap_or_else(|_| "".into());
     let hostname = biding.to_string_lossy();
 
     let user = env::var_os(user).unwrap_or_default();
@@ -162,11 +162,11 @@ fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
     for user in users {
         let mut file = match std::fs::OpenOptions::new().write(true).open(user) {
             Ok(f) => f,
-            Err(e) => {
-                eprintln!("{}: {e}", translate!("wall-error-open-terminal"));
-                continue;
-            }
+            Err(_) => continue,
         };
+        if !unistd::isatty(&file).unwrap_or(false) {
+            continue;
+        }
         write!(file, "{transmission}").map_err(|e| {
             eprintln!("{}:, {e}", translate!("wall-error-write-terminal"));
             WallError::Stdin(e)
@@ -176,18 +176,21 @@ fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
 }
 
 fn get_hour_and_date() -> String {
-    chrono::Local::now().format("%H:%M %Z %a %b %e").to_string()
+    chrono::Local::now().format("%a %b %e %H:%M %Z").to_string()
 }
 
 fn get_sender() -> String {
-    unistd::ttyname(std::io::stdin().as_fd()).unwrap_or_else(|_| "".into()).to_string_lossy().to_string()
+    unistd::ttyname(std::io::stdin().as_fd())
+        .unwrap_or_else(|_| "".into())
+        .to_string_lossy()
+        .to_string()
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::{OPT_GROUP, STRING};
     use crate::{find_logged_users, get_message, uu_app, write_to_terminals};
+    use crate::{OPT_GROUP, STRING};
     use std::ffi::OsString;
     use std::process::{Command, Output};
 
