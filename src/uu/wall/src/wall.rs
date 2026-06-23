@@ -3,14 +3,16 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use chrono;
 use clap::builder::ValueParser;
 use clap::parser::ValuesRef;
 use clap::{Arg, ArgAction, Command};
-use nix::sys::utsname;
+use nix::unistd;
 use std::env;
 use std::ffi::OsString;
 use std::io;
 use std::io::prelude::*;
+use std::os::fd::AsFd;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
@@ -32,8 +34,6 @@ enum WallError {
     VecToString(#[from] FromUtf8Error),
     #[error("{}", translate!("wall-error-osstring"))]
     ToStringError,
-    #[error("{}", translate!("wall-error-mac-os-too-many-args"))]
-    MacOsTooManyArgs,
 }
 
 impl UError for WallError {
@@ -97,8 +97,6 @@ fn get_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
         read_from_stdin()
     } else if args.len() == 1 {
         read_from_file(args.into_iter().next().unwrap())
-    } else if cfg!(target_os = "macos") {
-        Err(WallError::MacOsTooManyArgs)
     } else {
         concatenate_message(args)
     }
@@ -143,28 +141,19 @@ fn find_logged_users() -> Vec<OsString> {
 
 fn wall_intro_message() -> String {
     let user = "USER";
-    let biding = match nix::sys::utsname::uname() {
-        Ok(uts) => match uts.nodename() {
-            Ok(hostname) => hostname,
-            Err(_) => String::from(""),
-        },
-        Err(_) => String::from(""),
-    };
+    let biding = unistd::gethostname().unwrap_or_else(|_| "".into()); 
+    let hostname = biding.to_string_lossy();
 
     let user = env::var_os(user).unwrap_or_default();
     // Fetch the TTY of the process calling wall (requires OS-specific calls or a wrapper function)
-    let tty = "/dev/".to_owned() + &get_sender();
+    let tty = &get_sender();
 
     let datetime = get_hour_and_date();
     #[cfg(target_os = "linux")]
     return format!(
-        "\r\nBroadcast message from {}@{hostname} ({tty}) at {datetime} \r\n\r\n",
-        user.to_string_lossy()
-    );
-    #[cfg(target_os = "macos")]
-    return format!(
-        "\r\nBroadcast message from {}@{hostname}\r\n\t({tty}) at {datetime}\r\n\r\n",
-        user.to_string_lossy()
+        "\r\nBroadcast message from {}@{} ({tty}) at ({datetime}) \r\n\r\n",
+        user.to_string_lossy(),
+        hostname
     );
 }
 
@@ -187,16 +176,11 @@ fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
 }
 
 fn get_hour_and_date() -> String {
-    #[cfg(target_os = "linux")]
-    return Zoned::now().strftime("(%a %b %d %H:%M:%S %Y):").to_string();
-    #[cfg(target_os = "macos")]
-    return Zoned::now().strftime("%H:%M %Z...").to_string();
+    chrono::Local::now().format("%H:%M %Z %a %b %e").to_string()
 }
 
 fn get_sender() -> String {
-    rustix::termios::ttyname(io::stdin(), Vec::with_capacity(16))
-        .map(|s| s.to_string_lossy().trim_start_matches("/dev/").to_owned())
-        .unwrap_or_default()
+    unistd::ttyname(std::io::stdin().as_fd()).unwrap_or_else(|_| "".into()).to_string_lossy().to_string()
 }
 
 #[cfg(test)]
@@ -228,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_get_message_on_file() {
-        let file = String::from("LICENSE");
+        let file = String::from("Cargo.toml");
 
         // wall does not print the content of the file in the stdout, it sends it to the tty(s)
         // Hence the use of cat to check if the get_message function can extract correctly the
@@ -278,9 +262,9 @@ mod tests {
         assert_eq!(
             users,
             vec!(
-                OsString::from("tty1"),
-                OsString::from("tty2"),
-                OsString::from("tty3")
+                OsString::from("/dev/tty2"),
+                OsString::from("/dev/pts/1"),
+                OsString::from("/dev/pts/2")
             )
         );
     }

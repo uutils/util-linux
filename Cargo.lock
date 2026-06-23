@@ -1783,6 +1783,7 @@ dependencies = [
 name = "uu_wall"
 version = "0.0.1"
 dependencies = [
+ "chrono",
  "clap",
  "nix 0.31.3",
  "thiserror",
