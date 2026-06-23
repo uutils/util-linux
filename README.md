@@ -56,7 +56,6 @@ First, reimplement the most important tools from util-linux:
 - `sulogin`: Provides single-user mode login.
 - `chrt`: Manages real-time process attributes.
 - `ionice`: Sets process I/O scheduling class/priority.
-- `kill`: Sends signals to processes.
 - `renice`: Alters process priority.
 - `prlimit`: Sets/gets process resource limits.
 - `taskset`: Sets/gets process CPU affinity.
@@ -102,7 +101,8 @@ First, reimplement the most important tools from util-linux:
 - `uuidgen`: Generate different types of UUID.
 
 Note:
-* /bin/more is already implemented in https://github.com/uutils/coreutils
+* `kill` and `more` is not implemented at here to avoid confliction with https://github.com/uutils/coreutils
+Most Linux distributions do not use them from GNU coreutils. But we have then as coreutils currently.
 
 Project:
 http://www.kernel.org/pub/linux/utils/util-linux/
