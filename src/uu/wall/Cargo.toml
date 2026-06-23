@@ -1,0 +1,19 @@
+[package]
+name = "uu_wall"
+version = "0.0.1"
+description = "wall ~ write a message to all users"
+
+edition = "2021"
+
+[lib]
+path = "src/wall.rs"
+
+[[bin]]
+name = "wall"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+nix = { workspace = true, features = ["feature"] }
+thiserror.workspace = true
+uucore = { workspace = true, features = ["utmpx"] }
