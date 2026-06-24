@@ -48,6 +48,7 @@ feat_common_core = [
   "setpgid",
   "setsid",
   "uuidgen",
+  "wall",
 ]
 
 [workspace.dependencies]
@@ -121,7 +122,7 @@ rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/r
 setpgid = { optional = true, version = "0.0.1", package = "uu_setpgid", path = "src/uu/setpgid" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
 uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
-wall = {option = true, version = "0.0.1", package = "uu_wall", path = "src/uu/wall" }
+wall = { optional = true, version = "0.0.1", package = "uu_wall", path = "src/uu/wall" }
 
 [dev-dependencies]
 ctor = "1.0.0"

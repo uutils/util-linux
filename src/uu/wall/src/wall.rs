@@ -28,11 +28,11 @@ const OPT_TIMEOUT: &str = "timeout";
 
 #[derive(Error, Debug)]
 enum WallError {
-    #[error("{}", translate!("wall-error-stdin"))]
+    #[error("wall: cannot read stdin")]
     Stdin(#[from] io::Error),
-    #[error("{}", translate!("wall-encoding-error"))]
+    #[error("wall: encoding error")]
     VecToString(#[from] FromUtf8Error),
-    #[error("{}", translate!("wall-error-osstring"))]
+    #[error("wall: osstring conversion failed")]
     ToStringError,
 }
 
@@ -63,7 +63,7 @@ pub fn uu_app() -> Command {
                 .short('g')
                 .long(OPT_GROUP)
                 .value_name("GROUP")
-                .help(translate!("wall-help-group"))
+                .help("Send restrict to only users in the group(s)")
                 .num_args(1)
                 .action(ArgAction::Append) // User can target more than one group
                 .value_parser(clap::value_parser!(String)),
@@ -74,7 +74,7 @@ pub fn uu_app() -> Command {
                 .short('n')
                 .long(OPT_NOBANNER)
                 .action(ArgAction::SetTrue)
-                .help(translate!("wall-help-nobanner")),
+                .help("Suppress the intro branner of the broadcast"),
         )
         .arg(
             Arg::new(OPT_TIMEOUT) // TODO(FEAT): Implement -t --timeout to stop trying to print
@@ -82,7 +82,7 @@ pub fn uu_app() -> Command {
                 .short('t')
                 .long(OPT_TIMEOUT)
                 .value_name("SECONDS")
-                .help(translate!("wall-help-timeout"))
+                .help("Abandon after t seconds the write attempt to the terminals")
                 .num_args(1),
         )
         .arg(
@@ -149,16 +149,16 @@ fn wall_intro_message() -> String {
     let tty = &get_sender();
 
     let datetime = get_hour_and_date();
-    #[cfg(target_os = "linux")]
-    return format!(
+    format!(
         "\r\nBroadcast message from {}@{} ({tty}) at ({datetime}) \r\n\r\n",
         user.to_string_lossy(),
         hostname
-    );
+    )
 }
 
 fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
-    let transmission = wall_intro_message() + &message + "\r\n\r\n";
+    let format_message = message.replace("\n", "\r\n\n");
+    let transmission = wall_intro_message() + &format_message;
     for user in users {
         let mut file = match std::fs::OpenOptions::new().write(true).open(user) {
             Ok(f) => f,
@@ -168,7 +168,7 @@ fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
             continue;
         }
         write!(file, "{transmission}").map_err(|e| {
-            eprintln!("{}:, {e}", translate!("wall-error-write-terminal"));
+            eprintln!("wall-error: terminal write:, {e}",);
             WallError::Stdin(e)
         })?;
     }
@@ -189,8 +189,8 @@ fn get_sender() -> String {
 #[cfg(test)]
 mod tests {
 
-    use crate::{find_logged_users, get_message, uu_app, write_to_terminals};
     use crate::{OPT_GROUP, STRING};
+    use crate::{find_logged_users, get_message, uu_app, write_to_terminals};
     use std::ffi::OsString;
     use std::process::{Command, Output};
 
