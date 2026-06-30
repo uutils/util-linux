@@ -84,25 +84,24 @@ struct Namespace {
 struct Lsns {
     processes: Vec<Process>,
     namespaces: Vec<Namespace>,
+    noheadings: bool,
 }
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
 
-    // Print no headings if this flag is set
-    let noheadings = matches.get_flag("noheadings");
-
     let mut lsns = Lsns {
         processes: Vec::new(),
         namespaces: Vec::new(),
+        noheadings: matches.get_flag("noheadings"),
     };
 
     read_processes(PATH_PROC, &mut lsns)?;
 
     read_namespaces(&mut lsns)?;
 
-    display_namespaces(&lsns, noheadings)?;
+    display_namespaces(&lsns)?;
 
     Ok(())
 }
@@ -491,7 +490,7 @@ impl NamespaceType {
 
 /// Display namespaces in default format using smartcols
 #[cfg(target_os = "linux")]
-fn display_namespaces(lsns: &Lsns, noheadings: bool) -> Result<(), LsnsError> {
+fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     use smartcols_sys::{SCOLS_FL_RIGHT, SCOLS_FL_TRUNC};
 
     // Initialize smartcols
@@ -501,7 +500,7 @@ fn display_namespaces(lsns: &Lsns, noheadings: bool) -> Result<(), LsnsError> {
     let mut table = Table::new()?;
 
     // Enable or disable headings based on flag
-    if noheadings {
+    if lsns.noheadings {
         table.enable_headings(false)?;
     }
 
@@ -572,7 +571,7 @@ fn display_namespaces(lsns: &Lsns, noheadings: bool) -> Result<(), LsnsError> {
 }
 
 #[cfg(not(target_os = "linux"))]
-fn display_namespaces(_lsns: &Lsns, _noheadings: bool) -> Result<(), LsnsError> {
+fn display_namespaces(_lsns: &Lsns) -> Result<(), LsnsError> {
     Err(LsnsError::UnsupportedPlatform)
 }
 
