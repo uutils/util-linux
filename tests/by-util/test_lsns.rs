@@ -96,6 +96,20 @@ fn test_output_format() {
 
 #[test]
 #[cfg(target_os = "linux")]
+fn test_noheadings() {
+    let res = new_ucmd!().arg("-n").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    let headers = ["NS", "TYPE", "NPROCS", "PID", "USER", "COMMAND"];
+
+    for header in headers {
+        let msg = format!("{} header should not be present when -n is used", header);
+        assert!(!stdout.contains(header), "{}", msg);
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
 fn test_namespace_ids_are_numeric() {
     let res = new_ucmd!().succeeds();
     let stdout = res.no_stderr().stdout_str();
