@@ -1540,6 +1540,7 @@ dependencies = [
  "uu_dmesg",
  "uu_fsfreeze",
  "uu_hexdump",
+ "uu_kill",
  "uu_last",
  "uu_lscpu",
  "uu_lsipc",
@@ -1629,6 +1630,14 @@ dependencies = [
 
 [[package]]
 name = "uu_hexdump"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "uucore 0.2.2",
+]
+
+[[package]]
+name = "uu_kill"
 version = "0.0.1"
 dependencies = [
  "clap",
