@@ -497,21 +497,11 @@ impl NamespaceType {
     }
 }
 
-/// Display namespaces in default format using smartcols
 #[cfg(target_os = "linux")]
-fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
+fn get_table_with_columns() -> Result<Table, LsnsError> {
     use smartcols_sys::{SCOLS_FL_RIGHT, SCOLS_FL_TRUNC};
 
-    // Initialize smartcols
-    smartcols::initialize();
-
-    // Create table
     let mut table = Table::new()?;
-
-    // Enable or disable headings based on flag
-    if lsns.noheadings {
-        table.enable_headings(false)?;
-    }
 
     // NS: width_hint=10, right-aligned
     table.new_column(c"NS", 10.0, SCOLS_FL_RIGHT)?;
@@ -525,6 +515,22 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     table.new_column(c"USER", 0.0, 0)?;
     // COMMAND: width_hint=0 (auto-size), truncate if too long
     table.new_column(c"COMMAND", 0.0, SCOLS_FL_TRUNC)?;
+
+    Ok(table)
+}
+
+/// Display namespaces in default format using smartcols
+#[cfg(target_os = "linux")]
+fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
+    // Initialize smartcols
+    smartcols::initialize();
+
+    let mut table = get_table_with_columns()?;
+
+    // Enable or disable headings based on flag
+    if lsns.noheadings {
+        table.enable_headings(false)?;
+    }
 
     // Build username cache once before displaying
     let mut username_cache = HashMap::new();
