@@ -85,6 +85,7 @@ struct Lsns {
     processes: Vec<Process>,
     namespaces: Vec<Namespace>,
     noheadings: bool,
+    persistent: bool,
 }
 
 #[uucore::main]
@@ -95,6 +96,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         processes: Vec::new(),
         namespaces: Vec::new(),
         noheadings: matches.get_flag("noheadings"),
+        persistent: matches.get_flag("persistent"),
     };
 
     read_processes(PATH_PROC, &mut lsns)?;
@@ -118,6 +120,13 @@ pub fn uu_app() -> Command {
                 .long("noheadings")
                 .action(ArgAction::SetTrue)
                 .help("don't print headings"),
+        )
+        .arg(
+            Arg::new("persistent")
+                .short('P')
+                .long("persistent")
+                .action(ArgAction::SetTrue)
+                .help("namespaces without processes"),
         )
 }
 
@@ -525,7 +534,9 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 
     // Add each namespace as a row
     for ns in &lsns.namespaces {
-        let mut line = table.new_line(None)?;
+        if lsns.persistent && ns.nprocs != 0 {
+            continue;
+        }
 
         // Get namespace type name
         let ns_type = NSNAMES[ns.ns_type as usize];
@@ -557,6 +568,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
         let user_str = CString::new(user)?;
         let command_str = CString::new(command)?;
 
+        let mut line = table.new_line(None)?;
         line.set_data(0, &ns_str)?;
         line.set_data(1, &type_str)?;
         line.set_data(2, &nprocs_str)?;
