@@ -85,6 +85,7 @@ struct Lsns {
     processes: Vec<Process>,
     namespaces: Vec<Namespace>,
     noheadings: bool,
+    persistent: bool,
 }
 
 #[uucore::main]
@@ -95,6 +96,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         processes: Vec::new(),
         namespaces: Vec::new(),
         noheadings: matches.get_flag("noheadings"),
+        persistent: matches.get_flag("persistent"),
     };
 
     read_processes(PATH_PROC, &mut lsns)?;
@@ -118,6 +120,13 @@ pub fn uu_app() -> Command {
                 .long("noheadings")
                 .action(ArgAction::SetTrue)
                 .help("don't print headings"),
+        )
+        .arg(
+            Arg::new("persistent")
+                .short('P')
+                .long("persistent")
+                .action(ArgAction::SetTrue)
+                .help("namespaces without processes"),
         )
 }
 
@@ -488,21 +497,11 @@ impl NamespaceType {
     }
 }
 
-/// Display namespaces in default format using smartcols
 #[cfg(target_os = "linux")]
-fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
+fn get_table_with_columns() -> Result<Table, LsnsError> {
     use smartcols_sys::{SCOLS_FL_RIGHT, SCOLS_FL_TRUNC};
 
-    // Initialize smartcols
-    smartcols::initialize();
-
-    // Create table
     let mut table = Table::new()?;
-
-    // Enable or disable headings based on flag
-    if lsns.noheadings {
-        table.enable_headings(false)?;
-    }
 
     // NS: width_hint=10, right-aligned
     table.new_column(c"NS", 10.0, SCOLS_FL_RIGHT)?;
@@ -517,6 +516,22 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
     // COMMAND: width_hint=0 (auto-size), truncate if too long
     table.new_column(c"COMMAND", 0.0, SCOLS_FL_TRUNC)?;
 
+    Ok(table)
+}
+
+/// Display namespaces in default format using smartcols
+#[cfg(target_os = "linux")]
+fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
+    // Initialize smartcols
+    smartcols::initialize();
+
+    let mut table = get_table_with_columns()?;
+
+    // Enable or disable headings based on flag
+    if lsns.noheadings {
+        table.enable_headings(false)?;
+    }
+
     // Build username cache once before displaying
     let mut username_cache = HashMap::new();
 
@@ -525,7 +540,9 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 
     // Add each namespace as a row
     for ns in &lsns.namespaces {
-        let mut line = table.new_line(None)?;
+        if lsns.persistent && ns.nprocs != 0 {
+            continue;
+        }
 
         // Get namespace type name
         let ns_type = NSNAMES[ns.ns_type as usize];
@@ -557,6 +574,7 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
         let user_str = CString::new(user)?;
         let command_str = CString::new(command)?;
 
+        let mut line = table.new_line(None)?;
         line.set_data(0, &ns_str)?;
         line.set_data(1, &type_str)?;
         line.set_data(2, &nprocs_str)?;
