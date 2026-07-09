@@ -94,3 +94,7 @@ mod test_mcookie;
 #[cfg(feature = "uuidgen")]
 #[path = "by-util/test_uuidgen.rs"]
 mod test_uuidgen;
+
+#[cfg(feature = "whereis")]
+#[path = "by-util/test_whereis.rs"]
+mod test_whereis;
