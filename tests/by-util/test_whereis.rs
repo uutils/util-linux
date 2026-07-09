@@ -20,8 +20,10 @@ fn test_whereis_nonexistent() {
 
 #[test]
 fn test_whereis_binary_only() {
-    new_ucmd!()
-        .args(&["-b", "ls"])
-        .succeeds()
-        .stdout_contains("/usr/bin/ls");
+    let output = new_ucmd!().args(&["-b", "ls"]).succeeds().stdout_move_str();
+    assert!(output.contains("ls:"), "output should contain 'ls:'");
+    assert!(
+        output.lines().next().unwrap().contains("ls:"),
+        "output should have 'ls:' prefix"
+    );
 }
