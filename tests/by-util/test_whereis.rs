@@ -32,6 +32,8 @@ fn test_whereis_binary_only() {
 fn test_whereis_man_only() {
     let output = new_ucmd!().args(&["-m", "ls"]).succeeds().stdout_move_str();
     assert!(output.contains("ls:"), "output should contain 'ls:'");
+    // On Unix, man pages should be found; on Windows, may be empty
+    #[cfg(unix)]
     assert!(
         output.contains("man"),
         "output should contain man page path"
@@ -52,7 +54,12 @@ fn test_whereis_multiple_programs() {
 fn test_whereis_default_searches_all() {
     let output = new_ucmd!().arg("ls").succeeds().stdout_move_str();
     let first_line = output.lines().next().unwrap();
-    assert!(first_line.starts_with("ls:"), "output should start with 'ls:'");
+    assert!(
+        first_line.starts_with("ls:"),
+        "output should start with 'ls:'"
+    );
+    // On Unix, should find at least binary; on Windows, may be empty
+    #[cfg(unix)]
     assert!(
         first_line.contains("/"),
         "output should contain at least one path"

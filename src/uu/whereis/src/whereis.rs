@@ -29,11 +29,12 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         || matches.get_flag(options::MAN)
         || matches.get_flag(options::ALL);
 
-    let show_bin = matches.get_flag(options::BINARIES)
-        || matches.get_flag(options::ALL)
-        || !has_any_flag;
-    let show_source = matches.get_flag(options::SOURCE) || matches.get_flag(options::ALL) || !has_any_flag;
-    let show_man = matches.get_flag(options::MAN) || matches.get_flag(options::ALL) || !has_any_flag;
+    let show_bin =
+        matches.get_flag(options::BINARIES) || matches.get_flag(options::ALL) || !has_any_flag;
+    let show_source =
+        matches.get_flag(options::SOURCE) || matches.get_flag(options::ALL) || !has_any_flag;
+    let show_man =
+        matches.get_flag(options::MAN) || matches.get_flag(options::ALL) || !has_any_flag;
 
     let programs: Vec<&str> = matches
         .get_many::<String>(options::PROGRAM)
@@ -176,7 +177,12 @@ fn man_file_matches(name: &str, file_name: &str) -> bool {
         let base_name = &uncompressed[..dot_pos];
         let section = &uncompressed[dot_pos + 1..];
         // Section should be a number (1-9) or number followed by letter (e.g., 3pm)
-        if base_name == name && !section.is_empty() && section.bytes().all(|b| b.is_ascii_digit() || b.is_ascii_lowercase()) {
+        if base_name == name
+            && !section.is_empty()
+            && section
+                .bytes()
+                .all(|b| b.is_ascii_digit() || b.is_ascii_lowercase())
+        {
             return true;
         }
     }
