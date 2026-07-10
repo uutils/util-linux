@@ -24,11 +24,16 @@ mod options {
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
 
+    let has_any_flag = matches.get_flag(options::BINARIES)
+        || matches.get_flag(options::SOURCE)
+        || matches.get_flag(options::MAN)
+        || matches.get_flag(options::ALL);
+
     let show_bin = matches.get_flag(options::BINARIES)
         || matches.get_flag(options::ALL)
-        || (!matches.get_flag(options::SOURCE) && !matches.get_flag(options::MAN));
-    let show_source = matches.get_flag(options::SOURCE) || matches.get_flag(options::ALL);
-    let show_man = matches.get_flag(options::MAN) || matches.get_flag(options::ALL);
+        || !has_any_flag;
+    let show_source = matches.get_flag(options::SOURCE) || matches.get_flag(options::ALL) || !has_any_flag;
+    let show_man = matches.get_flag(options::MAN) || matches.get_flag(options::ALL) || !has_any_flag;
 
     let programs: Vec<&str> = matches
         .get_many::<String>(options::PROGRAM)
@@ -113,42 +118,69 @@ fn search_source_dir(dir: &Path, name: &str) -> Option<String> {
 }
 
 fn find_man(name: &str) -> Option<String> {
-    let man_paths = ["/usr/share/man", "/usr/local/share/man", "/usr/man"];
+    // GNU whereis man directories (with glob support)
+    let man_patterns = [
+        "/usr/man",
+        "/usr/share/man",
+        "/usr/local/share/man",
+        "/usr/X11/man",
+        "/usr/TeX/man",
+    ];
 
-    for man_dir in &man_paths {
+    let mut results = Vec::new();
+
+    for man_dir in &man_patterns {
         let path = Path::new(man_dir);
         if path.exists() {
-            if let Some(found) = search_man_dir(path, name) {
-                return Some(found);
+            search_man_dir_recursive(path, name, &mut results);
+            if !results.is_empty() {
+                break;
             }
         }
     }
-    None
+
+    if results.is_empty() {
+        None
+    } else {
+        Some(results[0].clone())
+    }
 }
 
-fn search_man_dir(dir: &Path, name: &str) -> Option<String> {
+fn search_man_dir_recursive(dir: &Path, name: &str, results: &mut Vec<String>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                if let Ok(man_entries) = fs::read_dir(&path) {
-                    for man_entry in man_entries.flatten() {
-                        let man_path = man_entry.path();
-                        if let Some(file_name) = man_path.file_name().and_then(|n| n.to_str()) {
-                            if file_name.starts_with(name)
-                                && (file_name.ends_with(".1")
-                                    || file_name.ends_with(".1.gz")
-                                    || file_name.ends_with(".1.bz2"))
-                            {
-                                return Some(man_path.to_string_lossy().into_owned());
-                            }
-                        }
-                    }
+                search_man_dir_recursive(&path, name, results);
+            } else if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                if man_file_matches(name, file_name) {
+                    results.push(path.to_string_lossy().into_owned());
                 }
             }
         }
     }
-    None
+}
+
+fn man_file_matches(name: &str, file_name: &str) -> bool {
+    // Remove compression extensions for comparison
+    let uncompressed = file_name
+        .strip_suffix(".zst")
+        .or_else(|| file_name.strip_suffix(".bz2"))
+        .or_else(|| file_name.strip_suffix(".xz"))
+        .or_else(|| file_name.strip_suffix(".gz"))
+        .or_else(|| file_name.strip_suffix(".Z"))
+        .unwrap_or(file_name);
+
+    // Match patterns like: name.1, name.1.gz, name.1.bz2, name.1.xz, name.1.zst
+    if let Some(dot_pos) = uncompressed.rfind('.') {
+        let base_name = &uncompressed[..dot_pos];
+        let section = &uncompressed[dot_pos + 1..];
+        // Section should be a number (1-9) or number followed by letter (e.g., 3pm)
+        if base_name == name && !section.is_empty() && section.bytes().all(|b| b.is_ascii_digit() || b.is_ascii_lowercase()) {
+            return true;
+        }
+    }
+    false
 }
 
 pub fn uu_app() -> Command {
