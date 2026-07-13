@@ -50,6 +50,18 @@ mod unix {
     }
 
     #[test]
+    fn fork_wait_returns_signal_exit_code() {
+        new_ucmd!()
+            .arg("-f")
+            .arg("-w")
+            .arg("sh")
+            .args(&["-c", "kill -s INT $$"])
+            .fails()
+            .code_is(130)
+            .no_output();
+    }
+
+    #[test]
     fn non_fork_returns_not_found_error() {
         new_ucmd!()
         .arg("/usr/bin/this-tool-does-not-exist-hopefully")
