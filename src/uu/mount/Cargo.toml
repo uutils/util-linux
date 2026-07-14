@@ -1,0 +1,17 @@
+[package]
+name = "uu_mount"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/mount.rs"
+
+[[bin]]
+name = "mount"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+libc = { workspace = true }
+thiserror = { workspace = true }
+uucore = { workspace = true }
