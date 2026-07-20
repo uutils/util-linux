@@ -10,7 +10,7 @@ mod errors;
 #[cfg(target_os = "linux")]
 mod smartcols;
 
-use clap::{Command, crate_version};
+use clap::{Arg, ArgAction, Command, crate_version};
 #[cfg(target_os = "linux")]
 use std::ffi::CString;
 #[cfg(target_os = "linux")]
@@ -84,15 +84,17 @@ struct Namespace {
 struct Lsns {
     processes: Vec<Process>,
     namespaces: Vec<Namespace>,
+    noheadings: bool,
 }
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let _matches = uu_app().try_get_matches_from(args)?;
+    let matches = uu_app().try_get_matches_from(args)?;
 
     let mut lsns = Lsns {
         processes: Vec::new(),
         namespaces: Vec::new(),
+        noheadings: matches.get_flag("noheadings"),
     };
 
     read_processes(PATH_PROC, &mut lsns)?;
@@ -110,6 +112,13 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
+        .arg(
+            Arg::new("noheadings")
+                .short('n')
+                .long("noheadings")
+                .action(ArgAction::SetTrue)
+                .help("don't print headings"),
+        )
 }
 
 /// Read information of all the processes from /proc
@@ -489,6 +498,11 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
 
     // Create table
     let mut table = Table::new()?;
+
+    // Enable or disable headings based on flag
+    if lsns.noheadings {
+        table.enable_headings(false)?;
+    }
 
     // NS: width_hint=10, right-aligned
     table.new_column(c"NS", 10.0, SCOLS_FL_RIGHT)?;
