@@ -14,8 +14,8 @@ pub enum LsnsError {
     IOError(String, std::io::Error),
     /// CString conversion error (null byte in string)
     NulError(String, std::ffi::NulError),
-    /// Invalid namespace type index
-    InvalidNamespaceType(usize),
+    /// Invalid namespace type
+    InvalidNamespaceType(String),
     /// Unsupported platform
     #[cfg(not(target_os = "linux"))]
     UnsupportedPlatform,
@@ -56,7 +56,7 @@ impl fmt::Display for LsnsError {
         match self {
             Self::IOError(message, err) => write!(f, "{message}: {err}"),
             Self::NulError(message, err) => write!(f, "{message}: {err}"),
-            Self::InvalidNamespaceType(idx) => write!(f, "Invalid namespace type index: {}", idx),
+            Self::InvalidNamespaceType(_type) => write!(f, "unknown namespace type: {}", _type),
             #[cfg(not(target_os = "linux"))]
             Self::UnsupportedPlatform => write!(f, "lsns is only supported on Linux"),
             Self::InvalidNamespaceInodeFormat(s) => {
