@@ -180,3 +180,35 @@ fn test_persistent_flag() {
         }
     }
 }
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_type_option() {
+    let res = new_ucmd!().arg("--type").arg("mnt").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // With --type mnt, only mount namespace should be shown
+    for line in stdout.lines().skip(1) {
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            if columns.len() >= 2 {
+                assert_eq!(
+                    columns[1], "mnt",
+                    "With --type mnt, only mnt namespace should be shown"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_invalid_namespace_type() {
+    let res = new_ucmd!()
+        .arg("--type")
+        .arg("invalid-namespace-type")
+        .fails();
+    let stdout = res.stderr_str();
+
+    assert!(stdout.contains("lsns: unknown namespace type: invalid-namespace-type"));
+}
