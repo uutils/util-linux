@@ -1566,6 +1566,7 @@ dependencies = [
  "uu_setpgid",
  "uu_setsid",
  "uu_uuidgen",
+ "uu_whereis",
  "uucore 0.2.2",
  "uuhelp_parser",
  "uuid",
@@ -1791,6 +1792,14 @@ dependencies = [
  "uucore 0.2.2",
  "uuid",
  "windows",
+]
+
+[[package]]
+name = "uu_whereis"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "uucore 0.2.2",
 ]
 
 [[package]]
