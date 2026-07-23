@@ -212,3 +212,37 @@ fn test_invalid_namespace_type() {
 
     assert!(stdout.contains("lsns: unknown namespace type: invalid-namespace-type"));
 }
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_invalid_task_pid() {
+    let res = new_ucmd!().arg("--task").arg("not_a_number").fails();
+    let stderr = res.stderr_str();
+
+    assert!(stderr.contains("invalid PID argument: 'not_a_number'"));
+}
+
+// Write a test to verify that -p 0 part.
+#[test]
+#[cfg(target_os = "linux")]
+fn test_task_pid_0() {
+    let res = new_ucmd!().arg("--task").arg("0").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // With -p 0, all namespaces should be shown
+    let line = stdout.lines().next().unwrap();
+
+    // Check for all regular headers
+    let columns = line.split_whitespace().count();
+    assert!(
+        columns == 6,
+        "All 6 columns should be displayed when -p 0 is used"
+    );
+
+    // Check for at least one entry
+    let entry_count = stdout.lines().count();
+    assert!(
+        entry_count > 1,
+        "There should be at least one entry when -p 0 is used"
+    );
+}
