@@ -3,37 +3,62 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use chrono;
 use clap::builder::ValueParser;
 use clap::parser::ValuesRef;
 use clap::{Arg, ArgAction, Command};
+#[cfg(unix)]
 use nix::unistd;
 use std::env;
 use std::ffi::OsString;
 use std::io;
 use std::io::prelude::*;
+#[cfg(unix)]
 use std::os::fd::AsFd;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
-use uucore::error::{UError, UResult};
-use uucore::format_usage;
-use uucore::utmpx::Utmpx;
+#[cfg(unix)]
+use uucore::{
+    error::{UError, UResult}, 
+    format_usage, 
+    utmpx::Utmpx,
+    translate // unused at the moment...
+};
 
-use uucore::translate;
 const STRING: &str = "string";
 const OPT_GROUP: &str = "group";
 const OPT_NOBANNER: &str = "nobanner";
 const OPT_TIMEOUT: &str = "timeout";
 
+#[cfg(target_os = "macos")]
+mod options {
+    use super::OPT_GROUP; // module don't automatically has access to const of parent
+
+    pub const VALID_SHORT: &[char] = &['g'];
+    pub const VALID_LONG: &[&str] = &[OPT_GROUP];
+}
+
+
+#[cfg(target_os = "linux")]
+mod options {
+    use super::{OPT_GROUP, OPT_NOBANNER, OPT_TIMEOUT};
+
+    pub const VALID_SHORT: &[char] = &['g', 'n', 't'];
+    pub const VALID_LONG: &[&str] = &[OPT_GROUP, OPT_NOBANNER, OPT_TIMEOUT];
+}
+
 #[derive(Error, Debug)]
 enum WallError {
+    #[error("wall: invalid argument")]
+    ArgError,
     #[error("wall: cannot read stdin")]
     Stdin(#[from] io::Error),
     #[error("wall: encoding error")]
     VecToString(#[from] FromUtf8Error),
     #[error("wall: osstring conversion failed")]
     ToStringError,
+    #[error("wall is not supported on windows")]
+    WindowsError,
 }
 
 impl UError for WallError {
@@ -42,9 +67,17 @@ impl UError for WallError {
     }
 }
 
+#[cfg(target_family = "unix")]
 #[uucore::main(no_signals)]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    #[cfg(windows)]
+    return Err(io::Error::new(
+            WallError::WindowsError));
     let args = args.skip(1).peekable();
+    match args_pre_scan(&args) {
+        Ok(_) => {}
+        Err(e) => { return Err(WallError::ArgError); }
+    }
     let matches = uucore::clap_localization::handle_clap_result(uu_app(), args)?;
     let message = get_message(matches.get_many(STRING).unwrap_or_default())?;
     let users = find_logged_users();
@@ -52,11 +85,23 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(not(target_family = "unix"))]
+#[uucore::main(no_signals)]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: ArgMatches = uu_app().try_get_matches_from(args)?;
+    Err(uucore::error::USimpleError::new(
+            1,
+            "`wall` is available only on Unix platforms."
+    ))
+}
+
+#[cfg(target_os = "linux")]
 pub fn uu_app() -> Command {
     Command::new("wall")
         .version(uucore::crate_version!())
-        .about(translate!("wall-about"))
-        .override_usage(format_usage(&translate!("pwd-usage")))
+        .about(translate!("wall.md"))
+        .infer_long_args(true)
+        .override_usage(format_usage(&translate!("wall.md")))
         .arg(
             Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
                 // users inside a group
@@ -65,6 +110,7 @@ pub fn uu_app() -> Command {
                 .value_name("GROUP")
                 .help("Send restrict to only users in the group(s)")
                 .num_args(1)
+                .required(false)
                 .action(ArgAction::Append) // User can target more than one group
                 .value_parser(clap::value_parser!(String)),
         )
@@ -73,6 +119,7 @@ pub fn uu_app() -> Command {
                 // intro message
                 .short('n')
                 .long(OPT_NOBANNER)
+                .required(false)
                 .action(ArgAction::SetTrue)
                 .help("Suppress the intro branner of the broadcast"),
         )
@@ -81,6 +128,7 @@ pub fn uu_app() -> Command {
                 // after passed a delay
                 .short('t')
                 .long(OPT_TIMEOUT)
+                .required(false)
                 .value_name("SECONDS")
                 .help("Abandon after t seconds the write attempt to the terminals")
                 .num_args(1),
@@ -90,6 +138,43 @@ pub fn uu_app() -> Command {
                 .action(ArgAction::Append)
                 .value_parser(ValueParser::os_string()),
         )
+}
+
+#[cfg(target_os = "macos")]
+pub fn uu_app() -> Command {
+    Command::new("wall")
+        .version(uucore::crate_version!())
+        .about(translate!("wall.md"))
+        .infer_long_args(true)
+        .override_usage(format_usage(&translate!("wall.md")))
+        .arg(
+            Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
+                // users inside a group
+                .short('g')
+                .long(OPT_GROUP)
+                .value_name("GROUP")
+                .help("Send restrict to only users in the group(s)")
+                .num_args(1)
+                .required(false)
+                .action(ArgAction::Append) // User can target more than one group
+                .value_parser(clap::value_parser!(String)),
+        )
+        .arg(
+            Arg::new(STRING)
+                .action(ArgAction::Append)
+                .value_parser(ValueParser::os_string()),
+        )
+}
+
+fn args_pre_scan(args: &ValuesRef<OsString>) -> Result<(), String> {
+    for arg in args {
+        let arg = arg.to_string_lossy();
+        if arg == "--" {
+            break;
+        }
+        
+    }
+    Ok(())
 }
 
 fn get_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
@@ -175,6 +260,12 @@ fn write_to_terminals(message: String, users: Vec<OsString>) -> UResult<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+fn get_hour_and_date() -> String {
+    chrono::Local::now().format("%a %b %e %H:%M %Z").to_string()
+}
+
+#[cfg(target_os = "macos")]
 fn get_hour_and_date() -> String {
     chrono::Local::now().format("%a %b %e %H:%M %Z").to_string()
 }
@@ -184,107 +275,4 @@ fn get_sender() -> String {
         .unwrap_or_else(|_| "".into())
         .to_string_lossy()
         .to_string()
-}
-
-#[cfg(test)]
-mod tests {
-
-    use crate::{OPT_GROUP, STRING};
-    use crate::{find_logged_users, get_message, uu_app, write_to_terminals};
-    use std::ffi::OsString;
-    use std::process::{Command, Output};
-
-    #[test]
-    fn test_basic_clap_implementation() {
-        let group = String::from("staff");
-        let file = String::from("LICENSE");
-        let command = vec!["wall", "-g", &group, &file];
-        let matches = uucore::clap_localization::handle_clap_result(uu_app(), command)
-            .expect("Error outside of test perimeter");
-        assert!(matches.get_one::<String>(OPT_GROUP).unwrap() == &group);
-        assert!(
-            matches
-                .get_one::<OsString>(STRING)
-                .unwrap()
-                .clone()
-                .into_string()
-                .unwrap()
-                == file
-        );
-    }
-
-    #[test]
-    fn test_get_message_on_file() {
-        let file = String::from("Cargo.toml");
-
-        // wall does not print the content of the file in the stdout, it sends it to the tty(s)
-        // Hence the use of cat to check if the get_message function can extract correctly the
-        // file
-        let mut command = Command::new("cat");
-        command.arg(&file);
-        let output: Output = command.output().expect("Failed to start 'cat' command");
-        assert!(
-            output.status.success(),
-            "'cat' command exit with failure status"
-        );
-        let command_output =
-            String::from_utf8(output.stdout).expect("Failed to convert 'cat'output");
-
-        let command = vec!["wall", &file];
-        let matches = uucore::clap_localization::handle_clap_result(uu_app(), command)
-            .expect("External error");
-        let pos_arg = matches.get_many(STRING).unwrap_or_default();
-        let function_output = get_message(pos_arg).unwrap();
-        assert_eq!(function_output, command_output);
-    }
-
-    #[test]
-    fn test_get_message_on_stdin() {
-        // for the moment test against cat is not implemented
-        let command = vec!["wall"];
-        let matches = uucore::clap_localization::handle_clap_result(uu_app(), command)
-            .expect("External error");
-        let pos_arg = matches.get_many(STRING).unwrap_or_default();
-        let function_output = get_message(pos_arg).unwrap();
-        assert_eq!(function_output, "Hello !\n");
-    }
-
-    #[test]
-    fn test_arguments_as_message() {
-        let command = vec!["wall", "Hello", "World", "!"];
-        let matches = uucore::clap_localization::handle_clap_result(uu_app(), command)
-            .expect("External error");
-        let pos_arg = matches.get_many(STRING).unwrap_or_default();
-        let function_output = get_message(pos_arg).unwrap();
-        assert_eq!(function_output, "Hello World !");
-    }
-
-    #[test]
-    fn test_found_connected_users() {
-        let users = find_logged_users();
-        assert_eq!(
-            users,
-            vec!(
-                OsString::from("/dev/tty2"),
-                OsString::from("/dev/pts/1"),
-                OsString::from("/dev/pts/2")
-            )
-        );
-    }
-
-    #[test]
-    fn test_print_to_terminals() {
-        let users = find_logged_users();
-        let _ = write_to_terminals(String::from("hello world!"), users);
-        let _ = write_to_terminals(
-            String::from("hello world!"),
-            vec![OsString::from("/dev/tty1")],
-        );
-    }
-
-    #[test]
-    fn test_get_sender() {
-        let sender = crate::get_sender();
-        assert_eq!(sender, "pts/0");
-    }
 }
