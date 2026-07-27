@@ -9,8 +9,8 @@ use std::{io, ptr};
 
 use smartcols_sys::{
     libscols_column, libscols_line, libscols_table, scols_init_debug, scols_line_set_data,
-    scols_new_table, scols_print_table, scols_table_new_column, scols_table_new_line,
-    scols_unref_table,
+    scols_new_table, scols_print_table, scols_table_enable_noheadings, scols_table_new_column,
+    scols_table_new_line, scols_unref_table,
 };
 
 use crate::errors::LsnsError;
@@ -44,6 +44,12 @@ impl Drop for Table {
 
 pub(crate) trait TableOperations: Sized {
     fn as_ptr(&self) -> *mut libscols_table;
+
+    fn enable_headings(&mut self, enable: bool) -> Result<(), LsnsError> {
+        let no_headings = c_int::from(!enable);
+        let r = unsafe { scols_table_enable_noheadings(self.as_ptr(), no_headings) };
+        LsnsError::io_from_neg_errno("scols_table_enable_noheadings", r).map(|_| ())
+    }
 
     fn new_column(
         &mut self,

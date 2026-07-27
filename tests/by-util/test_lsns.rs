@@ -96,6 +96,20 @@ fn test_output_format() {
 
 #[test]
 #[cfg(target_os = "linux")]
+fn test_noheadings() {
+    let res = new_ucmd!().arg("-n").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    let headers = ["NS", "TYPE", "NPROCS", "PID", "USER", "COMMAND"];
+
+    for header in headers {
+        let msg = format!("{} header should not be present when -n is used", header);
+        assert!(!stdout.contains(header), "{}", msg);
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
 fn test_namespace_ids_are_numeric() {
     let res = new_ucmd!().succeeds();
     let stdout = res.no_stderr().stdout_str();
@@ -142,4 +156,59 @@ fn test_user_column_not_empty() {
             }
         }
     }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_persistent_flag() {
+    let res = new_ucmd!().arg("--persistent").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // With --persistent flag, only namespaces without processes should be shown
+    // These are persistent (bind-mounted) namespaces
+    for line in stdout.lines().skip(1) {
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            if columns.len() >= 3 {
+                // NPROCS column (3rd column) should be 0 for persistent namespaces
+                let nprocs = columns[2];
+                assert_eq!(
+                    nprocs, "0",
+                    "With --persistent flag, NPROCS should be 0 (no processes)"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_type_option() {
+    let res = new_ucmd!().arg("--type").arg("mnt").succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    // With --type mnt, only mount namespace should be shown
+    for line in stdout.lines().skip(1) {
+        if !line.is_empty() {
+            let columns: Vec<&str> = line.split_whitespace().collect();
+            if columns.len() >= 2 {
+                assert_eq!(
+                    columns[1], "mnt",
+                    "With --type mnt, only mnt namespace should be shown"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_invalid_namespace_type() {
+    let res = new_ucmd!()
+        .arg("--type")
+        .arg("invalid-namespace-type")
+        .fails();
+    let stdout = res.stderr_str();
+
+    assert!(stdout.contains("lsns: unknown namespace type: invalid-namespace-type"));
 }
