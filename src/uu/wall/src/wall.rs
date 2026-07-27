@@ -19,10 +19,10 @@ use thiserror::Error;
 
 #[cfg(unix)]
 use uucore::{
-    error::{UError, UResult}, 
-    format_usage, 
+    error::{UError, UResult},
+    format_usage,
+    translate, // unused at the moment...
     utmpx::Utmpx,
-    translate // unused at the moment...
 };
 
 const STRING: &str = "string";
@@ -37,7 +37,6 @@ mod options {
     pub const VALID_SHORT: &[char] = &['g'];
     pub const VALID_LONG: &[&str] = &[OPT_GROUP];
 }
-
 
 #[cfg(target_os = "linux")]
 mod options {
@@ -71,12 +70,13 @@ impl UError for WallError {
 #[uucore::main(no_signals)]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     #[cfg(windows)]
-    return Err(io::Error::new(
-            WallError::WindowsError));
+    return Err(io::Error::new(WallError::WindowsError));
     let args = args.skip(1).peekable();
     match args_pre_scan(&args) {
         Ok(_) => {}
-        Err(e) => { return Err(WallError::ArgError); }
+        Err(e) => {
+            return Err(WallError::ArgError);
+        }
     }
     let matches = uucore::clap_localization::handle_clap_result(uu_app(), args)?;
     let message = get_message(matches.get_many(STRING).unwrap_or_default())?;
@@ -90,8 +90,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches: ArgMatches = uu_app().try_get_matches_from(args)?;
     Err(uucore::error::USimpleError::new(
-            1,
-            "`wall` is available only on Unix platforms."
+        1,
+        "`wall` is available only on Unix platforms.",
     ))
 }
 
@@ -172,7 +172,6 @@ fn args_pre_scan(args: &ValuesRef<OsString>) -> Result<(), String> {
         if arg == "--" {
             break;
         }
-        
     }
     Ok(())
 }

@@ -3,9 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use uutests::new_ucmd;
 use std::ffi::OsString;
 use std::process::{Command, Output};
+use uutests::new_ucmd;
 
 #[test]
 fn test_invalid_arg() {
@@ -14,7 +14,10 @@ fn test_invalid_arg() {
 
 #[test]
 fn test_invalid_file() {
-    new_ucmd!().arg("not_existing_file.not_existing_extension").fails().code_is(1);
+    new_ucmd!()
+        .arg("not_existing_file.not_existing_extension")
+        .fails()
+        .code_is(1);
 }
 
 // wall does not print the content of the file in the stdout, it sends it to the tty(s)
