@@ -159,6 +159,8 @@ mod linux {
 
 #[cfg(target_os = "linux")]
 use linux::*;
+#[cfg(target_os = "linux")]
+use uucore::error::USimpleError;
 
 #[cfg(target_os = "linux")]
 #[uucore::main]
