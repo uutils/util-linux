@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
-use uucore::error::{UResult, USimpleError};
+use uucore::error::UResult;
 use uucore::{format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("runuser.md");
