@@ -306,7 +306,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 //       on non-linux unix operating systems.
 #[cfg(not(target_os = "linux"))]
 #[uucore::main]
-pub fn main(args: impl uucore::Args) -> UResult<()> {
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let _matches = uu_app().try_get_matches_from(args)?;
 
     Err(uucore::error::USimpleError::new(
