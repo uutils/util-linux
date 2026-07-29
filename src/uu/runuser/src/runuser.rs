@@ -4,13 +4,6 @@
 // file that was distributed with this source code.
 
 use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
-#[cfg(target_os = "linux")]
-use nix::unistd::{setgid, setgroups, setsid, setuid, Gid, Uid};
-use std::env::var;
-use std::error::Error;
-use std::fs::read_to_string;
-use std::io::Error as IOError;
-use std::process::Command as RunCommand;
 use uucore::error::{UResult, USimpleError};
 use uucore::{format_usage, help_about, help_usage};
 
@@ -18,146 +11,160 @@ const ABOUT: &str = help_about!("runuser.md");
 const USAGE: &str = help_usage!("runuser.md");
 
 #[cfg(target_os = "linux")]
-fn get_conf(filename: &str, query: &str) -> Result<Option<Vec<String>>, IOError> {
-    let file = read_to_string(filename)?;
-    let line = file
-        .lines()
-        .find(|line| line.starts_with(&format!("{}:", query)));
+mod linux {
+    use nix::unistd::{setgid, setgroups, setsid, setuid, Gid, Uid};
+    use std::env::var;
+    use std::error::Error;
+    use std::fs::read_to_string;
+    use std::io::Error as IOError;
+    use std::process::Command as RunCommand;
+    use uucore::error::{UResult, USimpleError};
 
-    match line {
-        Some(line) => {
-            let parts: Vec<String> = line.split(':').map(|s| s.to_string()).collect();
+    pub fn get_conf(filename: &str, query: &str) -> Result<Option<Vec<String>>, IOError> {
+        let file = read_to_string(filename)?;
+        let line = file
+            .lines()
+            .find(|line| line.starts_with(&format!("{}:", query)));
 
-            Ok(Some(parts))
-        }
-        None => Ok(None),
-    }
-}
+        match line {
+            Some(line) => {
+                let parts: Vec<String> = line.split(':').map(|s| s.to_string()).collect();
 
-struct UserEntry {
-    uid: u32,
-    gid: u32,
-    home: String,
-    shell: String,
-}
-
-#[cfg(target_os = "linux")]
-fn get_user_info(username: &str) -> Result<Option<UserEntry>, Box<dyn Error>> {
-    let info = get_conf("/etc/passwd", username)?;
-
-    match info {
-        Some(parts) => {
-            if parts.len() < 7 {
-                return Err("Invalid passwd format".into());
+                Ok(Some(parts))
             }
-            let [_, _, ref uid_str, ref gid_str, _, ref home_dir, ref shell_path] = parts[0..7]
-            else {
-                unreachable!()
-            };
-            let uid = uid_str.parse::<u32>()?;
-            let gid = gid_str.parse::<u32>()?;
-
-            Ok(Some(UserEntry {
-                uid,
-                gid,
-                home: home_dir.to_string(),
-                shell: shell_path.to_string(),
-            }))
+            None => Ok(None),
         }
-        None => Ok(None),
     }
-}
 
-#[cfg(target_os = "linux")]
-fn get_group_info(groupname: &str) -> Result<Option<u32>, Box<dyn Error>> {
-    let info = get_conf("/etc/group", groupname)?;
-
-    match info {
-        Some(parts) => {
-            let gid = parts.get(2).ok_or("Invalid group format")?.parse::<u32>()?;
-
-            Ok(Some(gid))
-        }
-        None => Ok(None),
+    pub struct UserEntry {
+        pub uid: u32,
+        pub gid: u32,
+        pub home: String,
+        pub shell: String,
     }
-}
 
-#[cfg(target_os = "linux")]
-fn set_ids(uid: u32, gid: u32, supp_gids: &Vec<Gid>) -> UResult<()> {
-    setgroups(supp_gids.as_slice())
-        .map_err(|e| USimpleError::new(1, format!("Failed to set supp Gid: {}", e)))?;
-    setgid(Gid::from_raw(gid))
-        .map_err(|e| USimpleError::new(1, format!("Failed to set Gid to {}: {}", gid, e)))?;
-    setuid(Uid::from_raw(uid))
-        .map_err(|e| USimpleError::new(1, format!("Failed to set Uid to {}: {}", uid, e)))?;
+    pub fn get_user_info(username: &str) -> Result<Option<UserEntry>, Box<dyn Error>> {
+        let info = get_conf("/etc/passwd", username)?;
 
-    Ok(())
-}
+        match info {
+            Some(parts) => {
+                if parts.len() < 7 {
+                    return Err("Invalid passwd format".into());
+                }
+                let [_, _, ref uid_str, ref gid_str, _, ref home_dir, ref shell_path] = parts[0..7]
+                else {
+                    unreachable!()
+                };
+                let uid = uid_str.parse::<u32>()?;
+                let gid = gid_str.parse::<u32>()?;
 
-fn prepare_env(
-    cmd: &mut RunCommand,
-    home_dir: &str,
-    shell_path: &str,
-    username: &str,
-    preserve_env: bool,
-    whitelist_env: &Vec<String>,
-    is_login: bool,
-) {
-    const ROOT_PATH: &str = "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin";
-
-    if is_login {
-        if preserve_env {
-            println!("--preserve-environment is ignored in case `--login` is enabled");
-        }
-        cmd.env_clear();
-    }
-    if is_login || !preserve_env {
-        match username {
-            "root" => {
-                cmd.env("PATH", ROOT_PATH);
+                Ok(Some(UserEntry {
+                    uid,
+                    gid,
+                    home: home_dir.to_string(),
+                    shell: shell_path.to_string(),
+                }))
             }
-            _ => {
-                cmd.env("PATH", "/usr/local/bin:/usr/bin:/bin");
-            }
+            None => Ok(None),
         }
-        cmd.env("HOME", home_dir);
-        cmd.env("USER", username);
-        cmd.env("LOGNAME", username);
-        cmd.env("SHELL", shell_path);
     }
-    for item in whitelist_env {
-        if !["HOME", "USER", "LOGNAME", "SHELL", "PATH"].contains(&item.as_str()) {
-            if let Ok(val) = var(item) {
-                cmd.env(item, val);
+
+    #[cfg(target_os = "linux")]
+    pub fn get_group_info(groupname: &str) -> Result<Option<u32>, Box<dyn Error>> {
+        let info = get_conf("/etc/group", groupname)?;
+
+        match info {
+            Some(parts) => {
+                let gid = parts.get(2).ok_or("Invalid group format")?.parse::<u32>()?;
+
+                Ok(Some(gid))
+            }
+            None => Ok(None),
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn set_ids(uid: u32, gid: u32, supp_gids: &Vec<Gid>) -> UResult<()> {
+        setgroups(supp_gids.as_slice())
+            .map_err(|e| USimpleError::new(1, format!("Failed to set supp Gid: {}", e)))?;
+        setgid(Gid::from_raw(gid))
+            .map_err(|e| USimpleError::new(1, format!("Failed to set Gid to {}: {}", gid, e)))?;
+        setuid(Uid::from_raw(uid))
+            .map_err(|e| USimpleError::new(1, format!("Failed to set Uid to {}: {}", uid, e)))?;
+
+        Ok(())
+    }
+
+    pub fn prepare_env(
+        cmd: &mut RunCommand,
+        home_dir: &str,
+        shell_path: &str,
+        username: &str,
+        preserve_env: bool,
+        whitelist_env: &Vec<String>,
+        is_login: bool,
+    ) {
+        const ROOT_PATH: &str = "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin";
+
+        if is_login {
+            if preserve_env {
+                println!("--preserve-environment is ignored in case `--login` is enabled");
+            }
+            cmd.env_clear();
+        }
+        if is_login || !preserve_env {
+            match username {
+                "root" => {
+                    cmd.env("PATH", ROOT_PATH);
+                }
+                _ => {
+                    cmd.env("PATH", "/usr/local/bin:/usr/bin:/bin");
+                }
+            }
+            cmd.env("HOME", home_dir);
+            cmd.env("USER", username);
+            cmd.env("LOGNAME", username);
+            cmd.env("SHELL", shell_path);
+        }
+        for item in whitelist_env {
+            if !["HOME", "USER", "LOGNAME", "SHELL", "PATH"].contains(&item.as_str()) {
+                if let Ok(val) = var(item) {
+                    cmd.env(item, val);
+                }
             }
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn run(cmd: &mut RunCommand) -> UResult<i32> {
+        let status = cmd
+            .spawn()
+            .map_err(|e| match e.kind() {
+                std::io::ErrorKind::NotFound => USimpleError::new(127, "command was not found"),
+                e => USimpleError::new(126, format!("Failed to spawn for process: {}", e)),
+            })?
+            .wait()
+            .map_err(|e| USimpleError::new(126, format!("Failed to wait for process: {}", e)))?;
+
+        Ok(status.code().unwrap_or(0))
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn sep_session() -> UResult<()> {
+        setsid().map_err(|e| USimpleError::new(1, format!("Failed to set Sid: {}", e)))?;
+
+        Ok(())
     }
 }
 
 #[cfg(target_os = "linux")]
-fn run(cmd: &mut RunCommand) -> UResult<i32> {
-    let status = cmd
-        .spawn()
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::NotFound => USimpleError::new(127, "command was not found"),
-            e => USimpleError::new(126, format!("Failed to spawn for process: {}", e)),
-        })?
-        .wait()
-        .map_err(|e| USimpleError::new(126, format!("Failed to wait for process: {}", e)))?;
-
-    Ok(status.code().unwrap_or(0))
-}
-
-#[cfg(target_os = "linux")]
-fn sep_session() -> UResult<()> {
-    setsid().map_err(|e| USimpleError::new(1, format!("Failed to set Sid: {}", e)))?;
-
-    Ok(())
-}
+use linux::*;
 
 #[cfg(target_os = "linux")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    use nix::unistd::Gid;
+    use std::process::Command as RunCommand;
     let matches = uu_app().try_get_matches_from(args)?;
     let mut is_login = false;
     let mut command_args = Vec::new();
@@ -302,7 +309,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 pub fn main(args: impl uucore::Args) -> UResult<()> {
     let _matches = uu_app().try_get_matches_from(args)?;
 
-    Err(USimpleError::new(1, "`runuser` is only available on linux"))
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`runuser` is only available on linux",
+    ))
 }
 
 pub fn uu_app() -> Command {
