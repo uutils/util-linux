@@ -61,5 +61,5 @@ fn unsupported_platform() {
     new_ucmd!()
         .fails()
         .code_is(1)
-        .stderr_contains("`runuser` is only available on linux")
+        .stderr_contains("`runuser` is only available on linux");
 }
