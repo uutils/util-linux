@@ -3,6 +3,70 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use uutests::new_ucmd;
+
+#[test]
+fn test_invalid_arg() {
+    new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
+}
+
+#[test]
+fn test_no_args_shows_usage() {
+    new_ucmd!()
+        .fails()
+        .code_is(1)
+        .stderr_contains("configure CPUs in a multi-processor system.");
+}
+
+#[test]
+fn test_actions_mutually_exclusive() {
+    new_ucmd!()
+        .args(&["--enable", "0", "--disable", "1"])
+        .fails()
+        .code_is(1)
+        .stderr_contains(
+            "the argument '--enable <cpu-list>' cannot be used with '--disable <cpu-list>'",
+        );
+}
+
+#[test]
+fn test_cpu_list_range_out_of_order() {
+    new_ucmd!()
+        .args(&["--enable", "3-1"])
+        .fails()
+        .code_is(1)
+        .stderr_contains("first element of CPU list range is greater than its last element");
+}
+
+#[test]
+fn test_cpu_list_not_a_number() {
+    new_ucmd!()
+        .args(&["--enable", "a"])
+        .fails()
+        .code_is(1)
+        .stderr_contains("CPU list element is not a positive number");
+}
+
+/// An empty argument splits into one empty element rather than zero elements, so it
+/// is rejected as an unparsable element; `ChCpuError::EmptyCpuList` is unreachable.
+#[test]
+fn test_cpu_list_empty() {
+    new_ucmd!()
+        .args(&["--enable", ""])
+        .fails()
+        .code_is(1)
+        .stderr_contains("CPU list element is not a positive number");
+}
+
+#[test]
+fn test_dispatch_mode_unknown() {
+    new_ucmd!()
+        .args(&["--dispatch", "bogus"])
+        .fails()
+        .code_is(1)
+        .stderr_contains("[possible values: horizontal, vertical]");
+}
+
 #[cfg(target_os = "linux")]
 mod linux {
     use uutests::new_ucmd;
