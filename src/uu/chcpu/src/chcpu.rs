@@ -204,30 +204,27 @@ impl fmt::Display for DispatchMode {
 pub(crate) struct CpuList(RangeInclusiveSet<usize>);
 
 impl CpuList {
-    fn run(&self, f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>) -> Result<(), ChCpuError> {
+    /// A failure on one CPU must not stop the remaining ones, so failures are
+    /// reported here and reflected in the exit code instead of being returned:
+    /// returning one would let `uucore` print it a second time.
+    fn run(&self, f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>) {
         use std::ops::RangeInclusive;
 
-        let iter = self.0.iter().flat_map(RangeInclusive::to_owned).map(f);
+        let mut success_occurred = false;
+        let mut failure_occurred = false;
 
-        let (success_occurred, first_error) =
-            iter.fold((false, None), |(success_occurred, first_error), result| {
-                if let Err(err) = result {
-                    eprintln!("{err}");
-                    (success_occurred, first_error.or(Some(err)))
-                } else {
-                    (true, first_error)
+        for cpu_index in self.0.iter().flat_map(RangeInclusive::to_owned) {
+            match f(cpu_index) {
+                Ok(()) => success_occurred = true,
+                Err(err) => {
+                    uucore::show!(err);
+                    failure_occurred = true;
                 }
-            });
-
-        if let Some(err) = first_error {
-            if success_occurred {
-                uucore::error::set_exit_code(64); // Partial success.
-                Ok(())
-            } else {
-                Err(err)
             }
-        } else {
-            Ok(())
+        }
+
+        if success_occurred && failure_occurred {
+            uucore::error::set_exit_code(64); // Partial success.
         }
     }
 }
@@ -293,7 +290,9 @@ fn enable_cpu(cpu_list: &CpuList, enable: bool) -> Result<(), ChCpuError> {
 
     cpu_list.run(&mut move |cpu_index| {
         sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, enable)
-    })
+    });
+
+    Ok(())
 }
 
 #[cfg(not(unix))]
@@ -309,7 +308,9 @@ fn configure_cpu(cpu_list: &CpuList, configure: bool) -> Result<(), ChCpuError> 
 
     cpu_list.run(&mut move |cpu_index| {
         sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, configure)
-    })
+    });
+
+    Ok(())
 }
 
 #[cfg(not(unix))]
