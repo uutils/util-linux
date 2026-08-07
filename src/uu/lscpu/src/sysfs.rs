@@ -18,7 +18,9 @@ pub struct CpuTopology {
 #[derive(Debug)]
 pub struct Cpu {
     _index: usize,
-    pub pkg_id: usize,
+    // i64 rather than usize: the kernel reports -1 when the architecture
+    // does not expose physical package information
+    pub pkg_id: i64,
     pub core_id: usize,
     pub caches: Vec<CpuCache>,
 }
@@ -53,7 +55,7 @@ impl CpuTopology {
             let pkg_id = fs::read_to_string(cpu_dir.join("topology/physical_package_id"))
                 .unwrap()
                 .trim()
-                .parse::<usize>()
+                .parse::<i64>()
                 .unwrap();
 
             let core_id = fs::read_to_string(cpu_dir.join("topology/core_id"))
@@ -274,6 +276,31 @@ fn test_print_cache_size() {
         CacheSize::new((7.6 * 1024.0 * 1024.0) as u64).human_readable(),
         "7 MiB"
     );
+}
+
+#[test]
+fn test_socket_count_with_unknown_package_id() {
+    // The kernel reports physical_package_id as -1 when the architecture does
+    // not expose package information (e.g. some ppc64 machines, see #495).
+    // All-unknown ids collapse into a single socket bucket.
+    let topology = CpuTopology {
+        cpus: vec![
+            Cpu {
+                _index: 0,
+                pkg_id: -1,
+                core_id: 0,
+                caches: vec![],
+            },
+            Cpu {
+                _index: 1,
+                pkg_id: -1,
+                core_id: 1,
+                caches: vec![],
+            },
+        ],
+    };
+    assert_eq!(topology.socket_count(), 1);
+    assert_eq!(topology.core_count(), 2);
 }
 
 #[test]
