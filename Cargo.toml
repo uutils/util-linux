@@ -48,6 +48,7 @@ feat_common_core = [
   "setpgid",
   "setsid",
   "uuidgen",
+  "whereis",
 ]
 
 [workspace.dependencies]
@@ -121,6 +122,7 @@ rev = { optional = true, version = "0.0.1", package = "uu_rev", path = "src/uu/r
 setpgid = { optional = true, version = "0.0.1", package = "uu_setpgid", path = "src/uu/setpgid" }
 setsid = { optional = true, version = "0.0.1", package = "uu_setsid", path ="src/uu/setsid" }
 uuidgen = { optional = true, version = "0.0.1", package = "uu_uuidgen", path ="src/uu/uuidgen" }
+whereis = { optional = true, version = "0.0.1", package = "uu_whereis", path = "src/uu/whereis" }
 
 [dev-dependencies]
 ctor = "1.0.0"
