@@ -87,6 +87,7 @@ struct Lsns {
     noheadings: bool,
     persistent: bool,
     namespace_type: Option<NamespaceType>,
+    task: Option<i32>,
 }
 
 #[uucore::main]
@@ -98,6 +99,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         .map(|s| NamespaceType::try_from(s.as_str()))
         .transpose()?;
 
+    let task = matches
+        .get_one::<String>("task")
+        .map(|s| {
+            s.parse::<i32>()
+                .map_err(|_| LsnsError::InvalidPidArgument(s.clone()))
+        })
+        .transpose()?;
+
     // Initialize lsns struct
     let mut lsns = Lsns {
         processes: Vec::new(),
@@ -105,6 +114,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         noheadings: matches.get_flag("noheadings"),
         persistent: matches.get_flag("persistent"),
         namespace_type,
+        task,
     };
 
     read_processes(PATH_PROC, &mut lsns)?;
@@ -144,6 +154,15 @@ pub fn uu_app() -> Command {
                 .required(false)
                 .value_name("name")
                 .help("namespace type (mnt, net, ipc, user, pid, uts, cgroup, time)"),
+        )
+        .arg(
+            Arg::new("task")
+                .short('p')
+                .long("task")
+                .action(ArgAction::Set)
+                .required(false)
+                .value_name("pid")
+                .help("print process namespaces"),
         )
 }
 
@@ -561,6 +580,13 @@ fn get_table_with_columns() -> Result<Table, LsnsError> {
     Ok(table)
 }
 
+/// Check if a namespace contains a specific process
+fn namespace_has_process(lsns: &Lsns, ns: &Namespace, pid: i32) -> bool {
+    lsns.processes
+        .iter()
+        .any(|proc| proc.pid == pid && proc.ns_ids[ns.ns_type as usize] == ns.id)
+}
+
 /// Display namespaces in default format using smartcols
 #[cfg(target_os = "linux")]
 fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
@@ -586,18 +612,28 @@ fn display_namespaces(lsns: &Lsns) -> Result<(), LsnsError> {
             continue;
         }
 
+        // If --type argument is supplied then show only the specified namespace type
         if let Some(namespace_type) = &lsns.namespace_type
             && ns.ns_type != *namespace_type
         {
             continue;
         }
 
-        // Get namespace type name
-        let ns_type = NSNAMES[ns.ns_type as usize];
+        // If --task argument is supplied then show only the namespaces of the specified process
+        // Note: task_pid == 0 means show all namespaces (no filtering)
+        if let Some(task_pid) = lsns.task
+            && task_pid != 0
+            && !namespace_has_process(lsns, ns, task_pid)
+        {
+            continue;
+        }
 
         // Find representative process using O(1) HashMap lookup
         let rep_pid = ns.representative_pid.unwrap_or(0);
         let rep_proc = process_map.get(&rep_pid).copied();
+
+        // Get namespace type name
+        let ns_type = NSNAMES[ns.ns_type as usize];
 
         // Get user name
         let uid = if let Some(proc) = rep_proc {
