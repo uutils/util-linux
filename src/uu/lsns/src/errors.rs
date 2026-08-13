@@ -29,6 +29,8 @@ pub enum LsnsError {
     FailedToGetPid(String),
     /// Failed to read process information
     FailedToReadProcess(String),
+    // Invalid PID argument
+    InvalidPidArgument(String),
 }
 
 impl LsnsError {
@@ -73,6 +75,9 @@ impl fmt::Display for LsnsError {
             }
             Self::FailedToReadProcess(s) => {
                 write!(f, "Failed to read process information: {}", s)
+            }
+            Self::InvalidPidArgument(s) => {
+                write!(f, "invalid PID argument: '{}'", s)
             }
         }
     }
