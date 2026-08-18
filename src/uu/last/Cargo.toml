@@ -6,6 +6,10 @@ edition = "2021"
 [lib]
 path = "src/last.rs"
 
+[[bin]]
+name = "last"
+path = "src/main.rs"
+
 [dependencies]
 uucore = { workspace = true, features = ["utmpx"] }
 clap = { workspace = true}
