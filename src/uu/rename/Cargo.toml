@@ -1,0 +1,19 @@
+[package]
+name = "uu_rename"
+version = "0.0.1"
+edition = "2021"
+description = "rename ~ (uutils) Rename files by substring replacement"
+
+[lib]
+path = "src/rename.rs"
+
+[[bin]]
+name = "rename"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+uucore = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { workspace = true }
