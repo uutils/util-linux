@@ -6,8 +6,8 @@
 #[cfg(target_family = "unix")]
 mod unix {
     use uutests::new_ucmd;
-    use uutests::util::get_tests_binary;
     use uutests::util::UCommand;
+    use uutests::util::get_tests_binary;
 
     #[test]
     fn test_invalid_arg() {
