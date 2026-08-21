@@ -41,6 +41,7 @@ feat_common_core = [
   "lsns",  
   "mcookie",
   "mesg",
+  "mount",
   "mountpoint",
   "nologin",
   "renice",
@@ -114,6 +115,7 @@ lsmem = { optional = true, version = "0.0.1", package = "uu_lsmem", path = "src/
 lsns = { optional = true, version = "0.0.1", package = "uu_lsns", path = "src/uu/lsns" }
 mcookie = { optional = true, version = "0.0.1", package = "uu_mcookie", path = "src/uu/mcookie" }
 mesg = { optional = true, version = "0.0.1", package = "uu_mesg", path = "src/uu/mesg" }
+mount = { optional = true, version = "0.0.1", package = "uu_mount", path = "src/uu/mount" }
 mountpoint = { optional = true, version = "0.0.1", package = "uu_mountpoint", path = "src/uu/mountpoint" }
 nologin = { optional = true, version = "0.0.1", package = "uu_nologin", path = "src/uu/nologin" }
 renice = { optional = true, version = "0.0.1", package = "uu_renice", path = "src/uu/renice" }
@@ -127,6 +129,7 @@ ctor = "1.0.0"
 # dmesg test require fixed-boot-time feature turned on.
 dmesg = { version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg", features = ["fixed-boot-time"] }
 libc = { workspace = true }
+mount = { version = "0.0.1", package = "uu_mount", path = "src/uu/mount" }
 pretty_assertions = "1"
 rand = { workspace = true }
 regex = { workspace = true }
