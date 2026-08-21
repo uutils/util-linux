@@ -28,9 +28,6 @@ mod unix {
     pub fn report_failure_to_exec(error: io::Error, executable: &OsStr, set_error: bool) {
         let kind = error.kind();
 
-        // FIXME: POSIX wants certain exit statuses for specific errors, should
-        // these be handled by uucore::error? We should be able to just return
-        // the UError here.
         uucore::show_error!(
             "failed to execute {}: {}",
             executable.to_string_lossy(),
@@ -38,11 +35,11 @@ mod unix {
         );
 
         if set_error {
-            if kind == io::ErrorKind::NotFound {
-                uucore::error::set_exit_code(127);
-            } else if kind == io::ErrorKind::PermissionDenied {
-                uucore::error::set_exit_code(126);
-            }
+            let exit_code = match kind {
+                io::ErrorKind::NotFound => 127,
+                _ => 126,
+            };
+            uucore::error::set_exit_code(exit_code);
         }
     }
 
@@ -97,7 +94,13 @@ mod unix {
 
         match child.wait() {
             Ok(status) => {
-                uucore::error::set_exit_code(status.code().unwrap());
+                let code = if let Some(code) = status.code() {
+                    code
+                } else {
+                    use std::os::unix::process::ExitStatusExt;
+                    status.signal().map(|s| 128 + s).unwrap_or(1)
+                };
+                uucore::error::set_exit_code(code);
                 Ok(())
             }
             Err(error) => {

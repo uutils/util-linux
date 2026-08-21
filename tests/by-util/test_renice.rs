@@ -10,3 +10,33 @@ use uutests::new_ucmd;
 fn test_invalid_arg() {
     new_ucmd!().arg("--definitely-invalid").fails().code_is(1);
 }
+
+#[test]
+fn test_pid_option_after_priority() {
+    new_ucmd!()
+        .args(&["19", "-p", "not-a-pid"])
+        .fails()
+        .code_is(1)
+        .no_stdout()
+        .stderr_is("Invalid process ID\n");
+}
+
+#[test]
+fn test_priority_option_before_pid() {
+    new_ucmd!()
+        .args(&["-n", "19", "-p", "not-a-pid"])
+        .fails()
+        .code_is(1)
+        .no_stdout()
+        .stderr_is("Invalid process ID\n");
+}
+
+#[test]
+fn test_pgrp_option_after_priority() {
+    new_ucmd!()
+        .args(&["19", "-g", "not-a-pgrp"])
+        .fails()
+        .code_is(1)
+        .no_stdout()
+        .stderr_is("Invalid process group ID\n");
+}
