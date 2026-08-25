@@ -119,6 +119,19 @@ impl SysFSCpu {
         self.cpu_list("online")
     }
 
+    /// The highest CPU index the kernel can ever bring online. `cpu_possible_mask`
+    /// is fixed during boot discovery, so nothing above it can appear later, not
+    /// even by hot-add: <https://docs.kernel.org/core-api/cpu_hotplug.html>.
+    ///
+    /// `None` where the attribute cannot be read, which leaves the walk unbounded
+    /// rather than refusing the operation: one missing optional attribute must not
+    /// stop a CPU that does exist from being enabled.
+    pub(crate) fn max_possible_cpu_index(&self) -> Option<usize> {
+        self.cpu_list("possible")
+            .ok()
+            .and_then(|list| list.max_index())
+    }
+
     pub(crate) fn cpu_dir_path(&self, cpu_index: usize) -> Result<PathBuf, ChCpuError> {
         let dir_name = PathBuf::from(format!("cpu{cpu_index}"));
 
