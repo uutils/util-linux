@@ -104,16 +104,19 @@ impl SysFSCpu {
             .map_err(|err| ChCpuError::io1("failed to write file", Self::inner_path(name), err))
     }
 
-    pub(crate) fn enabled_cpu_list(&self) -> Result<CpuList, ChCpuError> {
+    fn cpu_list(&self, name: impl AsRef<Path>) -> Result<CpuList, ChCpuError> {
+        let name = name.as_ref();
         let mut buffer = Vec::default();
 
-        self.open_inner("online", libc::O_RDONLY | libc::O_CLOEXEC)?
+        self.open_inner(name, libc::O_RDONLY | libc::O_CLOEXEC)?
             .read_to_end(&mut buffer)
-            .map_err(|err| {
-                ChCpuError::io1("failed to read file", Self::inner_path("online"), err)
-            })?;
+            .map_err(|err| ChCpuError::io1("failed to read file", Self::inner_path(name), err))?;
 
         CpuList::try_from(buffer.as_slice())
+    }
+
+    pub(crate) fn enabled_cpu_list(&self) -> Result<CpuList, ChCpuError> {
+        self.cpu_list("online")
     }
 
     pub(crate) fn cpu_dir_path(&self, cpu_index: usize) -> Result<PathBuf, ChCpuError> {
