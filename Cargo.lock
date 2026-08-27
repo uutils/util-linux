@@ -435,6 +435,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dns-lookup"
+version = "4.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6120e7e5dcd1c90098e349def389e2797377cdbe6b465ad8fdd115c0c99d5cf2"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "socket2",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1530,7 +1542,7 @@ dependencies = [
  "clap_complete",
  "clap_mangen",
  "ctor",
- "dns-lookup",
+ "dns-lookup 4.0.1",
  "libc",
  "nix 0.31.3",
  "parse_datetime",
@@ -1651,7 +1663,7 @@ name = "uu_last"
 version = "0.0.1"
 dependencies = [
  "clap",
- "dns-lookup",
+ "dns-lookup 4.0.1",
  "parse_datetime",
  "uucore 0.2.2",
 ]
@@ -1802,7 +1814,7 @@ dependencies = [
  "bigdecimal",
  "bstr",
  "clap",
- "dns-lookup",
+ "dns-lookup 3.0.1",
  "fluent",
  "fluent-bundle",
  "fluent-syntax",
@@ -1827,7 +1839,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e97dd0fd8bb2ed12affba9f956c3b94b8ad3f9432746717475420e916ae0b8d4"
 dependencies = [
  "clap",
- "dns-lookup",
+ "dns-lookup 3.0.1",
  "fluent",
  "fluent-syntax",
  "jiff",
