@@ -98,3 +98,7 @@ mod test_uuidgen;
 #[cfg(feature = "chcpu")]
 #[path = "by-util/test_chcpu.rs"]
 mod test_chcpu;
+
+#[cfg(feature = "ionice")]
+#[path = "by-util/test_ionice.rs"]
+mod test_ionice;

@@ -33,6 +33,7 @@ feat_common_core = [
   "dmesg",
   "fsfreeze",
   "hexdump",
+  "ionice",
   "last",
   "lscpu",
   "lsipc",
@@ -106,6 +107,7 @@ ctrlaltdel = { optional = true, version = "0.0.1", package = "uu_ctrlaltdel", pa
 dmesg = { optional = true, version = "0.0.1", package = "uu_dmesg", path = "src/uu/dmesg" }
 fsfreeze = { optional = true, version = "0.0.1", package = "uu_fsfreeze", path = "src/uu/fsfreeze" }
 hexdump = { optional = true, version = "0.0.1", package = "uu_hexdump", path = "src/uu/hexdump" }
+ionice = { optional = true, version = "0.0.1", package = "uu_ionice", path = "src/uu/ionice" }
 last = { optional = true, version = "0.0.1", package = "uu_last", path = "src/uu/last" }
 lscpu = { optional = true, version = "0.0.1", package = "uu_lscpu", path = "src/uu/lscpu" }
 lsipc = { optional = true, version = "0.0.1", package = "uu_lsipc", path = "src/uu/lsipc" }
