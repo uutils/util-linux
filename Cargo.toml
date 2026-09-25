@@ -78,6 +78,7 @@ textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"
 uucore = "0.2.2"
 uuhelp_parser = "0.2.2"
+uulinux = { version = "0.0.1", path = "src/uulinux" }
 uuid = { version = "1.16.0", features = ["rng-rand"] }
 uutests = "0.12.0"
 windows = { version = "0.62.2" }
