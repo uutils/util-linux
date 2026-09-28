@@ -32,50 +32,6 @@ fn test_a_no_match_exits_four() {
     assert!(at.file_exists("n1"));
 }
 
-// -- option permutation and POSIXLY_CORRECT -------------------------------
-
-/// POSIXLY_CORRECT turns permutation off: scanning stops at the first operand
-/// and everything after it is a filename, however much it looks like a flag.
-#[test]
-fn test_posixly_correct_stops_the_scan_at_the_first_operand() {
-    let (at, mut ucmd) = at_and_ucmd!();
-    at.touch("s1");
-    ucmd.env("POSIXLY_CORRECT", "")
-        .args(&["s", "z", "s1", "-v"])
-        .fails()
-        .code_is(2)
-        .no_stdout();
-    assert!(at.file_exists("z1"));
-}
-
-#[test]
-fn test_posixly_correct_is_read_for_presence_and_not_for_value() {
-    for value in ["", "0"] {
-        let (at, mut ucmd) = at_and_ucmd!();
-        at.touch("s1");
-        ucmd.env("POSIXLY_CORRECT", value)
-            .args(&["s", "z", "s1", "-v"])
-            .fails()
-            .code_is(2)
-            .no_stdout();
-        assert!(at.file_exists("z1"), "{value:?}");
-    }
-}
-
-/// Scanning stops at the first NON-OPTION, not at the first operand slot, so
-/// flags written before it are still flags - and this invocation is short of
-/// operands either way.
-#[test]
-fn test_posixly_correct_still_reads_the_flags_that_come_first() {
-    let (at, mut ucmd) = at_and_ucmd!();
-    at.touch("s1");
-    ucmd.env("POSIXLY_CORRECT", "")
-        .args(&["-v", "s", "z", "s1"])
-        .succeeds()
-        .stdout_is("`s1' -> `z1'\n");
-    assert!(at.file_exists("z1"));
-}
-
 /// The existence check runs before the substitution result matters.
 #[test]
 fn test_a_missing_operand_fails_even_when_the_needle_cannot_match() {

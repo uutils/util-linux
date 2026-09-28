@@ -13,14 +13,12 @@ use clap::{crate_version, Arg, ArgAction, ArgMatches, Command};
 use uucore::error::{set_exit_code, UResult};
 use uucore::{format_usage, help_about, help_usage};
 
-mod argv;
 mod encoding;
 mod errors;
 mod output;
 mod prompt;
 mod subst;
 
-use argv::collect_getopt_argv;
 use encoding::{os_string, units, Unit, SEP};
 use errors::RenameError;
 use output::Output;
@@ -122,7 +120,7 @@ fn argument(matches: &ArgMatches, id: &str) -> Vec<Unit> {
 
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    let matches = match uu_app().try_get_matches_from(collect_getopt_argv(args)) {
+    let matches = match uu_app().try_get_matches_from(args) {
         Ok(matches) => matches,
         Err(error) => {
             report_parse_failure(&error);
