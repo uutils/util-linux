@@ -75,21 +75,6 @@ fn test_the_tally_selects_one_status_for_every_mix_of_outcomes() {
     }
 }
 
-/// The other half of this claim, that each failure is reported exactly once
-/// and in argv order, is pinned by
-/// unix::test_every_failing_operand_is_reported_once_and_in_order, because the
-/// text it has to assert is the platform's strerror.
-#[test]
-fn test_a_failure_in_the_middle_does_not_stop_the_operands_after_it() {
-    let (at, mut ucmd) = at_and_ucmd!();
-    at.touch("s2");
-    ucmd.args(&["-v", "s", "z", "s8", "s2", "s9"])
-        .fails()
-        .code_is(2)
-        .stdout_is("`s2' -> `z2'\n");
-    assert!(at.file_exists("z2"));
-}
-
 // -- the substring-equals-replacement short circuit ----------------------
 
 /// The short circuit is for the whole run, before any operand is touched, so a
@@ -640,10 +625,8 @@ mod unix {
 
     // -- error classes ----------------------------------------------------
 
-    /// The diagnostic carries the platform's strerror text, which is why this
-    /// half lives here and its other half,
-    /// test_a_failure_in_the_middle_does_not_stop_the_operands_after_it,
-    /// stays ungated.
+    /// The diagnostic ends in the platform's own error text, which is why this
+    /// lives here rather than above.
     #[test]
     fn test_every_failing_operand_is_reported_once_and_in_order() {
         let (at, mut ucmd) = at_and_ucmd!();
