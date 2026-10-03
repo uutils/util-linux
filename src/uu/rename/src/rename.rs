@@ -142,13 +142,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // C util-linux's stdout is stdio's: line buffered on a terminal and fully
     // buffered anywhere else. Rust's is line buffered everywhere, and the
     // difference is not only a matter of syscall counts - under a write limit
-    // it stops our loop part way through a run C util-linux finishes.
-    let sink: Box<dyn Write> = if stdout.is_terminal() {
-        Box::new(stdout.lock())
-    } else {
-        Box::new(BufWriter::new(stdout.lock()))
-    };
-    let mut out = Output::new(sink);
+    // it stops our loop part way through a run C util-linux finishes. So the
+    // stream is fully buffered here, and on a terminal the loop flushes it
+    // after each operand.
+    let line_buffered = stdout.is_terminal();
+    let mut out = Output::new(BufWriter::new(stdout.lock()));
     let mut err = Output::new(io::stderr().lock());
 
     // Asked once for the whole run, before any operand is looked at, which is
@@ -159,7 +157,13 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         .get_many::<OsString>(options::FILES)
         .unwrap_or_default()
     {
-        match rename_one(&options, answering, operand, &mut out) {
+        let outcome = rename_one(&options, answering, operand, &mut out);
+        // Before the diagnostic, so that on a terminal the report and the
+        // diagnostics appear in the order things happened.
+        if line_buffered {
+            out.flush();
+        }
+        match outcome {
             Ok(Outcome::Renamed) => tally.renamed += 1,
             Ok(Outcome::Neither) => {}
             Err(error) => {
