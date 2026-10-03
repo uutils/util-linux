@@ -204,22 +204,49 @@ impl fmt::Display for DispatchMode {
 pub(crate) struct CpuList(RangeInclusiveSet<usize>);
 
 impl CpuList {
+    /// The highest index in the list. `RangeInclusiveSet` keeps its ranges
+    /// coalesced and ordered, so the last one holds it.
+    pub(crate) fn max_index(&self) -> Option<usize> {
+        self.0.last().map(|range| *range.end())
+    }
+
     /// A failure on one CPU must not stop the remaining ones, so failures are
     /// reported here and reflected in the exit code instead of being returned:
     /// returning one would let `uucore` print it a second time.
-    fn run(&self, f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>) {
-        use std::ops::RangeInclusive;
-
+    ///
+    /// `max_cpu_index` bounds the walk. A cpu-list range is only as wide as the
+    /// integer type, so without it `--enable 0-4294967295` spends hours calling
+    /// `f` on indices no kernel can have. Indices above the bound cannot exist, so
+    /// they are reported one range at a time rather than one index at a time.
+    /// `None` walks everything, as it did before the bound existed; call through
+    /// `walk_cpu_list` rather than passing it, so the bound cannot be dropped.
+    fn run(
+        &self,
+        max_cpu_index: Option<usize>,
+        f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>,
+    ) {
         let mut success_occurred = false;
         let mut failure_occurred = false;
 
-        for cpu_index in self.0.iter().flat_map(RangeInclusive::to_owned) {
-            match f(cpu_index) {
-                Ok(()) => success_occurred = true,
-                Err(err) => {
-                    uucore::show!(err);
-                    failure_occurred = true;
+        for range in self.0.iter() {
+            let (first, last) = (*range.start(), *range.end());
+            let walked_last = max_cpu_index.map_or(last, |max| max.min(last));
+
+            // Empty when the whole range sits above the bound.
+            for cpu_index in first..=walked_last {
+                match f(cpu_index) {
+                    Ok(()) => success_occurred = true,
+                    Err(err) => {
+                        uucore::show!(err);
+                        failure_occurred = true;
+                    }
                 }
+            }
+
+            if walked_last < last {
+                // The comparison guarantees the increment stays in range.
+                uucore::show!(ChCpuError::absent_cpus(first.max(walked_last + 1), last));
+                failure_occurred = true;
             }
         }
 
@@ -282,13 +309,26 @@ impl FromStr for CpuList {
     }
 }
 
+/// Walks `cpu_list`, bounded by what the machine can have. The bound is taken here
+/// rather than passed in so that no operation can be added that omits it: a walk
+/// given no bound steps through every index the integer type allows, which is the
+/// hours-long walk the bound exists to prevent.
+#[cfg(unix)]
+fn walk_cpu_list(
+    sysfs_cpu: &sysfs::SysFSCpu,
+    cpu_list: &CpuList,
+    f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>,
+) {
+    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), f);
+}
+
 #[cfg(unix)]
 fn enable_cpu(cpu_list: &CpuList, enable: bool) -> Result<(), ChCpuError> {
     let sysfs_cpu = sysfs::SysFSCpu::open()?;
 
     let mut enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    cpu_list.run(&mut move |cpu_index| {
+    walk_cpu_list(&sysfs_cpu, cpu_list, &mut |cpu_index| {
         sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, enable)
     });
 
@@ -306,7 +346,7 @@ fn configure_cpu(cpu_list: &CpuList, configure: bool) -> Result<(), ChCpuError> 
 
     let enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    cpu_list.run(&mut move |cpu_index| {
+    walk_cpu_list(&sysfs_cpu, cpu_list, &mut |cpu_index| {
         sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, configure)
     });
 
