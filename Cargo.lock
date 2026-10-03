@@ -1518,6 +1518,7 @@ dependencies = [
  "uu_mesg",
  "uu_mountpoint",
  "uu_nologin",
+ "uu_rename",
  "uu_renice",
  "uu_rev",
  "uu_setpgid",
@@ -1698,6 +1699,15 @@ name = "uu_nologin"
 version = "0.0.1"
 dependencies = [
  "clap",
+ "uucore 0.2.2",
+]
+
+[[package]]
+name = "uu_rename"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "libc",
  "uucore 0.2.2",
 ]
 
