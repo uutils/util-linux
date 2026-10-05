@@ -3,6 +3,7 @@ name = "uu_cal"
 version = "0.0.1"
 description = "cal ~ display a calendar"
 
+rust-version = "1.85"
 edition = "2021"
 
 [lib]
