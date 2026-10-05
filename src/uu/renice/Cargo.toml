@@ -2,7 +2,7 @@
 name = "uu_renice"
 version = "0.0.1"
 rust-version = "1.85"
-edition = "2021"
+edition = "2024"
 description = "renice ~ (uutils) Alter priority of running processes"
 
 [lib]

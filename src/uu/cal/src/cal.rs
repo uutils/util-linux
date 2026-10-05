@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use chrono::{Datelike, Local, NaiveDate, Weekday};
-use clap::{crate_version, value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, crate_version, value_parser};
 use std::io::IsTerminal;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 

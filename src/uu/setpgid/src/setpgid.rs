@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use clap::builder::ValueParser;
-use clap::{crate_version, Arg, ArgAction, Command as ClapCommand};
+use clap::{Arg, ArgAction, Command as ClapCommand, crate_version};
 use uucore::{
     error::{UResult, USimpleError},
     format_usage, help_about, help_usage,

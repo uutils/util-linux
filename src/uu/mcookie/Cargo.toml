@@ -2,7 +2,7 @@
 name = "uu_mcookie"
 version = "0.0.1"
 rust-version = "1.85"
-edition = "2021"
+edition = "2024"
 
 [lib]
 path = "src/mcookie.rs"

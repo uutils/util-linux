@@ -2,7 +2,7 @@
 name = "uu_hexdump"
 version = "0.0.1"
 rust-version = "1.85"
-edition = "2021"
+edition = "2024"
 description = "hexdump ~ display file contents in hexadecimal, decimal, octal, or ascii"
 
 [lib]
