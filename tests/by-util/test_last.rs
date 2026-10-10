@@ -4,12 +4,13 @@
 // file that was distributed with this source code.
 // spell-checker:ignore (words) symdir somefakedir
 
+#[cfg(all(unix, not(target_os = "macos")))]
 use uutests::at_and_ucmd;
 #[cfg(unix)]
 use uutests::new_ucmd;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 use uutests::util::TestScenario;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 use uutests::util_name;
 
 #[cfg(unix)]

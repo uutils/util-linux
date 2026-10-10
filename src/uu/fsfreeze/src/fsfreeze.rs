@@ -3,7 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
+use clap::{Arg, ArgAction, ArgGroup, Command, crate_version};
 #[cfg(target_os = "linux")]
 use std::{fs::File, io, os::fd::AsRawFd};
 #[cfg(target_os = "linux")]

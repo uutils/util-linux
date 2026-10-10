@@ -4,8 +4,8 @@
 // file that was distributed with this source code.
 
 use clap::builder::ValueParser;
-use clap::{crate_version, Command};
 use clap::{Arg, ArgAction};
+use clap::{Command, crate_version};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("setsid.md");

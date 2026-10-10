@@ -3,9 +3,9 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{builder::PossibleValuesParser, crate_version, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, builder::PossibleValuesParser, crate_version};
 #[cfg(target_family = "unix")]
-use uucore::error::{set_exit_code, UIoError, USimpleError};
+use uucore::error::{UIoError, USimpleError, set_exit_code};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("mesg.md");
@@ -13,7 +13,7 @@ const USAGE: &str = help_usage!("mesg.md");
 
 #[cfg(target_family = "unix")]
 pub fn do_mesg(matches: &ArgMatches) -> UResult<()> {
-    use nix::sys::stat::{fchmod, fstat, Mode};
+    use nix::sys::stat::{Mode, fchmod, fstat};
     use std::io;
     use std::{io::IsTerminal, os::fd::AsFd};
 
