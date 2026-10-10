@@ -5,11 +5,13 @@
 
 use clap::Arg;
 use clap::{crate_version, Command};
-use std::env;
 #[cfg(not(windows))]
 use std::fs;
+use std::io;
 #[cfg(not(windows))]
 use std::os::unix::fs::MetadataExt;
+#[cfg(not(windows))]
+use std::path::Path;
 use std::process;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -22,10 +24,11 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let path = matches.get_one::<String>("path");
 
     if let Some(path) = path {
-        if is_mountpoint(path) {
+        if is_mountpoint(path)? {
             println!("{path} is a mountpoint");
         } else {
             println!("{path} is not a mountpoint");
+            process::exit(32);
         }
     } else {
         // Handle the case where path is not provided
@@ -36,27 +39,22 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 }
 
 #[cfg(not(windows))]
-fn is_mountpoint(path: &str) -> bool {
-    let metadata = match fs::metadata(path) {
-        Ok(metadata) => metadata,
-        Err(_) => return false,
-    };
+fn is_mountpoint(path: &str) -> io::Result<bool> {
+    let path = Path::new(path);
+    let metadata = fs::metadata(path)?;
 
     let dev = metadata.dev();
     let inode = metadata.ino();
+    let parent = path.parent().filter(|p| !p.as_os_str().is_empty());
+    let parent_metadata = fs::metadata(parent.unwrap_or_else(|| Path::new(".")))?;
 
-    // Root inode (typically 2 in most Unix filesystems) indicates a mount point
-    inode == 2
-        || match fs::metadata("..") {
-            Ok(parent_metadata) => parent_metadata.dev() != dev,
-            Err(_) => false,
-        }
+    Ok(parent_metadata.dev() != dev || parent_metadata.ino() == inode)
 }
 
 // TODO: implement for windows
 #[cfg(windows)]
-fn is_mountpoint(_path: &str) -> bool {
-    false
+fn is_mountpoint(_path: &str) -> io::Result<bool> {
+    Ok(false)
 }
 
 pub fn uu_app() -> Command {
