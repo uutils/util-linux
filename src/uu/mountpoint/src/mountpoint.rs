@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use clap::Arg;
-use clap::{crate_version, Command};
+use clap::{Command, crate_version};
 use std::env;
 #[cfg(not(windows))]
 use std::fs;

@@ -11,7 +11,7 @@ use uucore::error::UResult;
 
 use uucore::error::USimpleError;
 use uucore::utmpx::time::{OffsetDateTime, UtcOffset};
-use uucore::utmpx::{time, Utmpx, UtmpxRecord};
+use uucore::utmpx::{Utmpx, UtmpxRecord, time};
 
 use std::fmt::Write;
 use std::fs;

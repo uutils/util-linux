@@ -7,14 +7,14 @@
 use windows::Win32::{
     Foundation::{ERROR_BUFFER_OVERFLOW, ERROR_SUCCESS},
     NetworkManagement::IpHelper::{
-        GetAdaptersAddresses, GAA_FLAG_SKIP_ANYCAST, GAA_FLAG_SKIP_DNS_SERVER,
-        GAA_FLAG_SKIP_FRIENDLY_NAME, GAA_FLAG_SKIP_MULTICAST, GAA_FLAG_SKIP_UNICAST,
+        GAA_FLAG_SKIP_ANYCAST, GAA_FLAG_SKIP_DNS_SERVER, GAA_FLAG_SKIP_FRIENDLY_NAME,
+        GAA_FLAG_SKIP_MULTICAST, GAA_FLAG_SKIP_UNICAST, GetAdaptersAddresses,
         IP_ADAPTER_ADDRESSES_LH,
     },
     Networking::WinSock::AF_UNSPEC,
 };
 
-use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
+use clap::{Arg, ArgAction, ArgGroup, Command, crate_version};
 
 #[cfg(all(target_family = "unix", not(target_os = "redox")))]
 use nix::ifaddrs::getifaddrs;
