@@ -102,3 +102,7 @@ mod test_chcpu;
 #[cfg(feature = "rename")]
 #[path = "by-util/test_rename.rs"]
 mod test_rename;
+
+#[cfg(feature = "ionice")]
+#[path = "by-util/test_ionice.rs"]
+mod test_ionice;
