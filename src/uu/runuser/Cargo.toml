@@ -1,0 +1,16 @@
+[package]
+name = "uu_runuser"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/runuser.rs"
+
+[[bin]]
+name = "runuser"
+path = "src/main.rs"
+
+[dependencies]
+uucore = { workspace = true }
+clap = { workspace = true }
+nix = { workspace = true, features = ["process", "user"] }
