@@ -104,16 +104,32 @@ impl SysFSCpu {
             .map_err(|err| ChCpuError::io1("failed to write file", Self::inner_path(name), err))
     }
 
-    pub(crate) fn enabled_cpu_list(&self) -> Result<CpuList, ChCpuError> {
+    fn cpu_list(&self, name: impl AsRef<Path>) -> Result<CpuList, ChCpuError> {
+        let name = name.as_ref();
         let mut buffer = Vec::default();
 
-        self.open_inner("online", libc::O_RDONLY | libc::O_CLOEXEC)?
+        self.open_inner(name, libc::O_RDONLY | libc::O_CLOEXEC)?
             .read_to_end(&mut buffer)
-            .map_err(|err| {
-                ChCpuError::io1("failed to read file", Self::inner_path("online"), err)
-            })?;
+            .map_err(|err| ChCpuError::io1("failed to read file", Self::inner_path(name), err))?;
 
         CpuList::try_from(buffer.as_slice())
+    }
+
+    pub(crate) fn enabled_cpu_list(&self) -> Result<CpuList, ChCpuError> {
+        self.cpu_list("online")
+    }
+
+    /// The highest CPU index the kernel can ever bring online. `cpu_possible_mask`
+    /// is fixed during boot discovery, so nothing above it can appear later, not
+    /// even by hot-add: <https://docs.kernel.org/core-api/cpu_hotplug.html>.
+    ///
+    /// `None` where the attribute cannot be read, which leaves the walk unbounded
+    /// rather than refusing the operation: one missing optional attribute must not
+    /// stop a CPU that does exist from being enabled.
+    pub(crate) fn max_possible_cpu_index(&self) -> Option<usize> {
+        self.cpu_list("possible")
+            .ok()
+            .and_then(|list| list.max_index())
     }
 
     pub(crate) fn cpu_dir_path(&self, cpu_index: usize) -> Result<PathBuf, ChCpuError> {
