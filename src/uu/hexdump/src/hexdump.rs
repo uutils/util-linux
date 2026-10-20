@@ -99,58 +99,72 @@ impl ChainedFileReader {
         offset
     }
 
-    fn skip_bytes(&mut self, bytes_to_skip: u64) {
+    /// Returns the offset the dump starts at. A skip past the end of named
+    /// regular files lands on their total size; stdin, devices and pipes are
+    /// seeked (or read) forward, so the offset is the requested skip.
+    fn skip_bytes(&mut self, bytes_to_skip: u64) -> u64 {
         let mut remaining = bytes_to_skip;
+        let mut skipped_whole_file = false;
 
         while remaining > 0 && self.ensure_current_file() {
-            match self.current_file().seek(SeekFrom::End(0)) {
-                Ok(file_size) => {
-                    if remaining >= file_size {
-                        remaining -= file_size;
+            let is_stdin = self.file_paths[self.current_file_index] == "/dev/stdin";
+            let regular_size = match self.current_file().get_ref().metadata() {
+                Ok(metadata) if metadata.is_file() && !is_stdin => Some(metadata.len()),
+                _ => None,
+            };
+
+            if let Some(file_size) = regular_size {
+                if remaining >= file_size {
+                    remaining -= file_size;
+                    skipped_whole_file = true;
+                    self.current_file = None;
+                    self.current_file_index += 1;
+                    continue;
+                }
+            }
+
+            let seek = if regular_size.is_some() {
+                self.current_file().seek(SeekFrom::Start(remaining))
+            } else {
+                self.current_file()
+                    .seek(SeekFrom::Current(remaining as i64))
+            };
+            if seek.is_ok() {
+                return bytes_to_skip;
+            }
+
+            // This file doesn't support seeking, fall back to dummy reads
+            while remaining > 0 {
+                let mut dummy_buf = vec![0u8; remaining.min(65536) as usize];
+                match self.current_file().read(&mut dummy_buf) {
+                    Ok(0) => {
                         self.current_file = None;
                         self.current_file_index += 1;
-                    } else {
-                        match self.current_file().seek(SeekFrom::Start(remaining)) {
-                            Ok(_) => return,
-                            Err(e) => {
-                                uucore::show_error!(
-                                    "cannot seek '{}': {}",
-                                    self.file_paths[self.current_file_index],
-                                    e
-                                );
-                                set_exit_code(1);
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                            }
-                        }
+                        break;
                     }
-                }
-                Err(_) => {
-                    // This file doesn't support seeking, fall back to dummy reads
-                    while remaining > 0 {
-                        let mut dummy_buf = vec![0u8; remaining.min(65536) as usize];
-                        match self.current_file().read(&mut dummy_buf) {
-                            Ok(0) => {
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                                break;
-                            }
-                            Ok(n) => remaining -= n as u64,
-                            Err(e) => {
-                                uucore::show_error!(
-                                    "cannot read '{}': {}",
-                                    self.file_paths[self.current_file_index],
-                                    e
-                                );
-                                set_exit_code(1);
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                                break;
-                            }
-                        }
+                    Ok(n) => remaining -= n as u64,
+                    Err(e) => {
+                        uucore::show_error!(
+                            "cannot read '{}': {}",
+                            self.file_paths[self.current_file_index],
+                            e
+                        );
+                        set_exit_code(1);
+                        self.current_file = None;
+                        self.current_file_index += 1;
+                        break;
                     }
                 }
             }
+            if remaining == 0 {
+                return bytes_to_skip;
+            }
+        }
+
+        if skipped_whole_file {
+            bytes_to_skip - remaining
+        } else {
+            bytes_to_skip
         }
     }
 }
@@ -222,9 +236,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 
 fn run_hexdump(options: HexdumpOptions) -> UResult<()> {
     let mut reader = ChainedFileReader::new(options.files.clone(), options.length);
-    reader.skip_bytes(options.skip);
-
-    let mut offset = options.skip;
+    let mut offset = reader.skip_bytes(options.skip);
     let mut last_line: Vec<u8> = Vec::new();
     let mut squeezing = false;
 

@@ -302,6 +302,46 @@ fn test_hexdump_invalid_skip_and_length() {
 }
 
 #[test]
+fn test_hexdump_skip_beyond_named_files() {
+    let scene = TestScenario::new("hexdump");
+    scene.fixtures.write("file1.txt", "abc");
+    scene.fixtures.write("file2.txt", "def");
+    scene.fixtures.write("empty.txt", "");
+
+    scene
+        .ucmd()
+        .args(&["-C", "-s", "100", "file1.txt", "file2.txt"])
+        .succeeds()
+        .stdout_is("00000006\n");
+
+    scene
+        .ucmd()
+        .args(&["-s", "5", "file1.txt"])
+        .succeeds()
+        .stdout_is("0000003\n");
+
+    scene
+        .ucmd()
+        .args(&["-s", "5", "empty.txt"])
+        .succeeds()
+        .stdout_is("");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_hexdump_skip_device() {
+    new_ucmd!()
+        .args(&["-s", "5", "/dev/null"])
+        .succeeds()
+        .stdout_is("0000005\n");
+
+    new_ucmd!()
+        .args(&["-C", "-s", "5", "-n", "3", "/dev/zero"])
+        .succeeds()
+        .stdout_is("00000005  00 00 00                                          |...|\n00000008\n");
+}
+
+#[test]
 #[cfg(unix)]
 fn test_hexdump_skip_beyond_file() {
     new_ucmd!()
