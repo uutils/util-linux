@@ -57,6 +57,7 @@ First, reimplement the most important tools from util-linux:
 - [ ] `prlimit`: Sets/gets process resource limits.
 - [ ] `taskset`: Sets/gets process CPU affinity.
 - [ ] `uclampset`: Manages process utilization clamping.
+- [x] `setpgid`: Runs a program in a new process group.
 
 ## User and Session Management
 - [ ] `su`: Changes user ID or becomes superuser.
@@ -70,6 +71,7 @@ First, reimplement the most important tools from util-linux:
 - [ ] `setsid`: Runs a program in a new session. (started)
 - [ ] `setterm`: Sets terminal attributes.
 - [ ] `getty`: Manages virtual console login prompts.
+- [x] `nologin`: Politely refuses a login.
 
 ## Networking and IPC
 - [ ] `ipcmk`: Creates IPC resources.
@@ -96,6 +98,8 @@ First, reimplement the most important tools from util-linux:
 - [ ] `readprofile`: Reads kernel profiling info.
 - [ ] `i386, linux32, linux64, x86_64`: Set personality flags for execution environment.
 - [ ] `uuidgen`: Generate different types of UUID. (started)
+- [ ] `cal`: Displays a calendar. (started)
+- [ ] `hexdump`: Displays file contents in hexadecimal, decimal, octal, or ASCII. (started)
 
 Note:
 * `kill` and `more` is not implemented at here to avoid confliction with https://github.com/uutils/coreutils
