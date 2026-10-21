@@ -4,9 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../"
 PROJECT_DIR="$(pwd)"
 DIFF_DIR="$PROJECT_DIR/.test-helpers/tests/diff"
-BASELINE="$PROJECT_DIR/.reference/gnu-test-failures.txt"
+BASELINE="$PROJECT_DIR/tests/gnu-test-failures.txt"
 UPDATE_BASELINE=false
-EMPTY_BASELINE=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -48,6 +47,8 @@ find "$DIFF_DIR" -mindepth 2 -maxdepth 2 -type f -print0 \
 if [[ "$UPDATE_BASELINE" == true ]]; then
     {
         echo "# Known GNU test failures - format: util/testname"
+        echo "# Must match CI: run against the util-linux version checked out in"
+        echo "# .github/workflows/run-gnu-test.yml."
         echo "# Update with: ./scripts/check-new-gnu-failures.sh --update-baseline"
         cat "$current_tmp"
     } > "$BASELINE"
@@ -56,21 +57,24 @@ if [[ "$UPDATE_BASELINE" == true ]]; then
     exit 0
 fi
 
+# The baseline is checked in, so a missing file is an error rather than a
+# reason to create one: creating it from the current results would accept
+# every current failure, including regressions, and pass.
+if [[ ! -f "$BASELINE" ]]; then
+    echo "ERROR: Baseline not found: $BASELINE" >&2
+    echo "  Restore it from version control, or create it with:" >&2
+    echo "    ./scripts/check-new-gnu-failures.sh --update-baseline" >&2
+    exit 2
+fi
+
 # Load baseline (strip comments and blank lines)
 baseline_tmp=$(mktemp)
 trap 'rm -f "$current_tmp" "$baseline_tmp"' EXIT
-if [[ -f "$BASELINE" ]]; then
-    # Use sed rather than grep -v: grep exits 1 when it selects no lines,
-    # which pipefail and set -e would turn into an abort for a baseline
-    # with no entries (e.g. after every known failure has been fixed).
-    sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$BASELINE" \
-        | sort > "$baseline_tmp"
-else
-    echo "WARNING: Baseline not found: $BASELINE" >&2
-    echo "  Run with --update-baseline to create it." >&2
-    touch "$baseline_tmp"
-    EMPTY_BASELINE=true
-fi
+# Use sed rather than grep -v: grep exits 1 when it selects no lines,
+# which pipefail and set -e would turn into an abort for a baseline with
+# no entries (e.g. after every known failure has been fixed).
+sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$BASELINE" \
+    | sort > "$baseline_tmp"
 
 # As in the check on DIFF_DIR above: if a component with known failures
 # has no DIFF_DIR/<component>, none of its tests produced results (e.g.
@@ -97,18 +101,6 @@ echo "--- GNU test failure summary ---"
 echo "Baseline failures: $(wc -l < "$baseline_tmp")"
 echo "Current failures:  $(wc -l < "$current_tmp")"
 echo ""
-
-if [[ "$EMPTY_BASELINE" == true ]]; then
-    mkdir -p "$(dirname "$BASELINE")"
-    {
-        echo "# Known GNU test failures - format: util/testname"
-        echo "# Update with: ./scripts/check-new-gnu-failures.sh --update-baseline"
-        cat "$current_tmp"
-    } > "$BASELINE"
-    count=$(wc -l < "$current_tmp")
-    echo "Initial baseline created: $BASELINE ($count failures recorded)"
-    exit 0
-fi
 
 if [[ -n "$fixed_tests" ]]; then
     echo "Tests newly FIXED:"
