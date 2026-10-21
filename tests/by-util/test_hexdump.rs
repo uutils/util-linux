@@ -328,7 +328,7 @@ fn test_hexdump_skip_beyond_named_files() {
 }
 
 #[test]
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 fn test_hexdump_skip_device() {
     new_ucmd!()
         .args(&["-s", "5", "/dev/null"])
