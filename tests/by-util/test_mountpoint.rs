@@ -35,6 +35,7 @@ fn test_directory_is_not_a_mountpoint() {
 }
 
 #[test]
+#[cfg(unix)]
 fn test_nonexistent_path() {
     new_ucmd!()
         .arg("does-not-exist")
