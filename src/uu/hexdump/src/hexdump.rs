@@ -111,9 +111,8 @@ impl ChainedFileReader {
         let mut skipped_whole_file = false;
 
         while remaining > 0 && self.ensure_current_file() {
-            let reads_stdin = self.reads_stdin;
             let regular_size = match self.current_file().get_ref().metadata() {
-                Ok(metadata) if metadata.is_file() && !reads_stdin => Some(metadata.len()),
+                Ok(metadata) if metadata.is_file() && !self.reads_stdin => Some(metadata.len()),
                 _ => None,
             };
 
