@@ -50,6 +50,11 @@ if [[ ${#UTILS[@]} -eq 0 ]]; then
 fi
 
 for util in "${UTILS[@]}"; do
+    # Remove any existing entry first: if it is a symlink or hard link to
+    # the release binary (e.g. left over from linking the multicall binary
+    # by hand), writing through it would replace the binary with a wrapper
+    # that execs itself, breaking every test until the next cargo build.
+    rm -f ".test-helpers/$util"
     cat > ".test-helpers/$util" <<EOF
 #!/bin/bash
 exec "$BINARY" $util "\$@"
