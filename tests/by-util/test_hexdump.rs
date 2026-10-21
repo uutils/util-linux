@@ -329,6 +329,21 @@ fn test_hexdump_skip_beyond_named_files() {
 
 #[test]
 #[cfg(unix)]
+fn test_hexdump_skip_beyond_named_stdin() {
+    let scene = TestScenario::new("hexdump");
+    scene.fixtures.write("file1.txt", "abc");
+
+    // Named, /dev/stdin is a regular file here, so the offset is its size
+    scene
+        .ucmd()
+        .args(&["-s", "100", "/dev/stdin"])
+        .set_stdin(std::fs::File::open(scene.fixtures.plus("file1.txt")).unwrap())
+        .succeeds()
+        .stdout_is("0000003\n");
+}
+
+#[test]
+#[cfg(unix)]
 fn test_hexdump_skip_device() {
     new_ucmd!()
         .args(&["-s", "5", "/dev/null"])
