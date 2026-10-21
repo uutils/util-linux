@@ -36,6 +36,20 @@ fn test_directory_is_not_a_mountpoint() {
 
 #[test]
 #[cfg(unix)]
+fn test_regular_file_is_not_a_mountpoint() {
+    let (at, mut ucmd) = at_and_ucmd!();
+    at.touch("file");
+    ucmd.arg(at.plus_as_string("file"))
+        .fails()
+        .code_is(32)
+        .stdout_is(format!(
+            "{} is not a mountpoint\n",
+            at.plus_as_string("file")
+        ));
+}
+
+#[test]
+#[cfg(unix)]
 fn test_nonexistent_path() {
     new_ucmd!()
         .arg("does-not-exist")
