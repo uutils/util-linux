@@ -8,7 +8,7 @@ use clap::{crate_version, Command};
 use std::env;
 #[cfg(not(windows))]
 use std::fs;
-#[cfg(all(not(windows), not(target_os = "linux")))]
+#[cfg(not(windows))]
 use std::os::unix::fs::MetadataExt;
 use std::process;
 use uucore::error::{set_exit_code, strip_errno, UResult, USimpleError};
@@ -40,13 +40,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
 }
 
 /// A path is a mount point when the kernel lists it in mountinfo, which also
-/// covers bind mounts on the same device and mounts on files.
+/// covers bind mounts on the same device and mounts on files. Without /proc
+/// (a chroot, early boot) it falls back to comparing with the parent.
 #[cfg(target_os = "linux")]
 fn is_mountpoint(path: &str) -> std::io::Result<bool> {
     use std::os::unix::ffi::OsStrExt;
 
     let target = fs::canonicalize(path)?;
-    let mountinfo = fs::read("/proc/self/mountinfo")?;
+    let Ok(mountinfo) = fs::read("/proc/self/mountinfo") else {
+        return is_mountpoint_by_device(path);
+    };
     Ok(mountinfo
         .split(|&b| b == b'\n')
         .filter_map(|line| line.split(|&b| b == b' ').nth(4))
@@ -78,6 +81,11 @@ fn unescape_mountinfo(field: &[u8]) -> Vec<u8> {
 
 #[cfg(all(not(windows), not(target_os = "linux")))]
 fn is_mountpoint(path: &str) -> std::io::Result<bool> {
+    is_mountpoint_by_device(path)
+}
+
+#[cfg(not(windows))]
+fn is_mountpoint_by_device(path: &str) -> std::io::Result<bool> {
     let metadata = fs::metadata(path)?;
     if !metadata.is_dir() {
         return Ok(false);
@@ -107,4 +115,18 @@ pub fn uu_app() -> Command {
                 .required(true)
                 .index(1),
         )
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::unescape_mountinfo;
+
+    #[test]
+    fn test_unescape_mountinfo() {
+        assert_eq!(unescape_mountinfo(br"/mnt/a\040b"), b"/mnt/a b");
+        assert_eq!(unescape_mountinfo(br"/mnt/a\134b"), br"/mnt/a\b");
+        assert_eq!(unescape_mountinfo(br"/mnt/a\"), br"/mnt/a\");
+        assert_eq!(unescape_mountinfo(br"/mnt/a\04"), br"/mnt/a\04");
+        assert_eq!(unescape_mountinfo(br"/mnt/a\9b"), br"/mnt/a\9b");
+    }
 }
