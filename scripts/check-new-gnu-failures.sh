@@ -15,16 +15,29 @@ for arg in "$@"; do
     esac
 done
 
+# run-tests.sh deletes DIFF_DIR before running the GNU tests, and the GNU
+# harness (ts_gen_diff in tests/functions.sh) creates DIFF_DIR/<component>
+# whenever it compares a test's output, deleting only the diff files of
+# tests that pass. So no component directory means that no test produced
+# results: run.sh failed to start, died early, or skipped every test.
+# Without this check, such a run would have no failures, so every known
+# failure would be reported as fixed and the check would pass (or
+# --update-baseline would record an empty baseline).
+if [[ ! -d "$DIFF_DIR" ]] \
+    || [[ -z "$(find "$DIFF_DIR" -mindepth 1 -maxdepth 1 -type d)" ]]; then
+    echo "ERROR: No GNU test results in $DIFF_DIR" >&2
+    echo "  The GNU test run failed or did not run any tests." >&2
+    exit 2
+fi
+
 # Collect current failures (exclude .err companion files)
 current_tmp=$(mktemp)
 trap 'rm -f "$current_tmp"' EXIT
-if [[ -d "$DIFF_DIR" ]]; then
-    find "$DIFF_DIR" -mindepth 2 -maxdepth 2 -type f ! -name "*.err" -print0 \
-        | sort -z \
-        | while IFS= read -r -d '' path; do
-            echo "${path#"$DIFF_DIR/"}"
-          done > "$current_tmp"
-fi
+find "$DIFF_DIR" -mindepth 2 -maxdepth 2 -type f ! -name "*.err" -print0 \
+    | sort -z \
+    | while IFS= read -r -d '' path; do
+        echo "${path#"$DIFF_DIR/"}"
+      done > "$current_tmp"
 
 # --update-baseline mode
 if [[ "$UPDATE_BASELINE" == true ]]; then
@@ -52,6 +65,22 @@ else
     echo "  Run with --update-baseline to create it." >&2
     touch "$baseline_tmp"
     EMPTY_BASELINE=true
+fi
+
+# As in the check on DIFF_DIR above: if a component with known failures
+# has no DIFF_DIR/<component>, none of its tests produced results (e.g.
+# they were all skipped, or the utility is no longer tested), so its known
+# failures must not be reported as fixed.
+missing_components=$(cut -d/ -f1 "$baseline_tmp" | sort -u \
+    | while IFS= read -r component; do
+        [[ -d "$DIFF_DIR/$component" ]] || echo "$component"
+      done)
+if [[ -n "$missing_components" ]]; then
+    echo "ERROR: No GNU test results for components with known failures:" >&2
+    awk '{print "  " $0}' <<< "$missing_components" >&2
+    echo "  Check the GNU test output for skipped tests, or remove the" >&2
+    echo "  components' entries from the baseline if they are no longer tested." >&2
+    exit 2
 fi
 
 # comm: -13 = lines only in current (new failures), -23 = lines only in baseline (fixed)
