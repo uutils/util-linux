@@ -59,7 +59,9 @@ fn unescape_mountinfo(field: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(field.len());
     let mut i = 0;
     while i < field.len() {
-        let octal = field.get(i + 1..i + 4).filter(|d| d.iter().all(|c| (b'0'..=b'7').contains(c)));
+        let octal = field
+            .get(i + 1..i + 4)
+            .filter(|d| d.iter().all(|c| (b'0'..=b'7').contains(c)));
         match (field[i], octal) {
             (b'\\', Some(d)) => {
                 out.push((d[0] - b'0') * 64 + (d[1] - b'0') * 8 + (d[2] - b'0'));
