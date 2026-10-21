@@ -222,21 +222,20 @@ impl Last {
             ut_stack.push(*utmpx);
         });
 
+        // "begins" is the time of the first record, whatever -n, --since and
+        // --until skip
+        let first_ut_time = ut_stack.first().map(|ut| {
+            let first_login_time = ut.login_time();
+            self.utmp_file_time(
+                first_login_time.unix_timestamp(),
+                first_login_time.nanosecond().into(),
+            )
+        });
+
         let mut counter = 0;
-        let mut first_ut_time = None;
         while let Some(ut) = ut_stack.pop() {
             if ut.login_time() < self.since || ut.login_time() > self.until {
                 continue;
-            }
-
-            if ut_stack.is_empty() {
-                // By the end of loop we will have the earliest time
-                // (This avoids getting into issues with the compiler)
-                let first_login_time = ut.login_time();
-                first_ut_time = Some(self.utmp_file_time(
-                    first_login_time.unix_timestamp(),
-                    first_login_time.nanosecond().into(),
-                ));
             }
 
             if counter >= self.limit && self.limit > 0 {
