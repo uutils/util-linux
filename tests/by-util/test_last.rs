@@ -144,14 +144,17 @@ fn test_since_only_shows_entries_after_time() {
     let expected_entry_time = "16:29";
     let unexpected_entry_time = "16:24";
 
-    new_ucmd!()
+    let result = new_ucmd!()
         .arg("--file")
         .arg("last.input.1")
         .arg("--since")
         .arg("2025-03-08 16:28")
-        .succeeds()
-        .stdout_contains(expected_entry_time)
-        .stdout_does_not_contain(unexpected_entry_time);
+        .succeeds();
+
+    // The "begins" line after the entries shows the first record, 16:24:36
+    let entries = result.stdout_str().split("\n\n").next().unwrap();
+    assert!(entries.contains(expected_entry_time));
+    assert!(!entries.contains(unexpected_entry_time));
 }
 
 #[test]
@@ -168,4 +171,18 @@ fn test_until_only_shows_entries_before_time() {
         .succeeds()
         .stdout_contains(expected_entry_time)
         .stdout_does_not_contain(unexpected_entry_time);
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
+fn test_begins_is_the_first_record_when_records_are_skipped() {
+    for args in [&["-n", "1"][..], &["--since", "2025-03-08 16:28"][..]] {
+        new_ucmd!()
+            .env("TZ", "UTC")
+            .arg("--file")
+            .arg("last.input.1")
+            .args(args)
+            .succeeds()
+            .stdout_contains("last.input.1 begins Sat Mar  8 16:24:36 2025");
+    }
 }
