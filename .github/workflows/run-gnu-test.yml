@@ -7,6 +7,17 @@ on:
     branches:
       - 'main'
 
+# The job only needs to check out the repository.
+permissions:
+  contents: read
+
+# Cancel superseded runs of a pull request or branch when it is updated.
+# On main, let a run in progress finish (GitHub still replaces a pending
+# run in the group with a newer one).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   native:
     name: Run GNU tests (native)
