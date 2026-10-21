@@ -42,7 +42,11 @@ fi
 baseline_tmp=$(mktemp)
 trap 'rm -f "$current_tmp" "$baseline_tmp"' EXIT
 if [[ -f "$BASELINE" ]]; then
-    grep -v '^\s*#' "$BASELINE" | grep -v '^\s*$' | sort > "$baseline_tmp"
+    # Use sed rather than grep -v: grep exits 1 when it selects no lines,
+    # which pipefail and set -e would turn into an abort for a baseline
+    # with no entries (e.g. after every known failure has been fixed).
+    sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$BASELINE" \
+        | sort > "$baseline_tmp"
 else
     echo "WARNING: Baseline not found: $BASELINE" >&2
     echo "  Run with --update-baseline to create it." >&2
