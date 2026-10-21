@@ -1,0 +1,18 @@
+[package]
+name = "uu_ionice"
+version = "0.0.1"
+edition = "2021"
+description = "ionice ~ (uutils) Show or change the I/O-scheduling class and priority of a process"
+
+[lib]
+path = "src/ionice.rs"
+
+[[bin]]
+name = "ionice"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+libc = { workspace = true }
+thiserror = { workspace = true }
+uucore = { workspace = true }
