@@ -143,8 +143,14 @@ fn boot_time() -> DateTime<FixedOffset> {
 }
 
 #[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn boot_time() -> DateTime<FixedOffset> {
+    *BOOT_TIME.get_or_init(boot_time_from_clock)
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
 #[cfg(unix)]
-#[cfg(not(target_os = "openbsd"))]
+#[cfg(not(any(target_os = "openbsd", target_os = "linux", target_os = "android")))]
 fn boot_time() -> DateTime<FixedOffset> {
     *BOOT_TIME.get_or_init(|| boot_time_from_utmpx().unwrap())
 }
@@ -163,9 +169,26 @@ fn boot_time() -> DateTime<FixedOffset> {
     *BOOT_TIME.get_or_init(|| chrono::DateTime::from_timestamp(0, 0).unwrap().into())
 }
 
+// The current time minus the time since boot (CLOCK_BOOTTIME, which counts
+// suspend), like util-linux. Works without a utmp boot record.
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn boot_time_from_clock() -> DateTime<FixedOffset> {
+    use uucore::libc;
+
+    let mut uptime = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    // SAFETY: `uptime` is a valid timespec for clock_gettime to write.
+    unsafe { libc::clock_gettime(libc::CLOCK_BOOTTIME, &mut uptime) };
+    let uptime = TimeDelta::new(uptime.tv_sec, uptime.tv_nsec as u32).unwrap_or_default();
+    (chrono::Local::now() - uptime).into()
+}
+
 #[cfg(not(feature = "fixed-boot-time"))]
 #[cfg(unix)]
-#[cfg(not(target_os = "openbsd"))]
+#[cfg(not(any(target_os = "openbsd", target_os = "linux", target_os = "android")))]
 fn boot_time_from_utmpx() -> Option<DateTime<FixedOffset>> {
     for record in uucore::utmpx::Utmpx::iter_all_records() {
         if record.record_type() == uucore::utmpx::BOOT_TIME {
@@ -179,4 +202,24 @@ fn boot_time_from_utmpx() -> Option<DateTime<FixedOffset>> {
         }
     }
     None
+}
+
+#[cfg(test)]
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(target_os = "linux", target_os = "android"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn boot_time_matches_proc_uptime() {
+        let uptime: f64 = std::fs::read_to_string("/proc/uptime")
+            .unwrap()
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let since_boot = chrono::Local::now().fixed_offset() - boot_time();
+        assert!((since_boot.as_seconds_f64() - uptime).abs() < 2.0);
+    }
 }
