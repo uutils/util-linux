@@ -30,14 +30,19 @@ if [[ ! -d "$DIFF_DIR" ]] \
     exit 2
 fi
 
-# Collect current failures (exclude .err companion files)
+# Collect current failures. The GNU harness (ts_gen_diff in
+# tests/functions.sh) fails a test if its stdout or its stderr differs from
+# the expected output, writing <test> or <test>.err respectively, so a test
+# whose stdout matches but whose stderr differs leaves only <test>.err.
+# Map both to <test> and de-duplicate so such failures are counted too.
 current_tmp=$(mktemp)
 trap 'rm -f "$current_tmp"' EXIT
-find "$DIFF_DIR" -mindepth 2 -maxdepth 2 -type f ! -name "*.err" -print0 \
-    | sort -z \
+find "$DIFF_DIR" -mindepth 2 -maxdepth 2 -type f -print0 \
     | while IFS= read -r -d '' path; do
-        echo "${path#"$DIFF_DIR/"}"
-      done > "$current_tmp"
+        path="${path#"$DIFF_DIR/"}"
+        echo "${path%.err}"
+      done \
+    | sort -u > "$current_tmp"
 
 # --update-baseline mode
 if [[ "$UPDATE_BASELINE" == true ]]; then
