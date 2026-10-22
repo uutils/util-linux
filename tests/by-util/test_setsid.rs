@@ -50,6 +50,24 @@ mod unix {
     }
 
     #[test]
+    fn long_options() {
+        new_ucmd!()
+            .args(&["--fork", "--wait", "/usr/bin/false"])
+            .fails()
+            .code_is(1)
+            .no_output();
+        new_ucmd!()
+            .args(&["--wait", "/usr/bin/true"])
+            .succeeds()
+            .no_output();
+        // without a terminal --ctty fails, but as an option it is accepted
+        new_ucmd!()
+            .args(&["--ctty", "/usr/bin/true"])
+            .run()
+            .stderr_does_not_contain("unexpected argument");
+    }
+
+    #[test]
     fn non_fork_returns_not_found_error() {
         new_ucmd!()
         .arg("/usr/bin/this-tool-does-not-exist-hopefully")
