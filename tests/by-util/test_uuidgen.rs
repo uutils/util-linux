@@ -62,6 +62,42 @@ fn test_md5_sha1() {
 }
 
 #[test]
+fn test_uuid_namespace() {
+    // the @dns namespace written out, in both cases
+    new_ucmd!()
+        .args(&[
+            "-m",
+            "-n",
+            "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+            "-N",
+            "a",
+        ])
+        .succeeds()
+        .stdout_only("4c104dd0-4821-30d5-9ce3-0e7a1f8b7c0d\n");
+    new_ucmd!()
+        .args(&[
+            "-s",
+            "-n",
+            "6BA7B810-9DAD-11D1-80B4-00C04FD430C8",
+            "-N",
+            "a",
+        ])
+        .succeeds()
+        .stdout_only("4f3f2898-69e3-5a0d-820a-c4e87987dbce\n");
+    for namespace in [
+        "{6ba7b810-9dad-11d1-80b4-00c04fd430c8}",
+        "6ba7b8109dad11d180b400c04fd430c8",
+        "urn:uuid:6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        "6ba7b810-9dad-11d1-80b4-00c04fd430c",
+    ] {
+        new_ucmd!()
+            .args(&["-s", "-n", namespace, "-N", "a"])
+            .fails()
+            .code_is(1);
+    }
+}
+
+#[test]
 fn test_invalid_arg() {
     new_ucmd!().arg("-Z").fails().code_is(1);
     new_ucmd!().args(&["-r", "-Z"]).fails().code_is(1);
