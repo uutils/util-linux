@@ -10,7 +10,7 @@ on:
 jobs:
   native:
     name: Run GNU tests (native)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout code (uutils/util-linux)
         uses: actions/checkout@v7
