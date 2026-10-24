@@ -1,0 +1,49 @@
+# Known GNU test failures - format: util/testname
+# Must match CI: run against the util-linux version checked out in
+# .github/workflows/run-gnu-test.yml.
+# Update with: ./scripts/check-new-gnu-failures.sh --update-baseline
+cal/column-5
+cal/column-6
+cal/column-auto
+cal/jan1753-3w
+cal/jan1753-m3w
+cal/weeknum-3mjw
+cal/weeknum-3mw
+cal/weeknum-3sjw
+cal/weeknum-3sw
+cal/weeknum-ymjw
+cal/weeknum-ymw
+cal/weeknum-ysjw
+cal/weeknum-ysw
+cal/year-ym
+cal/year-ymj
+cal/year-ymjw
+cal/year-ymw
+cal/year-ys
+cal/year-ysj
+cal/year-ysjw
+cal/year-ysw
+lscpu/lscpu-arm-A510-A710-A715-X3
+lscpu/lscpu-armv7
+lscpu/lscpu-loongarch-kvm_on_loongson_3c6000
+lscpu/lscpu-loongarch-loongson_3a5000_hv
+lscpu/lscpu-ppc-qemu
+lscpu/lscpu-ppc64-POWER7
+lscpu/lscpu-ppc64-POWER7-64cpu
+lscpu/lscpu-rv64-linux
+lscpu/lscpu-rv64-milkvpioneer
+lscpu/lscpu-rv64-visionfive2
+lscpu/lscpu-s390-kvm
+lscpu/lscpu-s390-lpar
+lscpu/lscpu-s390-lpar-drawer
+lscpu/lscpu-s390-nested-virt
+lscpu/lscpu-s390-zvm
+lscpu/lscpu-sparc64
+lscpu/lscpu-vbox-win
+lscpu/lscpu-vmware_fpe
+lscpu/lscpu-x86_64-64cpu
+lscpu/lscpu-x86_64-64cpu-linux6.2
+lscpu/lscpu-x86_64-dell_e4310
+lscpu/lscpu-x86_64-epyc_7451
+lsmem/lsmem-s390-zvm-6g
+lsmem/lsmem-x86_64-16g
