@@ -162,13 +162,21 @@ fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
     if unsafe { libc::clock_gettime(libc::CLOCK_BOOTTIME, &mut uptime) } != 0 {
         return None;
     }
-    // time_t is 32 bits on some targets, such as 32-bit Android
-    #[cfg(target_pointer_width = "64")]
-    let secs: i64 = uptime.tv_sec;
-    #[cfg(not(target_pointer_width = "64"))]
-    let secs: i64 = uptime.tv_sec.into();
-    let uptime = TimeDelta::new(secs, uptime.tv_nsec as u32)?;
+    let uptime = TimeDelta::new(time_t_secs(uptime.tv_sec), uptime.tv_nsec as u32)?;
     Some((chrono::Local::now() - uptime).into())
+}
+
+// time_t is 32 bits on some targets, such as 32-bit Android.
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "macos",
+    target_os = "freebsd"
+))]
+#[allow(clippy::useless_conversion)]
+fn time_t_secs(secs: uucore::libc::time_t) -> i64 {
+    secs.into()
 }
 
 // kern.boottime, which `uptime` and `who -b` read there too.
@@ -198,13 +206,9 @@ fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
     if res != 0 {
         return None;
     }
-    #[cfg(target_pointer_width = "64")]
-    let secs: i64 = boot.tv_sec;
-    #[cfg(not(target_pointer_width = "64"))]
-    let secs: i64 = boot.tv_sec.into();
     let nanos = u32::try_from(boot.tv_usec).ok()? * 1000;
     Some(
-        chrono::DateTime::from_timestamp(secs, nanos)?
+        chrono::DateTime::from_timestamp(time_t_secs(boot.tv_sec), nanos)?
             .with_timezone(&chrono::Local)
             .into(),
     )
