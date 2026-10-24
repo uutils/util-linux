@@ -169,6 +169,7 @@ pub fn uu_app() -> Command {
         .arg(
             Arg::new("ctty")
                 .short('c')
+                .long("ctty")
                 .action(ArgAction::SetTrue)
                 .value_parser(ValueParser::bool())
                 .help("Take the current controlling terminal"),
@@ -176,6 +177,7 @@ pub fn uu_app() -> Command {
         .arg(
             Arg::new("fork")
                 .short('f')
+                .long("fork")
                 .action(ArgAction::SetTrue)
                 .value_parser(ValueParser::bool())
                 .long_help("Always create a new process. By default this is only done if we are already a process group lead."),
@@ -183,6 +185,7 @@ pub fn uu_app() -> Command {
         .arg(
             Arg::new("wait")
                 .short('w')
+                .long("wait")
                 .action(ArgAction::SetTrue)
                 .value_parser(ValueParser::bool())
                 .help("Wait for the command to finish and exit with its exit code."),
