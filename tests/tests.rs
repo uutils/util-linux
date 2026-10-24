@@ -95,6 +95,10 @@ mod test_mcookie;
 #[path = "by-util/test_uuidgen.rs"]
 mod test_uuidgen;
 
+#[cfg(feature = "wall")]
+#[path = "by-util/test_wall.rs"]
+mod test_wall;
+
 #[cfg(feature = "chcpu")]
 #[path = "by-util/test_chcpu.rs"]
 mod test_chcpu;
