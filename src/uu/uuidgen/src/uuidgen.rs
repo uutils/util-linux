@@ -98,7 +98,7 @@ pub fn uu_app() -> Command {
                 .long(options::NAMESPACE)
                 .action(ArgAction::Set)
                 .value_parser(namespace_from_str)
-                .help("namespace for md5/sha1 - one of: @dns @url @oid @x500"),
+                .help("namespace for md5/sha1 - a UUID or one of: @dns @url @oid @x500"),
         )
         .arg(
             Arg::new(options::NAME)
@@ -132,10 +132,14 @@ fn namespace_from_str(s: &str) -> Result<Uuid, USimpleError> {
         "@url" => Ok(Uuid::NAMESPACE_URL),
         "@oid" => Ok(Uuid::NAMESPACE_OID),
         "@x500" => Ok(Uuid::NAMESPACE_X500),
-        _ => Err(USimpleError {
-            code: 1,
-            message: format!("Invalid namespace {s}."),
-        }),
+        // only the 36-character hyphenated form, like libuuid's uuid_parse()
+        _ => match Uuid::try_parse(s) {
+            Ok(uuid) if s.len() == 36 => Ok(uuid),
+            _ => Err(USimpleError {
+                code: 1,
+                message: format!("Invalid namespace {s}."),
+            }),
+        },
     }
 }
 
