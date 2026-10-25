@@ -60,11 +60,6 @@ mod unix {
             .args(&["--wait", "/usr/bin/true"])
             .succeeds()
             .no_output();
-        // without a terminal --ctty fails, but as an option it is accepted
-        new_ucmd!()
-            .args(&["--ctty", "/usr/bin/true"])
-            .run()
-            .stderr_does_not_contain("unexpected argument");
     }
 
     #[test]
@@ -109,6 +104,37 @@ mod unix {
             .code_is(1)
             .no_stdout()
             .stderr_is("setsid: failed to set the controlling terminal: Permission denied\r\n");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn long_options_take_new_controlling_tty() {
+        let shell_cmd = format!(
+            "/usr/bin/cat /proc/self/stat; {} setsid --wait --ctty /usr/bin/cat /proc/self/stat",
+            get_tests_binary()
+        );
+
+        let cmd_result = UCommand::new()
+            .terminal_simulation(true)
+            .arg(&shell_cmd)
+            .succeeds();
+
+        let output = cmd_result.code_is(0).no_stderr().stdout_str();
+
+        // the controlling terminal is the 7th field of /proc/self/stat
+        let (before, after) = output
+            .split_once('\n')
+            .expect("expected 2 lines of output at least");
+        let before = before
+            .split_whitespace()
+            .nth(6)
+            .expect("unexpected stat format");
+        let after = after
+            .split_whitespace()
+            .nth(6)
+            .expect("unexpected stat format");
+
+        assert_ne!(before, after);
     }
 
     #[cfg(target_os = "linux")]
