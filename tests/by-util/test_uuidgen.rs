@@ -93,7 +93,8 @@ fn test_uuid_namespace() {
         new_ucmd!()
             .args(&["-s", "-n", namespace, "-N", "a"])
             .fails()
-            .code_is(1);
+            .code_is(1)
+            .stderr_contains(format!("Invalid namespace {namespace}."));
     }
 }
 
