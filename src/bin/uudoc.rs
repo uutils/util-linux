@@ -20,7 +20,9 @@ fn main() -> io::Result<()> {
 
     if tldr_zip.is_none() {
         println!("Warning: No tldr archive found, so the documentation will not include examples.");
-        println!("To include examples in the documentation, download the tldr archive and put it in the docs/ folder.");
+        println!(
+            "To include examples in the documentation, download the tldr archive and put it in the docs/ folder."
+        );
         println!();
         println!("  curl https://tldr.sh/assets/tldr.zip -o docs/tldr.zip");
         println!();
@@ -107,7 +109,7 @@ fn main() -> io::Result<()> {
             "| util             | Linux | macOS | Windows | FreeBSD | Android |\n\
              | ---------------- | ----- | ----- | ------- | ------- | ------- |"
         )?;
-        for (&name, _) in &utils {
+        for &(&name, _) in &utils {
             if name == "[" {
                 continue;
             }
@@ -141,19 +143,22 @@ fn main() -> io::Result<()> {
             })
             .ok();
 
-        if let Ok(f) = File::create(&p) {
-            MDWriter {
-                w: Box::new(f),
-                command: command(),
-                name,
-                tldr_zip: &mut tldr_zip,
-                utils_per_platform: &utils_per_platform,
-                markdown,
+        match File::create(&p) {
+            Ok(f) => {
+                MDWriter {
+                    w: Box::new(f),
+                    command: command(),
+                    name,
+                    tldr_zip: &mut tldr_zip,
+                    utils_per_platform: &utils_per_platform,
+                    markdown,
+                }
+                .markdown()?;
+                println!("Wrote to '{}'", p);
             }
-            .markdown()?;
-            println!("Wrote to '{}'", p);
-        } else {
-            println!("Error writing to {}", p);
+            _ => {
+                println!("Error writing to {}", p);
+            }
         }
         writeln!(summary, "* [{0}](utils/{0}.md)", name)?;
     }

@@ -4,7 +4,7 @@
 // file that was distributed with this source code.
 
 use chrono::{DateTime, FixedOffset};
-use clap::{crate_version, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_version};
 use regex::Regex;
 use std::{
     collections::HashSet,
@@ -51,7 +51,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 return Err(USimpleError::new(
                     1,
                     format!("unknown time format: {time_format}"),
-                ))
+                ));
             }
         };
     }
@@ -294,7 +294,7 @@ impl Dmesg<'_> {
 
     fn is_record_in_set<T>(
         set: &Option<HashSet<T>>,
-    ) -> impl Fn(&Result<Record, Box<dyn UError>>) -> bool + '_
+    ) -> impl Fn(&Result<Record, Box<dyn UError>>) -> bool + '_ + use<'_, T>
     where
         T: From<u32> + Eq + Hash,
     {
@@ -306,7 +306,7 @@ impl Dmesg<'_> {
 
     fn is_record_since(
         since: &Option<DateTime<FixedOffset>>,
-    ) -> impl Fn(&UResult<Record>) -> bool + '_ {
+    ) -> impl Fn(&UResult<Record>) -> bool + '_ + use<'_> {
         move |record: &UResult<Record>| match (record, since) {
             (Ok(record), Some(since)) => {
                 let time =
@@ -319,7 +319,7 @@ impl Dmesg<'_> {
 
     fn is_record_until(
         until: &Option<DateTime<FixedOffset>>,
-    ) -> impl Fn(&UResult<Record>) -> bool + '_ {
+    ) -> impl Fn(&UResult<Record>) -> bool + '_ + use<'_> {
         move |record: &UResult<Record>| match (record, until) {
             (Ok(record), Some(until)) => {
                 let time =

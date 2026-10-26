@@ -3,7 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, value_parser, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_version, value_parser};
 use linux_raw_sys::ioctl::*;
 #[cfg(target_os = "linux")]
 use std::collections::BTreeMap;

@@ -6,13 +6,13 @@
 mod utils;
 
 use clap::builder::{EnumValueParser, PossibleValue, PossibleValuesParser};
-use clap::{crate_version, Command, ValueEnum};
 use clap::{Arg, ArgAction};
+use clap::{Command, ValueEnum, crate_version};
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Path, PathBuf, MAIN_SEPARATOR};
+use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::str::FromStr;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 

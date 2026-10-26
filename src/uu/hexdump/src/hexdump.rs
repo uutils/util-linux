@@ -7,9 +7,9 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 
-use clap::{crate_version, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_version};
 use uucore::{
-    error::{set_exit_code, UResult, USimpleError},
+    error::{UResult, USimpleError, set_exit_code},
     format_usage, help_about, help_usage,
     parser::parse_size,
 };

@@ -3,7 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
-use clap::{crate_version, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_version};
 use regex::RegexBuilder;
 use serde::Serialize;
 use std::{cmp, collections::HashMap, fs};
@@ -291,11 +291,10 @@ fn find_cpuinfo_value(contents: &str, key: &str) -> Option<String> {
         .build()
         .unwrap();
 
-    let value = re
+    re
         .captures_iter(contents)
         .next()
-        .map(|cap| cap[1].to_string());
-    value
+        .map(|cap| cap[1].to_string())
 }
 
 // TODO: This is non-exhaustive and assumes that compile-time arch is the same as runtime

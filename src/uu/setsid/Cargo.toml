@@ -1,7 +1,8 @@
 [package]
 name = "uu_setsid"
 version = "0.0.1"
-edition = "2021"
+rust-version = "1.85"
+edition = "2024"
 
 [dependencies]
 uucore = { workspace = true }

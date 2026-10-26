@@ -5,10 +5,10 @@
 
 use std::{
     fs::File,
-    io::{stdin, Read},
+    io::{Read, stdin},
 };
 
-use clap::{crate_version, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_version};
 use md5::{Digest, Md5};
 use rand::Rng;
 use uucore::{
