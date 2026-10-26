@@ -35,3 +35,32 @@ fn test_flag_after_command() {
         .succeeds()
         .stdout_is("-f\n");
 }
+
+#[test]
+#[cfg(target_family = "unix")]
+fn test_non_utf8_arguments() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+
+    new_ucmd!()
+        .arg("echo")
+        .arg(OsStr::from_bytes(b"\xff"))
+        .succeeds()
+        .stdout_is_bytes(b"\xff\n");
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos")))]
+fn test_non_utf8_program_name() {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt;
+    use uutests::at_and_ucmd;
+
+    let (at, mut ucmd) = at_and_ucmd!();
+    let program = at.plus(OsStr::from_bytes(b"sh_\xff"));
+    std::os::unix::fs::symlink("/bin/sh", &program).unwrap();
+    ucmd.arg(&program)
+        .args(&["-c", "echo ran"])
+        .succeeds()
+        .stdout_is("ran\n");
+}

@@ -24,9 +24,17 @@ ours_tmp=$(mktemp)
 gnu_tmp=$(mktemp)
 trap 'rm -f "$ours_tmp" "$gnu_tmp"' EXIT
 
-for d in "$PROJECT_DIR/src/uu/"*/; do
-    basename "$d"
-done | sort > "$ours_tmp"
+if [[ ! -x "$BINARY" ]]; then
+    echo "ERROR: $BINARY not found." >&2
+    echo "  Run 'cargo build --release' first." >&2
+    exit 2
+fi
+
+# Ask the binary which utilities it provides instead of listing src/uu/:
+# this only includes utilities enabled by the build's features, and a
+# utility name need not match its crate directory (e.g. setarch's
+# i386/linux32/... aliases).
+"$BINARY" --list | sort > "$ours_tmp"
 
 for d in "$GNU_TS_DIR/"*/; do
     basename "$d"
@@ -42,6 +50,11 @@ if [[ ${#UTILS[@]} -eq 0 ]]; then
 fi
 
 for util in "${UTILS[@]}"; do
+    # Remove any existing entry first: if it is a symlink or hard link to
+    # the release binary (e.g. left over from linking the multicall binary
+    # by hand), writing through it would replace the binary with a wrapper
+    # that execs itself, breaking every test until the next cargo build.
+    rm -f ".test-helpers/$util"
     cat > ".test-helpers/$util" <<EOF
 #!/bin/bash
 exec "$BINARY" $util "\$@"

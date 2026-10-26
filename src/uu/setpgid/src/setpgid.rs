@@ -3,6 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use clap::builder::ValueParser;
 use clap::{crate_version, Arg, ArgAction, Command as ClapCommand};
 use uucore::{
     error::{UResult, USimpleError},
@@ -15,14 +16,15 @@ const USAGE: &str = help_usage!("setpgid.md");
 #[cfg(target_family = "unix")]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
-    use std::ffi::CString;
+    use std::ffi::{CString, OsString};
     use std::fs::File;
+    use std::os::unix::ffi::OsStrExt;
     use std::os::unix::io::AsRawFd;
 
     let matches = uu_app().try_get_matches_from(args)?;
 
-    let remaining_args: Vec<String> = matches
-        .get_many::<String>("args")
+    let remaining_args: Vec<OsString> = matches
+        .get_many::<OsString>("args")
         .unwrap()
         .cloned()
         .collect();
@@ -50,16 +52,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let program_args = &remaining_args[1..];
 
     // Command line arguments can't contain NUL bytes, so unwrap() is safe here.
-    let program_cstr = CString::new(program.as_str()).unwrap();
+    let program_cstr = CString::new(program.as_bytes()).unwrap();
     let mut argv = vec![program_cstr.clone()];
     for arg in program_args {
-        argv.push(CString::new(arg.as_str()).unwrap());
+        argv.push(CString::new(arg.as_bytes()).unwrap());
     }
 
     let Err(e) = nix::unistd::execvp(&program_cstr, &argv);
     Err(USimpleError::new(
         1,
-        format!("failed to execute '{}': {}", program, e),
+        format!("failed to execute '{}': {}", program.to_string_lossy(), e),
     ))
 }
 
@@ -94,6 +96,7 @@ pub fn uu_app() -> ClapCommand {
                 .required(true)
                 .action(ArgAction::Append)
                 .num_args(1..)
+                .value_parser(ValueParser::os_string())
                 .trailing_var_arg(true),
         )
 }

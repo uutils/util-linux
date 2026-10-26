@@ -16,6 +16,8 @@ use uucore::{
 
 struct ChainedFileReader {
     file_paths: Vec<String>,
+    /// No file was given, so the input is stdin
+    reads_stdin: bool,
     current_file: Option<BufReader<File>>,
     current_file_index: usize,
     remaining_bytes: Option<u64>,
@@ -23,9 +25,11 @@ struct ChainedFileReader {
 }
 
 impl ChainedFileReader {
-    fn new(file_paths: Vec<String>, length_limit: Option<u64>) -> Self {
+    fn new(file_paths: Option<Vec<String>>, length_limit: Option<u64>) -> Self {
         Self {
-            file_paths,
+            reads_stdin: file_paths.is_none(),
+            // TODO: /dev/stdin doesn't work on Windows
+            file_paths: file_paths.unwrap_or_else(|| vec!["/dev/stdin".to_string()]),
             current_file: None,
             current_file_index: 0,
             remaining_bytes: length_limit,
@@ -99,58 +103,71 @@ impl ChainedFileReader {
         offset
     }
 
-    fn skip_bytes(&mut self, bytes_to_skip: u64) {
+    /// Returns the offset the dump starts at. A skip past the end of named
+    /// regular files lands on their total size; stdin, devices and pipes are
+    /// seeked (or read) forward, so the offset is the requested skip.
+    fn skip_bytes(&mut self, bytes_to_skip: u64) -> u64 {
         let mut remaining = bytes_to_skip;
+        let mut skipped_whole_file = false;
 
         while remaining > 0 && self.ensure_current_file() {
-            match self.current_file().seek(SeekFrom::End(0)) {
-                Ok(file_size) => {
-                    if remaining >= file_size {
-                        remaining -= file_size;
+            let regular_size = match self.current_file().get_ref().metadata() {
+                Ok(metadata) if metadata.is_file() && !self.reads_stdin => Some(metadata.len()),
+                _ => None,
+            };
+
+            if let Some(file_size) = regular_size {
+                if remaining >= file_size {
+                    remaining -= file_size;
+                    skipped_whole_file = true;
+                    self.current_file = None;
+                    self.current_file_index += 1;
+                    continue;
+                }
+            }
+
+            let seeked = match regular_size {
+                Some(_) => self.current_file().seek(SeekFrom::Start(remaining)).is_ok(),
+                // A skip past i64::MAX can't be seeked, so it is read instead
+                None => i64::try_from(remaining)
+                    .is_ok_and(|n| self.current_file().seek(SeekFrom::Current(n)).is_ok()),
+            };
+            if seeked {
+                return bytes_to_skip;
+            }
+
+            // This file doesn't support seeking, fall back to dummy reads
+            while remaining > 0 {
+                let mut dummy_buf = vec![0u8; remaining.min(65536) as usize];
+                match self.current_file().read(&mut dummy_buf) {
+                    Ok(0) => {
                         self.current_file = None;
                         self.current_file_index += 1;
-                    } else {
-                        match self.current_file().seek(SeekFrom::Start(remaining)) {
-                            Ok(_) => return,
-                            Err(e) => {
-                                uucore::show_error!(
-                                    "cannot seek '{}': {}",
-                                    self.file_paths[self.current_file_index],
-                                    e
-                                );
-                                set_exit_code(1);
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                            }
-                        }
+                        break;
                     }
-                }
-                Err(_) => {
-                    // This file doesn't support seeking, fall back to dummy reads
-                    while remaining > 0 {
-                        let mut dummy_buf = vec![0u8; remaining.min(65536) as usize];
-                        match self.current_file().read(&mut dummy_buf) {
-                            Ok(0) => {
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                                break;
-                            }
-                            Ok(n) => remaining -= n as u64,
-                            Err(e) => {
-                                uucore::show_error!(
-                                    "cannot read '{}': {}",
-                                    self.file_paths[self.current_file_index],
-                                    e
-                                );
-                                set_exit_code(1);
-                                self.current_file = None;
-                                self.current_file_index += 1;
-                                break;
-                            }
-                        }
+                    Ok(n) => remaining -= n as u64,
+                    Err(e) => {
+                        uucore::show_error!(
+                            "cannot read '{}': {}",
+                            self.file_paths[self.current_file_index],
+                            e
+                        );
+                        set_exit_code(1);
+                        self.current_file = None;
+                        self.current_file_index += 1;
+                        break;
                     }
                 }
             }
+            if remaining == 0 {
+                return bytes_to_skip;
+            }
+        }
+
+        if skipped_whole_file {
+            bytes_to_skip - remaining
+        } else {
+            bytes_to_skip
         }
     }
 }
@@ -176,7 +193,7 @@ struct HexdumpOptions {
     length: Option<u64>,
     skip: u64,
     no_squeezing: bool,
-    files: Vec<String>,
+    files: Option<Vec<String>>,
 }
 
 #[uucore::main]
@@ -211,20 +228,16 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         length: matches.get_one::<u64>("length").copied(),
         skip: matches.get_one::<u64>("skip").copied().unwrap_or(0),
         no_squeezing: matches.get_flag("no-squeezing"),
-        // TODO: /dev/stdin doesn't work on Windows
         files: matches
             .get_many::<String>("files")
-            .map(|files| files.cloned().collect())
-            .unwrap_or_else(|| vec!["/dev/stdin".to_string()]),
+            .map(|files| files.cloned().collect()),
     };
     run_hexdump(options)
 }
 
 fn run_hexdump(options: HexdumpOptions) -> UResult<()> {
     let mut reader = ChainedFileReader::new(options.files.clone(), options.length);
-    reader.skip_bytes(options.skip);
-
-    let mut offset = options.skip;
+    let mut offset = reader.skip_bytes(options.skip);
     let mut last_line: Vec<u8> = Vec::new();
     let mut squeezing = false;
 
