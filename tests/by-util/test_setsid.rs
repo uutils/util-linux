@@ -50,6 +50,19 @@ mod unix {
     }
 
     #[test]
+    fn long_options() {
+        new_ucmd!()
+            .args(&["--fork", "--wait", "/usr/bin/false"])
+            .fails()
+            .code_is(1)
+            .no_output();
+        new_ucmd!()
+            .args(&["--wait", "/usr/bin/true"])
+            .succeeds()
+            .no_output();
+    }
+
+    #[test]
     fn non_fork_returns_not_found_error() {
         new_ucmd!()
         .arg("/usr/bin/this-tool-does-not-exist-hopefully")
@@ -91,6 +104,37 @@ mod unix {
             .code_is(1)
             .no_stdout()
             .stderr_is("setsid: failed to set the controlling terminal: Permission denied\r\n");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn long_options_take_new_controlling_tty() {
+        let shell_cmd = format!(
+            "/usr/bin/cat /proc/self/stat; {} setsid --wait --ctty /usr/bin/cat /proc/self/stat",
+            get_tests_binary()
+        );
+
+        let cmd_result = UCommand::new()
+            .terminal_simulation(true)
+            .arg(&shell_cmd)
+            .succeeds();
+
+        let output = cmd_result.code_is(0).no_stderr().stdout_str();
+
+        // the controlling terminal is the 7th field of /proc/self/stat
+        let (before, after) = output
+            .split_once('\n')
+            .expect("expected 2 lines of output at least");
+        let before = before
+            .split_whitespace()
+            .nth(6)
+            .expect("unexpected stat format");
+        let after = after
+            .split_whitespace()
+            .nth(6)
+            .expect("unexpected stat format");
+
+        assert_ne!(before, after);
     }
 
     #[cfg(target_os = "linux")]
