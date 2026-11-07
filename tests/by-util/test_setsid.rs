@@ -50,6 +50,19 @@ mod unix {
     }
 
     #[test]
+    fn long_options() {
+        new_ucmd!()
+            .args(&["--fork", "--wait", "/usr/bin/false"])
+            .fails()
+            .code_is(1)
+            .no_output();
+        new_ucmd!()
+            .args(&["--wait", "/usr/bin/true"])
+            .succeeds()
+            .no_output();
+    }
+
+    #[test]
     fn non_fork_returns_not_found_error() {
         new_ucmd!()
         .arg("/usr/bin/this-tool-does-not-exist-hopefully")
@@ -93,11 +106,13 @@ mod unix {
             .stderr_is("setsid: failed to set the controlling terminal: Permission denied\r\n");
     }
 
+    // Runs setsid with `args` under a simulated terminal and checks the
+    // controlling terminal in /proc/self/stat, the 7th space-separated item,
+    // changes.
     #[cfg(target_os = "linux")]
-    #[test]
-    fn unprivileged_user_can_take_new_controlling_tty() {
+    fn assert_takes_new_controlling_tty(args: &str) {
         let shell_cmd = format!(
-            "/usr/bin/cat /proc/self/stat; {} setsid -w -c /usr/bin/cat /proc/self/stat",
+            "/usr/bin/cat /proc/self/stat; {} setsid {args} /usr/bin/cat /proc/self/stat",
             get_tests_binary()
         );
 
@@ -108,9 +123,6 @@ mod unix {
 
         let output = cmd_result.code_is(0).no_stderr().stdout_str();
 
-        // /proc/self/stat format has controlling terminal as the 7th
-        // space-separated item; if we managed to change the controlling
-        // terminal, we should see a difference there
         let (before, after) = output
             .split_once('\n')
             .expect("expected 2 lines of output at least");
@@ -124,6 +136,18 @@ mod unix {
             .expect("unexpected stat format");
 
         assert_ne!(before, after);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn long_options_take_new_controlling_tty() {
+        assert_takes_new_controlling_tty("--wait --ctty");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn unprivileged_user_can_take_new_controlling_tty() {
+        assert_takes_new_controlling_tty("-w -c");
     }
 
     #[cfg(target_os = "linux")]
