@@ -198,3 +198,36 @@ fn test_begins_is_the_first_record_when_records_are_skipped() {
             .stdout_contains("last.input.1 begins Sat Mar  8 16:24:36 2025");
     }
 }
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
+fn test_time_zone_behind_utc() {
+    // A POSIX TZ string: UTC-6, with no daylight saving time
+    new_ucmd!()
+        .env("TZ", "CST6")
+        .arg("--file")
+        .arg("last.input.1")
+        .succeeds()
+        .stdout_contains("reboot   system boot  6.8.0-55-generic Sat Mar  8 10:24   still running")
+        .stdout_contains("last.input.1 begins Sat Mar  8 10:24:36 2025");
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
+fn test_timestamp_format_iso_offset_sign() {
+    for (tz, time) in [
+        ("CST6", "2025-03-08T10:24:36-06:00"),
+        ("UTC", "2025-03-08T16:24:36+00:00"),
+    ] {
+        new_ucmd!()
+            .env("TZ", tz)
+            .arg("--file")
+            .arg("last.input.1")
+            .arg("--time-format=iso")
+            .succeeds()
+            .stdout_contains(format!(
+                "reboot   system boot  6.8.0-55-generic {time}   still running"
+            ))
+            .stdout_contains(format!("last.input.1 begins {time}"));
+    }
+}
