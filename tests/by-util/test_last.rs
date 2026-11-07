@@ -27,6 +27,8 @@ fn test_last() {
     let regex = Regex::new("still running|still logged in").unwrap();
     TestScenario::new(util_name!())
         .ucmd()
+        .arg("--file")
+        .arg("last.input.1")
         .succeeds()
         .stdout_matches(&regex);
 }
@@ -36,6 +38,8 @@ fn test_last() {
 fn test_limit_arg() {
     let line_check = |input: &str| input.lines().count() == 3;
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--limit=1")
         .succeeds()
         .stdout_str_check(line_check);
@@ -57,6 +61,8 @@ fn test_system_arg() {
 fn test_timestamp_format_no_time() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=notime")
         .succeeds()
         .stdout_does_not_match(&regex);
@@ -67,6 +73,8 @@ fn test_timestamp_format_no_time() {
 fn test_timestamp_format_short() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=short")
         .succeeds()
         .stdout_matches(&regex);
@@ -77,6 +85,8 @@ fn test_timestamp_format_short() {
 fn test_timestamp_format_full() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=full")
         .succeeds()
         .stdout_matches(&regex);
@@ -90,6 +100,8 @@ fn test_timestamp_format_iso() {
         Regex::new(" [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")
             .unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=iso")
         .succeeds()
         .stdout_matches(&regex);
