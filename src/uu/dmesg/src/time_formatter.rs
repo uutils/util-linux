@@ -15,18 +15,18 @@ pub fn raw(timestamp_us: i64) -> String {
     format!("{seconds:>5}.{sub_seconds:0>6}")
 }
 
-pub fn ctime(timestamp_us: i64) -> String {
-    let date_time = boot_time()
+pub fn ctime(timestamp_us: i64) -> UResult<String> {
+    let date_time = boot_time()?
         .checked_add_signed(TimeDelta::microseconds(timestamp_us))
         .unwrap();
-    date_time.format("%a %b %d %H:%M:%S %Y").to_string()
+    Ok(date_time.format("%a %b %d %H:%M:%S %Y").to_string())
 }
 
-pub fn iso(timestamp_us: i64) -> String {
-    let date_time = boot_time()
+pub fn iso(timestamp_us: i64) -> UResult<String> {
+    let date_time = boot_time()?
         .checked_add_signed(TimeDelta::microseconds(timestamp_us))
         .unwrap();
-    date_time.format("%Y-%m-%dT%H:%M:%S,%6f%:z").to_string()
+    Ok(date_time.format("%Y-%m-%dT%H:%M:%S,%6f%:z").to_string())
 }
 
 pub struct ReltimeFormatter {
@@ -55,8 +55,8 @@ impl ReltimeFormatter {
         }
     }
 
-    pub fn format(&mut self, timestamp_us: i64) -> String {
-        let date_time = boot_time()
+    pub fn format(&mut self, timestamp_us: i64) -> UResult<String> {
+        let date_time = boot_time()?
             .checked_add_signed(TimeDelta::microseconds(timestamp_us))
             .unwrap();
         let unix_timestamp = date_time.timestamp();
@@ -73,7 +73,7 @@ impl ReltimeFormatter {
             State::Initial if timestamp_us == 0 => State::AfterBoot,
             _ => State::Delta,
         };
-        format_res
+        Ok(format_res)
     }
 
     fn delta(delta_us: i64) -> String {
@@ -122,61 +122,159 @@ pub fn parse_datetime(s: &str) -> UResult<DateTime<FixedOffset>> {
         .map_err(|_| USimpleError::new(1, format!("invalid time value \"{s}\"")))
 }
 
-pub fn datetime_from_microseconds_since_boot(microseconds: i64) -> DateTime<FixedOffset> {
-    boot_time()
+pub fn datetime_from_microseconds_since_boot(microseconds: i64) -> UResult<DateTime<FixedOffset>> {
+    Ok(boot_time()?
         .checked_add_signed(TimeDelta::microseconds(microseconds))
-        .unwrap()
+        .unwrap())
 }
 
-static BOOT_TIME: OnceLock<DateTime<FixedOffset>> = OnceLock::new();
+static BOOT_TIME: OnceLock<Option<DateTime<FixedOffset>>> = OnceLock::new();
+
+/// The time the system booted, looked up once.
+pub fn boot_time() -> UResult<DateTime<FixedOffset>> {
+    BOOT_TIME
+        .get_or_init(lookup_boot_time)
+        .ok_or_else(|| USimpleError::new(1, "cannot get the system boot time"))
+}
 
 #[cfg(feature = "fixed-boot-time")]
-fn boot_time() -> DateTime<FixedOffset> {
-    *BOOT_TIME.get_or_init(|| {
-        let date = NaiveDate::from_ymd_opt(2024, 11, 18).unwrap();
-        let time = NaiveTime::from_hms_micro_opt(19, 34, 12, 866807).unwrap();
-        let tz = FixedOffset::east_opt(7 * 3600).unwrap();
-        chrono::NaiveDateTime::new(date, time)
-            .and_local_timezone(tz)
-            .unwrap()
-    })
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
+    let date = NaiveDate::from_ymd_opt(2024, 11, 18).unwrap();
+    let time = NaiveTime::from_hms_micro_opt(19, 34, 12, 866807).unwrap();
+    let tz = FixedOffset::east_opt(7 * 3600).unwrap();
+    chrono::NaiveDateTime::new(date, time)
+        .and_local_timezone(tz)
+        .single()
+}
+
+// The current time minus the time since boot (CLOCK_BOOTTIME, which counts
+// suspend), like util-linux. Works without a utmp boot record.
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
+    use uucore::libc;
+
+    let mut uptime = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
+    // SAFETY: `uptime` is a valid timespec for clock_gettime to write.
+    if unsafe { libc::clock_gettime(libc::CLOCK_BOOTTIME, &mut uptime) } != 0 {
+        return None;
+    }
+    let uptime = TimeDelta::new(time_t_secs(uptime.tv_sec), uptime.tv_nsec as u32)?;
+    Some((chrono::Local::now() - uptime).into())
+}
+
+// time_t is 32 bits on some targets, such as 32-bit Android.
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "macos",
+    target_os = "freebsd"
+))]
+#[allow(clippy::useless_conversion)]
+fn time_t_secs(secs: uucore::libc::time_t) -> i64 {
+    secs.into()
+}
+
+// kern.boottime, which `uptime` and `who -b` read there too.
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(any(target_os = "macos", target_os = "freebsd"))]
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
+    use uucore::libc;
+
+    let mut mib = [libc::CTL_KERN, libc::KERN_BOOTTIME];
+    let mut boot = libc::timeval {
+        tv_sec: 0,
+        tv_usec: 0,
+    };
+    let mut len = std::mem::size_of::<libc::timeval>();
+    // SAFETY: kern.boottime is a timeval, and `boot` and `len` describe a
+    // buffer of that size for sysctl to write.
+    let res = unsafe {
+        libc::sysctl(
+            mib.as_mut_ptr(),
+            2,
+            &mut boot as *mut libc::timeval as *mut libc::c_void,
+            &mut len,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+    if res != 0 {
+        return None;
+    }
+    let nanos = u32::try_from(boot.tv_usec).ok()? * 1000;
+    Some(
+        chrono::DateTime::from_timestamp(time_t_secs(boot.tv_sec), nanos)?
+            .with_timezone(&chrono::Local)
+            .into(),
+    )
 }
 
 #[cfg(not(feature = "fixed-boot-time"))]
 #[cfg(unix)]
-#[cfg(not(target_os = "openbsd"))]
-fn boot_time() -> DateTime<FixedOffset> {
-    *BOOT_TIME.get_or_init(|| boot_time_from_utmpx().unwrap())
-}
-
-#[cfg(not(feature = "fixed-boot-time"))]
-#[cfg(windows)]
-fn boot_time() -> DateTime<FixedOffset> {
-    // TODO: get windows boot time
-    *BOOT_TIME.get_or_init(|| chrono::DateTime::from_timestamp(0, 0).unwrap().into())
-}
-
-#[cfg(not(feature = "fixed-boot-time"))]
-#[cfg(target_os = "openbsd")]
-fn boot_time() -> DateTime<FixedOffset> {
-    // TODO: get openbsd boot time
-    *BOOT_TIME.get_or_init(|| chrono::DateTime::from_timestamp(0, 0).unwrap().into())
-}
-
-#[cfg(not(feature = "fixed-boot-time"))]
-#[cfg(unix)]
-#[cfg(not(target_os = "openbsd"))]
-fn boot_time_from_utmpx() -> Option<DateTime<FixedOffset>> {
+#[cfg(not(any(
+    target_os = "openbsd",
+    target_os = "linux",
+    target_os = "android",
+    target_os = "macos",
+    target_os = "freebsd"
+)))]
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
     for record in uucore::utmpx::Utmpx::iter_all_records() {
         if record.record_type() == uucore::utmpx::BOOT_TIME {
             let t = record.login_time();
             return Some(
-                chrono::DateTime::from_timestamp(t.unix_timestamp(), t.nanosecond())
-                    .unwrap()
+                chrono::DateTime::from_timestamp(t.unix_timestamp(), t.nanosecond())?
                     .with_timezone(&chrono::Local)
                     .into(),
             );
         }
     }
     None
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(windows)]
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
+    // TODO: get windows boot time
+    Some(chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+}
+
+#[cfg(not(feature = "fixed-boot-time"))]
+#[cfg(target_os = "openbsd")]
+fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
+    // TODO: get openbsd boot time
+    Some(chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+}
+
+#[cfg(test)]
+#[cfg(not(feature = "fixed-boot-time"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    fn boot_time_matches_proc_uptime() {
+        let uptime: f64 = std::fs::read_to_string("/proc/uptime")
+            .unwrap()
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let since_boot = chrono::Local::now().fixed_offset() - boot_time().unwrap();
+        assert!((since_boot.as_seconds_f64() - uptime).abs() < 2.0);
+    }
+
+    #[test]
+    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+    fn boot_time_comes_from_kern_boottime() {
+        let since_boot = chrono::Local::now().fixed_offset() - boot_time().unwrap();
+        // a real boot time, not the epoch
+        assert!(since_boot > TimeDelta::zero() && since_boot < TimeDelta::days(3650));
+    }
 }

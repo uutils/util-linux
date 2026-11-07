@@ -117,6 +117,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     if let Some(until) = matches.get_one::<String>(options::UNTIL) {
         dmesg.until_filter = Some(time_formatter::parse_datetime(until)?);
     }
+    if dmesg.since_filter.is_some() || dmesg.until_filter.is_some() {
+        // The filters compare against the boot time: fail here, not per record.
+        time_formatter::boot_time()?;
+    }
     if let Some(kmsg_file) = matches.get_one::<String>(options::KMSG_FILE) {
         dmesg.kmsg_file = kmsg_file;
         dmesg.kmsg_record_separator = 0;
@@ -241,13 +245,13 @@ impl Dmesg<'_> {
                     print!("[{}] ", delta_formatter.format(record.timestamp_us))
                 }
                 TimeFormat::Reltime => {
-                    print!("[{}] ", reltime_formatter.format(record.timestamp_us))
+                    print!("[{}] ", reltime_formatter.format(record.timestamp_us)?)
                 }
                 TimeFormat::Ctime => {
-                    print!("[{}] ", time_formatter::ctime(record.timestamp_us))
+                    print!("[{}] ", time_formatter::ctime(record.timestamp_us)?)
                 }
                 TimeFormat::Iso => {
-                    print!("{} ", time_formatter::iso(record.timestamp_us))
+                    print!("{} ", time_formatter::iso(record.timestamp_us)?)
                 }
                 TimeFormat::Raw => {
                     print!("[{}] ", time_formatter::raw(record.timestamp_us))
@@ -309,9 +313,8 @@ impl Dmesg<'_> {
     ) -> impl Fn(&UResult<Record>) -> bool + '_ {
         move |record: &UResult<Record>| match (record, since) {
             (Ok(record), Some(since)) => {
-                let time =
-                    time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us);
-                time >= *since
+                time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us)
+                    .is_ok_and(|time| time >= *since)
             }
             _ => true,
         }
@@ -322,9 +325,8 @@ impl Dmesg<'_> {
     ) -> impl Fn(&UResult<Record>) -> bool + '_ {
         move |record: &UResult<Record>| match (record, until) {
             (Ok(record), Some(until)) => {
-                let time =
-                    time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us);
-                time <= *until
+                time_formatter::datetime_from_microseconds_since_boot(record.timestamp_us)
+                    .is_ok_and(|time| time <= *until)
             }
             _ => true,
         }
