@@ -12,7 +12,7 @@ use uutests::util::TestScenario;
 #[cfg(unix)]
 use uutests::util_name;
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 use regex::Regex;
 
 #[test]
@@ -57,7 +57,7 @@ fn test_system_arg() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_timestamp_format_no_time() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
@@ -65,6 +65,7 @@ fn test_timestamp_format_no_time() {
         .arg("last.input.1")
         .arg("--time-format=notime")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_does_not_match(&regex);
 }
 
@@ -89,6 +90,7 @@ fn test_timestamp_format_full() {
         .arg("last.input.1")
         .arg("--time-format=full")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_matches(&regex);
 }
 
@@ -104,6 +106,7 @@ fn test_timestamp_format_iso() {
         .arg("last.input.1")
         .arg("--time-format=iso")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_matches(&regex);
 }
 
