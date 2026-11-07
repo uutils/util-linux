@@ -15,6 +15,9 @@ path = "src/main.rs"
 [dependencies]
 chrono = { workspace = true }
 clap.workspace = true
+libc.workspace = true
+uucore = { workspace = true, features = ["utmpx"] }
+
+[target.'cfg(unix)'.dependencies]
 nix = { version = "0.30", default-features = false, features = ["fs", "hostname", "poll", "term"] }
 thiserror.workspace = true
-uucore = { workspace = true, features = ["utmpx"] }

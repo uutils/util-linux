@@ -4,38 +4,38 @@
 // file that was distributed with this source code.
 
 use clap::builder::ValueParser;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use clap::parser::ValuesRef;
-#[cfg(not(unix))]
+#[cfg(any(target_os = "windows", target_os = "openbsd"))]
 use clap::ArgMatches;
 use clap::{Arg, ArgAction, Command};
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use nix::{
-    libc,
+    errno::Errno,
     poll::{poll, PollFd, PollFlags, PollTimeout},
     unistd,
 };
 use std::env;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::ffi::OsString;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::io;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::io::prelude::*;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::os::fd::AsFd;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::os::unix::fs::OpenOptionsExt;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use std::string::FromUtf8Error;
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use thiserror::Error;
 
-#[cfg(unix)]
+use uucore::error::UResult;
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use uucore::error::{UError, USimpleError};
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 use uucore::utmpx::Utmpx;
-use uucore::{error::UResult, format_usage, translate};
 
 const STRING: &str = "string";
 // TODO(FEAT): Option for wall
@@ -45,7 +45,7 @@ const OPT_NOBANNER: &str = "nobanner";
 #[cfg(target_os = "linux")]
 const OPT_TIMEOUT: &str = "timeout";
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 #[derive(Error, Debug)]
 enum WallError {
     #[error("I/O error")]
@@ -58,14 +58,14 @@ enum WallError {
     TimeoutError,
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 impl UError for WallError {
     fn code(&self) -> i32 {
         1
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 #[uucore::main(no_signals)]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uucore::clap_localization::handle_clap_result(uu_app(), args)?; // Clap would have return 101
@@ -95,13 +95,23 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     ))
 }
 
+#[cfg(target_os = "openbsd")]
+#[uucore::main(no_signals)]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: ArgMatches = uu_app().try_get_matches_from(args)?;
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`wall` is not available on OpenBSD. Use of Utmpx crate is required, but it's not available on OpenBSD",
+    ))
+}
+
 #[cfg(target_os = "linux")]
 pub fn uu_app() -> Command {
-    Command::new("wall")
+    Command::new(uucore::util_name())
         .version(uucore::crate_version!())
-        .about("wall.md")
+        .about(uucore::help_about!("wall.md"))
         .infer_long_args(true)
-        .override_usage(format_usage(&translate!("wall.md")))
+        .override_usage(uucore::format_usage(uucore::help_usage!("wall.md")))
         // .arg(
         //     Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
         //         // users inside a group
@@ -141,13 +151,14 @@ pub fn uu_app() -> Command {
         )
 }
 
+// #[cfg(all(unix, not(target_os = "linux"), not(target_os = "openbsd")))]
 #[cfg(not(target_os = "linux"))]
 pub fn uu_app() -> Command {
-    Command::new("wall")
+    Command::new(uucore::util_name())
         .version(uucore::crate_version!())
-        .about(translate!("wall.md"))
+        .about(uucore::help_about!("wall.md"))
         .infer_long_args(true)
-        .override_usage(format_usage(&translate!("wall.md")))
+        .override_usage(uucore::format_usage(uucore::help_usage!("wall.md")))
         // .arg(
         //     Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
         //         // users inside a group
@@ -167,7 +178,7 @@ pub fn uu_app() -> Command {
         )
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn get_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
     if args.len() == 0 {
         read_from_stdin()
@@ -187,7 +198,7 @@ fn get_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn read_from_stdin() -> Result<String, WallError> {
     let mut buffer = Vec::new();
     io::stdin().read_to_end(&mut buffer)?;
@@ -195,7 +206,7 @@ fn read_from_stdin() -> Result<String, WallError> {
     Ok(res)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn read_from_file(file: &std::ffi::OsStr) -> Result<String, WallError> {
     let mut buffer = Vec::new();
     let mut file = std::fs::File::open(std::path::Path::new(file))?;
@@ -204,7 +215,7 @@ fn read_from_file(file: &std::ffi::OsStr) -> Result<String, WallError> {
     Ok(res)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn concatenate_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
     let mut res = String::new();
     for arg in args {
@@ -215,7 +226,7 @@ fn concatenate_message(args: ValuesRef<OsString>) -> Result<String, WallError> {
     Ok(res)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn find_logged_users() -> Vec<OsString> {
     let mut res = Vec::<OsString>::new();
     for ut in Utmpx::iter_all_records() {
@@ -228,7 +239,7 @@ fn find_logged_users() -> Vec<OsString> {
     res
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn wall_intro_message() -> String {
     let user = "USER";
     let binding = unistd::gethostname().unwrap_or_else(|_| "".into());
@@ -258,20 +269,20 @@ fn wall_intro_message() -> String {
     );
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn formatted_message(message: String, banner: bool) -> String {
     let formatted_message: String = message
         .chars()
         .filter(|c| !c.is_control() || *c == '\n')
         .collect();
     // Same here, control characters could also be hidden in the message provided. We still want newline char of course...
-    #[cfg(target_os = "linux")]
-    let mut formatted_message = formatted_message.replace('\n', "\r\n\n");
     #[cfg(not(target_os = "macos"))]
-    formatted_message.push_str("\r\n\n");
+    let formatted_message = formatted_message.replace('\n', "\r\n\n");
+    #[cfg(not(target_os = "macos"))]
+    let formatted_message = format!("{formatted_message}\r\n\n");
 
     #[cfg(target_os = "macos")]
-    let formatted_message = formatted_message.replace('\n', "\r\n\n");
+    let formatted_message = formatted_message.replace('\n', "\r\n");
 
     let transmission = if banner {
         format!("{}{}", wall_intro_message(), formatted_message)
@@ -281,14 +292,14 @@ fn formatted_message(message: String, banner: bool) -> String {
     transmission
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 struct Terminal {
     file: std::fs::File,
     written: usize,
     failed: bool,
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 impl Terminal {
     fn new(file: std::fs::File) -> Self {
         Terminal {
@@ -299,7 +310,7 @@ impl Terminal {
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn write_to_terminals(users: Vec<OsString>, message: &str, timeout: u16) -> UResult<()> {
     let mut ttys: Vec<Terminal> = add_users_terminal(&users);
     let poll_errors = PollFlags::POLLHUP | PollFlags::POLLERR | PollFlags::POLLNVAL;
@@ -315,12 +326,11 @@ fn write_to_terminals(users: Vec<OsString>, message: &str, timeout: u16) -> URes
         for (tty, event) in ttys.iter_mut().zip(events) {
             if event.contains(PollFlags::POLLOUT) {
                 let remaining = &message.as_bytes()[tty.written..];
-                let bytes = unistd::write(tty.file.as_fd(), remaining);
-                if bytes.is_err() {
-                    tty.failed = true;
-                    continue;
+                match unistd::write(tty.file.as_fd(), remaining) {
+                    Ok(n) => tty.written += n,
+                    Err(Errno::EAGAIN | Errno::EINTR) => continue,
+                    Err(_) => tty.failed = true,
                 }
-                tty.written += bytes.unwrap()
             } else if event.intersects(poll_errors) {
                 tty.failed = true;
             }
@@ -330,7 +340,7 @@ fn write_to_terminals(users: Vec<OsString>, message: &str, timeout: u16) -> URes
     Ok(())
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn poll_terminals(
     terminals: &[Terminal],
     remaining: std::time::Duration,
@@ -342,8 +352,11 @@ fn poll_terminals(
     let wait = PollTimeout::try_from(remaining)
         .map_err(|e| USimpleError::new(1, format!("invalid poll timeout: {e}")))?;
 
-    if poll(&mut fds, wait)? == 0 {
-        return Err(WallError::TimeoutError.into());
+    match poll(&mut fds, wait) {
+        Ok(0) => return Err(WallError::TimeoutError.into()),
+        Ok(_) => {}
+        Err(Errno::EINTR) => return Ok(Vec::new()),
+        Err(e) => return Err(e.into()),
     }
     Ok(fds
         .iter()
@@ -351,7 +364,7 @@ fn poll_terminals(
         .collect())
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(target_os = "openbsd")))]
 fn add_users_terminal(users: &Vec<OsString>) -> Vec<Terminal> {
     let mut ttys: Vec<Terminal> = Vec::new();
     for user in users {
@@ -371,8 +384,7 @@ fn add_users_terminal(users: &Vec<OsString>) -> Vec<Terminal> {
     ttys
 }
 
-#[cfg(unix)]
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn get_hour_and_date() -> String {
     chrono::Local::now().format("%a %b %e %H:%M %Y").to_string()
 }
@@ -384,16 +396,15 @@ fn get_hour_and_date() -> String {
 
 #[cfg(target_os = "macos")]
 fn get_sender() -> String {
-    unistd::ttyname(std::io::stdin().as_fd())
+    unistd::ttyname(std::io::stderr().as_fd())
         .unwrap_or_else(|_| "".into())
         .to_string_lossy()
         .to_string()
 }
 
-#[cfg(unix)]
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn get_sender() -> String {
-    unistd::ttyname(std::io::stdin().as_fd())
+    unistd::ttyname(std::io::stderr().as_fd())
         .unwrap_or_else(|_| "".into())
         .to_string_lossy()
         .strip_prefix("/dev/") // Wall doesn't print /dev/ after tty name, but might not be the way it does it
