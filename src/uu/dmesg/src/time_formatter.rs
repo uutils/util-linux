@@ -241,14 +241,14 @@ fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
 #[cfg(windows)]
 fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
     // TODO: get windows boot time
-    Some(chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+    None
 }
 
 #[cfg(not(feature = "fixed-boot-time"))]
 #[cfg(target_os = "openbsd")]
 fn lookup_boot_time() -> Option<DateTime<FixedOffset>> {
     // TODO: get openbsd boot time
-    Some(chrono::DateTime::from_timestamp(0, 0).unwrap().into())
+    None
 }
 
 #[cfg(test)]
