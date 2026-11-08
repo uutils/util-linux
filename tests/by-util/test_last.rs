@@ -218,6 +218,7 @@ fn test_timestamp_format_iso_offset_sign() {
     for (tz, time) in [
         ("CST6", "2025-03-08T10:24:36-06:00"),
         ("UTC", "2025-03-08T16:24:36+00:00"),
+        ("JST-9", "2025-03-09T01:24:36+09:00"),
     ] {
         new_ucmd!()
             .env("TZ", tz)
