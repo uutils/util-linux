@@ -17,21 +17,45 @@ fn unsupported_feature() {
     new_ucmd!().arg("Cargo.toml").fails().code_is(1);
 }
 
-#[cfg(target_os = "linux")]
-#[test]
-fn test_invalid_file() {
-    new_ucmd!()
-        .arg("not_existing_file.not_existing_extension")
-        .succeeds(); // Should print non-file name as broadcast
-}
-
-#[cfg(target_os = "macos")]
-#[test]
-fn test_invalid_file() {
-    new_ucmd!()
-        .arg("not_existing_file.not_existing_extension")
-        .fails()
-        .code_is(1); // On macOS, file not existing is an error
-}
-
 // wall does not print the content of the file in the stdout, it sends it to the tty(s).
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_help_arg() {
+    new_ucmd!().arg("--help").succeeds().code_is(0);
+}
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_null_timeout() {
+    new_ucmd!().arg("-t 0").fails().code_is(1);
+}
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_invalid_timeout() {
+    new_ucmd!().arg("-t notanumber").fails().code_is(1);
+}
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_no_timeout() {
+    new_ucmd!().arg("-t --help").fails().code_is(1);
+}
+
+#[cfg(target_family = "unix")]
+#[test]
+fn test_non_utf8_arg() {
+    use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+
+    let mut non_utf: Vec<u8> = Vec::new();
+    non_utf.push(2);
+    non_utf.push(213);
+    non_utf.push(255);
+    non_utf.push(13);
+    non_utf.push(12);
+    new_ucmd!()
+        .arg(OsString::from_vec(non_utf))
+        .fails()
+        .code_is(1);
+}
