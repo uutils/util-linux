@@ -214,12 +214,8 @@ impl CpuList {
     /// reported here and reflected in the exit code instead of being returned:
     /// returning one would let `uucore` print it a second time.
     ///
-    /// `max_cpu_index` bounds the walk. A cpu-list range is only as wide as the
-    /// integer type, so without it `--enable 0-4294967295` spends hours calling
-    /// `f` on indices no kernel can have. Indices above the bound cannot exist, so
-    /// they are reported one range at a time rather than one index at a time.
-    /// `None` walks everything, as it did before the bound existed; call through
-    /// `walk_cpu_list` rather than passing it, so the bound cannot be dropped.
+    /// Indices above `max_cpu_index` cannot exist, so they are reported one range
+    /// at a time instead of being walked. `None` walks the whole list, however wide.
     fn run(
         &self,
         max_cpu_index: Option<usize>,
@@ -309,26 +305,13 @@ impl FromStr for CpuList {
     }
 }
 
-/// Walks `cpu_list`, bounded by what the machine can have. The bound is taken here
-/// rather than passed in so that no operation can be added that omits it: a walk
-/// given no bound steps through every index the integer type allows, which is the
-/// hours-long walk the bound exists to prevent.
-#[cfg(unix)]
-fn walk_cpu_list(
-    sysfs_cpu: &sysfs::SysFSCpu,
-    cpu_list: &CpuList,
-    f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>,
-) {
-    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), f);
-}
-
 #[cfg(unix)]
 fn enable_cpu(cpu_list: &CpuList, enable: bool) -> Result<(), ChCpuError> {
     let sysfs_cpu = sysfs::SysFSCpu::open()?;
 
     let mut enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    walk_cpu_list(&sysfs_cpu, cpu_list, &mut |cpu_index| {
+    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), &mut |cpu_index| {
         sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, enable)
     });
 
@@ -346,7 +329,7 @@ fn configure_cpu(cpu_list: &CpuList, configure: bool) -> Result<(), ChCpuError> 
 
     let enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    walk_cpu_list(&sysfs_cpu, cpu_list, &mut |cpu_index| {
+    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), &mut |cpu_index| {
         sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, configure)
     });
 
