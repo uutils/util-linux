@@ -4,6 +4,16 @@
 // file that was distributed with this source code.
 
 use clap::{builder::ValueParser, crate_version, value_parser, Arg, ArgAction, Command};
+#[cfg(unix)]
+use std::{
+    ffi::{OsStr, OsString},
+    fs::{File, OpenOptions},
+    os::fd::{AsRawFd, RawFd},
+    os::unix::process::ExitStatusExt,
+    time::{Duration, Instant},
+};
+#[cfg(unix)]
+use uucore::error::FromIo;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("flock.md");
@@ -24,14 +34,142 @@ mod options {
 }
 
 #[cfg(unix)]
+enum LockMode {
+    Shared,
+    Exclusive,
+    Unlock,
+}
+
+#[cfg(unix)]
+fn open_lock_file(path: &OsStr) -> UResult<File> {
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path)
+        .or_else(|err| OpenOptions::new().read(true).open(path).map_err(|_| err))
+        .map_err_context(|| format!("cannot open lock file {}", path.to_string_lossy()))
+}
+
+#[cfg(unix)]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     let matches = uu_app().try_get_matches_from(args)?;
-    let _shared: bool = matches.get_flag(options::SHARED);
-    let _timeout: Option<f64> = matches.get_one::<f64>(options::TIMEOUT).copied();
-    let _exclusive: bool = matches.get_flag(options::EXCLUSIVE);
-    // TODO: Logic
-    Ok(())
+    let timeout: Option<f64> = matches.get_one::<f64>(options::TIMEOUT).copied();
+
+    let lock_mode = if matches.get_flag(options::SHARED) {
+        LockMode::Shared
+    } else if matches.get_flag(options::UNLOCK) {
+        LockMode::Unlock
+    } else {
+        LockMode::Exclusive
+    };
+
+    let file_or_fd = matches.get_one::<OsString>(options::FILE_OR_FD).unwrap();
+    let has_command =
+        matches.contains_id(options::PROG_ARGS) || matches.contains_id(options::COMMAND);
+
+    let (fd, _keep_open): (RawFd, Option<File>) = if has_command {
+        let file = open_lock_file(file_or_fd)?;
+        let fd = file.as_raw_fd();
+        (fd, Some(file))
+    } else {
+        let fd = file_or_fd
+            .to_str()
+            .and_then(|s| s.parse::<RawFd>().ok())
+            .ok_or_else(|| {
+                uucore::error::USimpleError::new(
+                    1,
+                    format!("Invalid file descriptor: {}", file_or_fd.to_string_lossy()),
+                )
+            })?;
+        (fd, None)
+    };
+
+    let nonblock = matches.get_flag(options::NONBLOCK);
+    let conflict_exit_code = *matches.get_one::<u8>(options::CONFLICT_EXIT_CODE).unwrap();
+
+    let operation = match lock_mode {
+        LockMode::Shared => libc::LOCK_SH,
+        LockMode::Exclusive => libc::LOCK_EX,
+        LockMode::Unlock => libc::LOCK_UN,
+    };
+
+    let deadline = timeout
+        .map(|secs| {
+            Duration::try_from_secs_f64(secs)
+                .ok()
+                .and_then(|d| Instant::now().checked_add(d))
+                .ok_or_else(|| uucore::error::USimpleError::new(1, "invalid timeout"))
+        })
+        .transpose()?;
+
+    loop {
+        let op = if nonblock || deadline.is_some() {
+            operation | libc::LOCK_NB
+        } else {
+            operation
+        };
+
+        if unsafe { libc::flock(fd, op) } == 0 {
+            break;
+        }
+
+        let err = std::io::Error::last_os_error();
+        if err.kind() == std::io::ErrorKind::WouldBlock {
+            if nonblock {
+                return Err(uucore::error::ExitCode::new(i32::from(conflict_exit_code)));
+            }
+            if let Some(dl) = deadline {
+                let now = Instant::now();
+                if now >= dl {
+                    return Err(uucore::error::ExitCode::new(i32::from(conflict_exit_code)));
+                }
+                std::thread::sleep((dl - now).min(Duration::from_millis(5)));
+                continue;
+            }
+        }
+        return Err(err.map_err_context(|| "flock failed".to_string()));
+    }
+
+    let mut cmd = if let Some(prog_args) = matches.get_many::<OsString>(options::PROG_ARGS) {
+        let args: Vec<&OsString> = prog_args.collect();
+        let mut command = std::process::Command::new(args[0]);
+        command.args(&args[1..]);
+        command
+    } else if let Some(shell_cmd) = matches.get_one::<OsString>(options::COMMAND) {
+        let shell = std::env::var_os("SHELL")
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| OsString::from("/bin/sh"));
+        let mut command = std::process::Command::new(shell);
+        command.arg("-c").arg(shell_cmd);
+        command
+    } else {
+        return Ok(());
+    };
+
+    match cmd.status() {
+        Ok(status) => {
+            let code = status
+                .code()
+                .or_else(|| status.signal().map(|sig| 128 + sig))
+                .unwrap_or(1);
+            uucore::error::set_exit_code(code);
+            Ok(())
+        }
+        Err(err) => {
+            let code = if err.kind() == std::io::ErrorKind::NotFound {
+                127
+            } else {
+                126
+            };
+            Err(uucore::error::USimpleError::new(
+                code,
+                format!("failed to execute command: {err}"),
+            ))
+        }
+    }
 }
 
 #[cfg(not(unix))]
@@ -89,6 +227,7 @@ pub fn uu_app() -> Command {
                 .long("timeout")
                 .alias("wait")
                 .value_name("secs")
+                .allow_negative_numbers(true)
                 .help("wait for a limited amount of time")
                 .value_parser(value_parser!(f64)),
         )
