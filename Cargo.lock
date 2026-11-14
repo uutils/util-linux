@@ -884,9 +884,9 @@ dependencies = [
 
 [[package]]
 name = "num-conv"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
+checksum = "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441"
 
 [[package]]
 name = "num-integer"
@@ -1542,6 +1542,7 @@ dependencies = [
  "uu_setpgid",
  "uu_setsid",
  "uu_uuidgen",
+ "uu_wall",
  "uucore 0.2.2",
  "uuhelp_parser",
  "uuid",
@@ -1776,6 +1777,18 @@ dependencies = [
  "uucore 0.2.2",
  "uuid",
  "windows",
+]
+
+[[package]]
+name = "uu_wall"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "clap",
+ "libc",
+ "nix 0.30.1",
+ "thiserror",
+ "uucore 0.2.2",
 ]
 
 [[package]]
