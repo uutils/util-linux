@@ -204,22 +204,45 @@ impl fmt::Display for DispatchMode {
 pub(crate) struct CpuList(RangeInclusiveSet<usize>);
 
 impl CpuList {
+    /// The highest index in the list. `RangeInclusiveSet` keeps its ranges
+    /// coalesced and ordered, so the last one holds it.
+    pub(crate) fn max_index(&self) -> Option<usize> {
+        self.0.last().map(|range| *range.end())
+    }
+
     /// A failure on one CPU must not stop the remaining ones, so failures are
     /// reported here and reflected in the exit code instead of being returned:
     /// returning one would let `uucore` print it a second time.
-    fn run(&self, f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>) {
-        use std::ops::RangeInclusive;
-
+    ///
+    /// Indices above `max_cpu_index` cannot exist, so they are reported one range
+    /// at a time instead of being walked. `None` walks the whole list, however wide.
+    fn run(
+        &self,
+        max_cpu_index: Option<usize>,
+        f: &mut dyn FnMut(usize) -> Result<(), ChCpuError>,
+    ) {
         let mut success_occurred = false;
         let mut failure_occurred = false;
 
-        for cpu_index in self.0.iter().flat_map(RangeInclusive::to_owned) {
-            match f(cpu_index) {
-                Ok(()) => success_occurred = true,
-                Err(err) => {
-                    uucore::show!(err);
-                    failure_occurred = true;
+        for range in self.0.iter() {
+            let (first, last) = (*range.start(), *range.end());
+            let walked_last = max_cpu_index.map_or(last, |max| max.min(last));
+
+            // Empty when the whole range sits above the bound.
+            for cpu_index in first..=walked_last {
+                match f(cpu_index) {
+                    Ok(()) => success_occurred = true,
+                    Err(err) => {
+                        uucore::show!(err);
+                        failure_occurred = true;
+                    }
                 }
+            }
+
+            if walked_last < last {
+                // The comparison guarantees the increment stays in range.
+                uucore::show!(ChCpuError::absent_cpus(first.max(walked_last + 1), last));
+                failure_occurred = true;
             }
         }
 
@@ -288,7 +311,7 @@ fn enable_cpu(cpu_list: &CpuList, enable: bool) -> Result<(), ChCpuError> {
 
     let mut enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    cpu_list.run(&mut move |cpu_index| {
+    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), &mut |cpu_index| {
         sysfs_cpu.enable_cpu(enabled_cpu_list.as_mut(), cpu_index, enable)
     });
 
@@ -306,7 +329,7 @@ fn configure_cpu(cpu_list: &CpuList, configure: bool) -> Result<(), ChCpuError> 
 
     let enabled_cpu_list = sysfs_cpu.enabled_cpu_list().ok();
 
-    cpu_list.run(&mut move |cpu_index| {
+    cpu_list.run(sysfs_cpu.max_possible_cpu_index(), &mut |cpu_index| {
         sysfs_cpu.configure_cpu(enabled_cpu_list.as_ref(), cpu_index, configure)
     });
 
@@ -336,4 +359,35 @@ fn rescan_cpus() -> Result<(), ChCpuError> {
 #[cfg(not(unix))]
 fn rescan_cpus() -> Result<(), ChCpuError> {
     unimplemented!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CpuList;
+
+    fn walk(cpu_list: &str, max_cpu_index: Option<usize>) -> Vec<usize> {
+        let cpu_list: CpuList = cpu_list.parse().unwrap();
+        let mut walked = Vec::new();
+
+        cpu_list.run(max_cpu_index, &mut |cpu_index| {
+            let bound = max_cpu_index.unwrap_or(usize::MAX);
+            assert!(cpu_index <= bound, "walked past the bound to {cpu_index}");
+            walked.push(cpu_index);
+            Ok(())
+        });
+
+        walked
+    }
+
+    #[test]
+    fn test_run_stops_at_the_bound() {
+        assert_eq!(walk("0-3,6-9,20-4294967295", Some(7)), [0, 1, 2, 3, 6, 7]);
+        // 8-9 and 20-4294967295 are reported as absent: a partial success.
+        assert_eq!(uucore::error::get_exit_code(), 64);
+    }
+
+    #[test]
+    fn test_run_without_a_bound_walks_the_whole_list() {
+        assert_eq!(walk("0-2,5", None), [0, 1, 2, 5]);
+    }
 }

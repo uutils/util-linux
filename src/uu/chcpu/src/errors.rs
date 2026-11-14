@@ -31,6 +31,9 @@ pub enum ChCpuError {
     #[error("CPU {0} does not exist")]
     InvalidCpuIndex(usize),
 
+    #[error("CPUs {0}-{1} do not exist")]
+    InvalidCpuIndexRange(usize, usize),
+
     #[error("{0}: {1}")]
     IO0(String, std::io::Error),
 
@@ -48,6 +51,16 @@ pub enum ChCpuError {
 }
 
 impl ChCpuError {
+    /// A run of nonexistent CPU indices, reported once instead of once per index.
+    /// A single index keeps the wording it has always had.
+    pub(crate) fn absent_cpus(first: usize, last: usize) -> Self {
+        if first == last {
+            Self::InvalidCpuIndex(first)
+        } else {
+            Self::InvalidCpuIndexRange(first, last)
+        }
+    }
+
     pub(crate) fn io0(message: impl Into<String>, error: std::io::Error) -> Self {
         Self::IO0(message.into(), error)
     }
@@ -74,6 +87,7 @@ impl ChCpuError {
             | Self::CpuSpecNotPositiveInteger
             | Self::EmptyCpuList
             | Self::InvalidCpuIndex(_)
+            | Self::InvalidCpuIndexRange(..)
             | Self::OneCpuIsEnabled
             | Self::NotInteger(_)
             | Self::SetCpuDispatchUnsupported => self,

@@ -32,6 +32,7 @@ jobs:
         shell: bash
         if: runner.os == 'Linux'
         run: sudo apt-get update --quiet && sudo apt-get install --quiet --no-install-recommends --assume-yes libclang-dev libc6-dev libsmartcols-dev libmount-dev
+      - run: cargo test -p uu_chcpu
       - run: cargo test
       # The workspace tests build dmesg with fixed-boot-time, so its real boot time is tested alone
       - run: cargo test -p uu_dmesg
