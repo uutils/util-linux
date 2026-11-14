@@ -7,6 +7,17 @@ on:
     branches:
       - 'main'
 
+# The job only needs to check out the repository.
+permissions:
+  contents: read
+
+# Cancel superseded runs of a pull request or branch when it is updated.
+# On main, let a run in progress finish (GitHub still replaces a pending
+# run in the group with a newer one).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   native:
     name: Run GNU tests (native)
@@ -39,30 +50,9 @@ jobs:
           ./configure
           make libsmartcols/src/filter-parser.c libsmartcols/src/filter-scanner.c
           make -j$(nproc) check-programs
-      - name: Download test baseline if exists
-        id: download-test-baseline
-        continue-on-error: true
-        uses: actions/download-artifact@v8
-        with:
-          name: gnu-test-failures
-          path: uutils-util-linux/.reference/
-
       - name: Run GNU tests
         env:
           GNU_PROJECT_DIR: ${{ github.workspace }}/gnu-util-linux
         run: |
           cd uutils-util-linux
           ./scripts/run-tests.sh
-
-      - name: Update test baseline
-        if: github.ref == 'refs/heads/main'
-        run: |
-          cd uutils-util-linux
-          ./scripts/check-new-gnu-failures.sh --update-baseline
-
-      - name: Upload test baseline artifact
-        if: github.ref == 'refs/heads/main' || steps.download-test-baseline.outcome == 'failure'
-        uses: actions/upload-artifact@v7
-        with:
-          name: gnu-test-failures
-          path: uutils-util-linux/.reference/gnu-test-failures.txt
