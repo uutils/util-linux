@@ -13,11 +13,20 @@ use std::{
     time::{Duration, Instant},
 };
 #[cfg(unix)]
-use uucore::error::FromIo;
+use uucore::display::Quotable;
+#[cfg(unix)]
+use uucore::error::{UIoError, USimpleError};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("flock.md");
 const USAGE: &str = help_usage!("flock.md");
+
+// Exit codes
+const EX_USAGE: i32 = 64;
+const EX_DATAERR: i32 = 65;
+const EX_NOINPUT: i32 = 66;
+const EX_UNAVAILABLE: i32 = 69;
+const EX_OSERR: i32 = 71;
 
 mod options {
     pub const SHARED: &str = "shared";
@@ -49,7 +58,16 @@ fn open_lock_file(path: &OsStr) -> UResult<File> {
         .truncate(false)
         .open(path)
         .or_else(|err| OpenOptions::new().read(true).open(path).map_err(|_| err))
-        .map_err_context(|| format!("cannot open lock file {}", path.to_string_lossy()))
+        .map_err(|err| {
+            USimpleError::new(
+                EX_NOINPUT,
+                format!(
+                    "cannot open lock file {}: {}",
+                    path.to_string_lossy(),
+                    UIoError::from(err)
+                ),
+            )
+        })
 }
 
 #[cfg(unix)]
@@ -79,9 +97,9 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             .to_str()
             .and_then(|s| s.parse::<RawFd>().ok())
             .ok_or_else(|| {
-                uucore::error::USimpleError::new(
-                    1,
-                    format!("Invalid file descriptor: {}", file_or_fd.to_string_lossy()),
+                USimpleError::new(
+                    EX_USAGE,
+                    format!("bad file descriptor: {}", file_or_fd.quote()),
                 )
             })?;
         (fd, None)
@@ -101,7 +119,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             Duration::try_from_secs_f64(secs)
                 .ok()
                 .and_then(|d| Instant::now().checked_add(d))
-                .ok_or_else(|| uucore::error::USimpleError::new(1, "invalid timeout"))
+                .ok_or_else(|| USimpleError::new(EX_OSERR, "cannot set up timer: Invalid argument"))
         })
         .transpose()?;
 
@@ -130,7 +148,10 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
                 continue;
             }
         }
-        return Err(err.map_err_context(|| "flock failed".to_string()));
+        return Err(USimpleError::new(
+            EX_DATAERR,
+            format!("{}: {}", file_or_fd.to_string_lossy(), UIoError::from(err)),
+        ));
     }
 
     let mut cmd = if let Some(prog_args) = matches.get_many::<OsString>(options::PROG_ARGS) {
@@ -158,17 +179,14 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             uucore::error::set_exit_code(code);
             Ok(())
         }
-        Err(err) => {
-            let code = if err.kind() == std::io::ErrorKind::NotFound {
-                127
-            } else {
-                126
-            };
-            Err(uucore::error::USimpleError::new(
-                code,
-                format!("failed to execute command: {err}"),
-            ))
-        }
+        Err(err) => Err(USimpleError::new(
+            EX_UNAVAILABLE,
+            format!(
+                "failed to execute {}: {}",
+                cmd.get_program().to_string_lossy(),
+                UIoError::from(err)
+            ),
+        )),
     }
 }
 

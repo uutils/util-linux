@@ -151,10 +151,10 @@ mod unix {
     #[test]
     fn test_invalid_fd() {
         new_ucmd!()
-            .arg("999")
+            .arg("77")
             .fails()
-            .code_is(1)
-            .stderr_contains("flock failed");
+            .code_is(65)
+            .stderr_contains("77: Bad file descriptor");
     }
 
     #[test]
@@ -162,8 +162,8 @@ mod unix {
         new_ucmd!()
             .arg("not_a_fd")
             .fails()
-            .code_is(1)
-            .stderr_contains("Invalid file descriptor");
+            .code_is(64)
+            .stderr_contains("bad file descriptor");
     }
 
     #[test]
@@ -171,7 +171,7 @@ mod unix {
         new_ucmd!()
             .args(&["/nonexistent_dir_for_flock/lockfile", "true"])
             .fails()
-            .code_is(1)
+            .code_is(66)
             .stderr_contains("cannot open lock file");
     }
 
@@ -181,8 +181,10 @@ mod unix {
         ts.ucmd()
             .args(&[&lockfile, "/this_binary_does_not_exist_12345"])
             .fails()
-            .code_is(127)
-            .stderr_contains("failed to execute command");
+            .code_is(69)
+            .stderr_is(
+                "flock: failed to execute /this_binary_does_not_exist_12345: No such file or directory\n",
+            );
     }
 
     #[test]
@@ -254,7 +256,26 @@ mod unix {
             ts.ucmd()
                 .args(&["-w", invalid, &lockfile, "true"])
                 .fails()
-                .stderr_contains("invalid timeout");
+                .code_is(71)
+                .stderr_contains("cannot set up timer: Invalid argument");
+        }
+    }
+
+    #[test]
+    fn test_nonblocking_long_and_alias() {
+        let (ts, lockfile) = scenario_with_lockfile();
+
+        let file = File::create(&lockfile).unwrap();
+        assert_eq!(
+            unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
+            0
+        );
+        for flag in ["--nonblocking", "--nonblock", "--nb"] {
+            ts.ucmd()
+                .args(&[flag, &lockfile, "true"])
+                .fails()
+                .code_is(1)
+                .no_output();
         }
     }
 }
