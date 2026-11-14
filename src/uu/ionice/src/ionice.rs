@@ -37,42 +37,16 @@ mod linux {
     use clap::ArgMatches;
     use uucore::error::UResult;
 
-    use crate::errors::{IoniceError, NumericArg};
+    use crate::errors::IoniceError;
     use crate::ioprio::{self, IoPrio, Who};
     use crate::options;
     use crate::parse;
-
-    /// Which of -p, -P and -u was given. Only one of them may appear.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum IdKind {
-        Pid,
-        Pgid,
-        Uid,
-    }
-
-    impl IdKind {
-        fn who(self) -> Who {
-            match self {
-                Self::Pid => Who::Process,
-                Self::Pgid => Who::Pgrp,
-                Self::Uid => Who::User,
-            }
-        }
-
-        fn numeric_arg(self) -> NumericArg {
-            match self {
-                Self::Pid => NumericArg::Pid,
-                Self::Pgid => NumericArg::Pgid,
-                Self::Uid => NumericArg::Uid,
-            }
-        }
-    }
 
     #[derive(Debug)]
     struct Request {
         class: Option<i32>,
         data: Option<i32>,
-        id_kind: Option<IdKind>,
+        id_kind: Option<Who>,
         first_id: i32,
         ignore: bool,
     }
@@ -87,26 +61,26 @@ mod linux {
                     .copied()
             };
             let id = [
-                (options::PID, IdKind::Pid),
-                (options::PGID, IdKind::Pgid),
-                (options::UID, IdKind::Uid),
+                (options::PID, Who::Process),
+                (options::PGID, Who::Pgrp),
+                (options::UID, Who::User),
             ]
             .into_iter()
-            .find_map(|(option, kind)| matches.get_one::<i32>(option).map(|&id| (kind, id)));
+            .find_map(|(option, who)| matches.get_one::<i32>(option).map(|&id| (who, id)));
 
             Self {
                 class: last(options::CLASS),
                 data: last(options::CLASSDATA),
-                id_kind: id.map(|(kind, _)| kind),
+                id_kind: id.map(|(who, _)| who),
                 first_id: id.map_or(0, |(_, id)| id),
                 ignore: matches.get_count(options::IGNORE) > 0,
             }
         }
     }
 
-    fn parse_id(kind: IdKind, value: &str) -> Result<i32, IoniceError> {
+    fn parse_id(who: Who, value: &str) -> Result<i32, IoniceError> {
         parse::blank_tolerant_i32(value)
-            .map_err(|detail| IoniceError::invalid_number(kind.numeric_arg(), value, detail))
+            .map_err(|detail| IoniceError::invalid_number(who, value, detail))
     }
 
     /// What a set uses when -c or -n is absent. These are ionice's defaults,
@@ -181,7 +155,7 @@ mod linux {
             (Some(_), _, None) if request.first_id == 0 && arguments.is_empty() => {
                 report(Who::Process, 0)
             }
-            (Some(kind), _, _) => act_on_ids(&request, kind, priority, &arguments),
+            (Some(who), _, _) => act_on_ids(&request, who, priority, &arguments),
             (None, Some(command), Some(priority)) => {
                 apply(&request, Who::Process, 0, priority)?;
                 run_command(command)
@@ -196,15 +170,14 @@ mod linux {
     /// list does not hide the results of the ids before it.
     fn act_on_ids(
         request: &Request,
-        kind: IdKind,
+        who: Who,
         priority: Option<IoPrio>,
         arguments: &[OsString],
     ) -> UResult<()> {
-        let who = kind.who();
         act_on_id(request, who, request.first_id, priority)?;
 
         for argument in arguments {
-            let id = parse_id(kind, &argument.to_string_lossy())?;
+            let id = parse_id(who, &argument.to_string_lossy())?;
             act_on_id(request, who, id, priority)?;
         }
 

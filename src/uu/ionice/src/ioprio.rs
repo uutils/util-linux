@@ -2,7 +2,7 @@
 //
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
-// spell-checker:ignore (words) ioprio pgrp
+// spell-checker:ignore (words) ioprio pgid pgrp
 
 use std::ffi::{c_int, c_long};
 use std::fmt;
@@ -22,6 +22,16 @@ pub(crate) enum Who {
     Process = 1,
     Pgrp = 2,
     User = 3,
+}
+
+impl fmt::Display for Who {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Process => "PID",
+            Self::Pgrp => "PGID",
+            Self::User => "UID",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
