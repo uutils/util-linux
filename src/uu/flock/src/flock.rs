@@ -4,29 +4,10 @@
 // file that was distributed with this source code.
 
 use clap::{builder::ValueParser, crate_version, value_parser, Arg, ArgAction, Command};
-#[cfg(unix)]
-use std::{
-    ffi::{OsStr, OsString},
-    fs::{File, OpenOptions},
-    os::fd::{AsRawFd, RawFd},
-    os::unix::process::ExitStatusExt,
-    time::{Duration, Instant},
-};
-#[cfg(unix)]
-use uucore::display::Quotable;
-#[cfg(unix)]
-use uucore::error::{UIoError, USimpleError};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 const ABOUT: &str = help_about!("flock.md");
 const USAGE: &str = help_usage!("flock.md");
-
-// Exit codes
-const EX_USAGE: i32 = 64;
-const EX_DATAERR: i32 = 65;
-const EX_NOINPUT: i32 = 66;
-const EX_UNAVAILABLE: i32 = 69;
-const EX_OSERR: i32 = 71;
 
 mod options {
     pub const SHARED: &str = "shared";
@@ -43,151 +24,219 @@ mod options {
 }
 
 #[cfg(unix)]
-enum LockMode {
-    Shared,
-    Exclusive,
-    Unlock,
-}
+mod unix {
+    use super::options;
+    use clap::ArgMatches;
+    use std::{
+        ffi::{OsStr, OsString},
+        fs::{File, OpenOptions},
+        os::fd::{AsRawFd, RawFd},
+        os::unix::process::ExitStatusExt,
+        process::Command as ProcessCommand,
+        time::{Duration, Instant},
+    };
+    use uucore::display::Quotable;
+    use uucore::error::{ExitCode, UIoError, UResult, USimpleError};
 
-#[cfg(unix)]
-fn open_lock_file(path: &OsStr) -> UResult<File> {
-    OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .open(path)
-        .or_else(|err| OpenOptions::new().read(true).open(path).map_err(|_| err))
-        .map_err(|err| {
-            USimpleError::new(
-                EX_NOINPUT,
+    // Exit codes from <sysexits.h>
+    pub const EX_USAGE: i32 = 64;
+    pub const EX_DATAERR: i32 = 65;
+    pub const EX_NOINPUT: i32 = 66;
+    pub const EX_UNAVAILABLE: i32 = 69;
+    pub const EX_OSERR: i32 = 71;
+
+    pub enum LockMode {
+        Shared,
+        Exclusive,
+        Unlock,
+    }
+
+    impl LockMode {
+        pub fn operation(&self) -> i32 {
+            match self {
+                Self::Shared => libc::LOCK_SH,
+                Self::Exclusive => libc::LOCK_EX,
+                Self::Unlock => libc::LOCK_UN,
+            }
+        }
+    }
+
+    pub fn lock_mode(matches: &ArgMatches) -> LockMode {
+        if matches.get_flag(options::SHARED) {
+            LockMode::Shared
+        } else if matches.get_flag(options::UNLOCK) {
+            LockMode::Unlock
+        } else {
+            LockMode::Exclusive
+        }
+    }
+
+    pub fn deadline(timeout: Option<f64>) -> UResult<Option<Instant>> {
+        timeout
+            .map(|secs| {
+                Duration::try_from_secs_f64(secs)
+                    .ok()
+                    .and_then(|d| Instant::now().checked_add(d))
+                    .ok_or_else(|| {
+                        USimpleError::new(EX_OSERR, "cannot set up timer: Invalid argument")
+                    })
+            })
+            .transpose()
+    }
+
+    fn open_lock_file(path: &OsStr) -> UResult<File> {
+        OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(path)
+            .or_else(|err| OpenOptions::new().read(true).open(path).map_err(|_| err))
+            .map_err(|err| {
+                USimpleError::new(
+                    EX_NOINPUT,
+                    format!(
+                        "cannot open lock file {}: {}",
+                        path.to_string_lossy(),
+                        UIoError::from(err)
+                    ),
+                )
+            })
+    }
+
+    pub fn lock_target(matches: &ArgMatches) -> UResult<(RawFd, Option<File>)> {
+        let file_or_fd = matches.get_one::<OsString>(options::FILE_OR_FD).unwrap();
+        let has_command =
+            matches.contains_id(options::PROG_ARGS) || matches.contains_id(options::COMMAND);
+        if has_command {
+            let file = open_lock_file(file_or_fd)?;
+            let fd = file.as_raw_fd();
+            Ok((fd, Some(file)))
+        } else {
+            let fd = file_or_fd
+                .to_str()
+                .and_then(|s| s.parse::<RawFd>().ok())
+                .ok_or_else(|| {
+                    USimpleError::new(
+                        EX_USAGE,
+                        format!("bad file descriptor: {}", file_or_fd.quote()),
+                    )
+                })?;
+            Ok((fd, None))
+        }
+    }
+
+    pub fn acquire_lock(
+        fd: RawFd,
+        operation: i32,
+        nonblock: bool,
+        deadline: Option<Instant>,
+        conflict_exit_code: u8,
+        file_or_fd: &OsString,
+    ) -> UResult<()> {
+        loop {
+            let op = if nonblock || deadline.is_some() {
+                operation | libc::LOCK_NB
+            } else {
+                operation
+            };
+
+            // SAFETY: `fd` is either an open file descriptor from `open_lock_file` or a
+            // user-supplied descriptor number (invalid descriptors fail cleanly with EBADF),
+            // and `op` is a valid combination of `libc::LOCK_*` flags.
+            if unsafe { libc::flock(fd, op) } == 0 {
+                return Ok(());
+            }
+
+            let err = std::io::Error::last_os_error();
+            if err.kind() == std::io::ErrorKind::WouldBlock {
+                if nonblock {
+                    return Err(ExitCode::new(i32::from(conflict_exit_code)));
+                }
+                if let Some(dl) = deadline {
+                    let now = Instant::now();
+                    if now >= dl {
+                        return Err(ExitCode::new(i32::from(conflict_exit_code)));
+                    }
+                    std::thread::sleep((dl - now).min(Duration::from_millis(5)));
+                    continue;
+                }
+            }
+            return Err(USimpleError::new(
+                EX_DATAERR,
+                format!("{}: {}", file_or_fd.to_string_lossy(), UIoError::from(err)),
+            ));
+        }
+    }
+
+    pub fn build_command(matches: &ArgMatches) -> Option<ProcessCommand> {
+        if let Some(prog_args) = matches.get_many::<OsString>(options::PROG_ARGS) {
+            let args: Vec<&OsString> = prog_args.collect();
+            let mut command = ProcessCommand::new(args[0]);
+            command.args(&args[1..]);
+            Some(command)
+        } else if let Some(shell_cmd) = matches.get_one::<OsString>(options::COMMAND) {
+            let shell = std::env::var_os("SHELL")
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| OsString::from("/bin/sh"));
+            let mut command = ProcessCommand::new(shell);
+            command.arg("-c").arg(shell_cmd);
+            Some(command)
+        } else {
+            None
+        }
+    }
+
+    pub fn run_command(mut cmd: ProcessCommand) -> UResult<()> {
+        match cmd.status() {
+            Ok(status) => {
+                let code = status
+                    .code()
+                    .or_else(|| status.signal().map(|sig| 128 + sig))
+                    .unwrap_or(EX_OSERR);
+                uucore::error::set_exit_code(code);
+                Ok(())
+            }
+            Err(err) => Err(USimpleError::new(
+                EX_UNAVAILABLE,
                 format!(
-                    "cannot open lock file {}: {}",
-                    path.to_string_lossy(),
+                    "failed to execute {}: {}",
+                    cmd.get_program().to_string_lossy(),
                     UIoError::from(err)
                 ),
-            )
-        })
+            )),
+        }
+    }
 }
 
 #[cfg(unix)]
 #[uucore::main]
 pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    use unix::*;
+
     let matches = uu_app().try_get_matches_from(args)?;
     let timeout: Option<f64> = matches.get_one::<f64>(options::TIMEOUT).copied();
-
-    let lock_mode = if matches.get_flag(options::SHARED) {
-        LockMode::Shared
-    } else if matches.get_flag(options::UNLOCK) {
-        LockMode::Unlock
-    } else {
-        LockMode::Exclusive
-    };
-
-    let file_or_fd = matches.get_one::<OsString>(options::FILE_OR_FD).unwrap();
-    let has_command =
-        matches.contains_id(options::PROG_ARGS) || matches.contains_id(options::COMMAND);
-
-    let (fd, _keep_open): (RawFd, Option<File>) = if has_command {
-        let file = open_lock_file(file_or_fd)?;
-        let fd = file.as_raw_fd();
-        (fd, Some(file))
-    } else {
-        let fd = file_or_fd
-            .to_str()
-            .and_then(|s| s.parse::<RawFd>().ok())
-            .ok_or_else(|| {
-                USimpleError::new(
-                    EX_USAGE,
-                    format!("bad file descriptor: {}", file_or_fd.quote()),
-                )
-            })?;
-        (fd, None)
-    };
-
     let nonblock = matches.get_flag(options::NONBLOCK);
     let conflict_exit_code = *matches.get_one::<u8>(options::CONFLICT_EXIT_CODE).unwrap();
+    let operation = lock_mode(&matches).operation();
+    let file_or_fd = matches.get_one(options::FILE_OR_FD).unwrap();
+    let (fd, _keep_open) = lock_target(&matches)?;
+    let deadline = deadline(timeout)?;
 
-    let operation = match lock_mode {
-        LockMode::Shared => libc::LOCK_SH,
-        LockMode::Exclusive => libc::LOCK_EX,
-        LockMode::Unlock => libc::LOCK_UN,
-    };
+    acquire_lock(
+        fd,
+        operation,
+        nonblock,
+        deadline,
+        conflict_exit_code,
+        file_or_fd,
+    )?;
 
-    let deadline = timeout
-        .map(|secs| {
-            Duration::try_from_secs_f64(secs)
-                .ok()
-                .and_then(|d| Instant::now().checked_add(d))
-                .ok_or_else(|| USimpleError::new(EX_OSERR, "cannot set up timer: Invalid argument"))
-        })
-        .transpose()?;
-
-    loop {
-        let op = if nonblock || deadline.is_some() {
-            operation | libc::LOCK_NB
-        } else {
-            operation
-        };
-
-        if unsafe { libc::flock(fd, op) } == 0 {
-            break;
-        }
-
-        let err = std::io::Error::last_os_error();
-        if err.kind() == std::io::ErrorKind::WouldBlock {
-            if nonblock {
-                return Err(uucore::error::ExitCode::new(i32::from(conflict_exit_code)));
-            }
-            if let Some(dl) = deadline {
-                let now = Instant::now();
-                if now >= dl {
-                    return Err(uucore::error::ExitCode::new(i32::from(conflict_exit_code)));
-                }
-                std::thread::sleep((dl - now).min(Duration::from_millis(5)));
-                continue;
-            }
-        }
-        return Err(USimpleError::new(
-            EX_DATAERR,
-            format!("{}: {}", file_or_fd.to_string_lossy(), UIoError::from(err)),
-        ));
+    if let Some(cmd) = build_command(&matches) {
+        run_command(cmd)?;
     }
 
-    let mut cmd = if let Some(prog_args) = matches.get_many::<OsString>(options::PROG_ARGS) {
-        let args: Vec<&OsString> = prog_args.collect();
-        let mut command = std::process::Command::new(args[0]);
-        command.args(&args[1..]);
-        command
-    } else if let Some(shell_cmd) = matches.get_one::<OsString>(options::COMMAND) {
-        let shell = std::env::var_os("SHELL")
-            .filter(|s| !s.is_empty())
-            .unwrap_or_else(|| OsString::from("/bin/sh"));
-        let mut command = std::process::Command::new(shell);
-        command.arg("-c").arg(shell_cmd);
-        command
-    } else {
-        return Ok(());
-    };
-
-    match cmd.status() {
-        Ok(status) => {
-            let code = status
-                .code()
-                .or_else(|| status.signal().map(|sig| 128 + sig))
-                .unwrap_or(1);
-            uucore::error::set_exit_code(code);
-            Ok(())
-        }
-        Err(err) => Err(USimpleError::new(
-            EX_UNAVAILABLE,
-            format!(
-                "failed to execute {}: {}",
-                cmd.get_program().to_string_lossy(),
-                UIoError::from(err)
-            ),
-        )),
-    }
+    Ok(())
 }
 
 #[cfg(not(unix))]
@@ -282,5 +331,4 @@ pub fn uu_app() -> Command {
                 .help("command to execute and its arguments")
                 .value_parser(ValueParser::os_string()),
         )
-    // TODO:-o, -F and --verbose
 }
