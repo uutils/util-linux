@@ -14,6 +14,5 @@ path = "src/main.rs"
 clap            = { workspace = true }
 libc            = { workspace = true }
 rangemap        = { workspace = true }
-syscall-numbers = { workspace = true }
 thiserror       = { workspace = true }
 uucore          = { workspace = true }
