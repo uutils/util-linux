@@ -8,19 +8,7 @@ use std::ffi::{c_int, c_long};
 use std::fmt;
 use std::io;
 
-pub(crate) const IOPRIO_CLASS_NONE: i32 = 0;
-pub(crate) const IOPRIO_CLASS_RT: i32 = 1;
-pub(crate) const IOPRIO_CLASS_BE: i32 = 2;
-pub(crate) const IOPRIO_CLASS_IDLE: i32 = 3;
-
-/// The scheduling class names, accepted by -c and printed back; the numbers
-/// are the kernel's.
-pub(crate) const CLASSES: [(&str, i32); 4] = [
-    ("none", IOPRIO_CLASS_NONE),
-    ("realtime", IOPRIO_CLASS_RT),
-    ("best-effort", IOPRIO_CLASS_BE),
-    ("idle", IOPRIO_CLASS_IDLE),
-];
+use crate::parse::{CLASSES, IOPRIO_CLASS_IDLE};
 
 /// The kernel packs a scheduling class above this many bits of priority data.
 const IOPRIO_CLASS_SHIFT: u32 = 13;

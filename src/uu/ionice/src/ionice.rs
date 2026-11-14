@@ -5,14 +5,13 @@
 // spell-checker:ignore (words) classdata ioprio pgid pgrp
 
 use clap::builder::ValueParser;
-use clap::{crate_version, Arg, ArgAction, Command};
+use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
 #[cfg(target_os = "linux")]
 mod errors;
 #[cfg(target_os = "linux")]
 mod ioprio;
-#[cfg(target_os = "linux")]
 mod parse;
 
 const ABOUT: &str = help_about!("ionice.md");
@@ -41,7 +40,7 @@ mod linux {
     use crate::errors::{IoniceError, NumericArg};
     use crate::ioprio::{self, IoPrio, Who};
     use crate::options;
-    use crate::parse::{self, ClassError};
+    use crate::parse;
 
     /// Which of -p, -P and -u was given. Only one of them may appear.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,16 +68,7 @@ mod linux {
         }
     }
 
-    /// A value-taking option, tagged for the ordered pass below.
-    #[derive(Debug, Clone, Copy)]
-    enum Slot {
-        Class,
-        ClassData,
-        Id(IdKind),
-    }
-
-    /// What the command line asked for once the options have been resolved.
-    #[derive(Debug, Default)]
+    #[derive(Debug)]
     struct Request {
         class: Option<i32>,
         data: Option<i32>,
@@ -87,77 +77,31 @@ mod linux {
         ignore: bool,
     }
 
-    /// Rebuild the left-to-right order in which the value-taking options
-    /// appeared. clap collects every value before returning, but its value
-    /// indices are monotone in argv order, so sorting by them recovers the
-    /// sequence needed to reject the first bad option rather than an arbitrary
-    /// one.
-    fn ordered_options(matches: &ArgMatches) -> Vec<(usize, Slot, String)> {
-        let slots = [
-            (options::CLASS, Slot::Class),
-            (options::CLASSDATA, Slot::ClassData),
-            (options::PID, Slot::Id(IdKind::Pid)),
-            (options::PGID, Slot::Id(IdKind::Pgid)),
-            (options::UID, Slot::Id(IdKind::Uid)),
-        ];
-
-        let mut events = Vec::new();
-
-        for (id, slot) in slots {
-            let (Some(values), Some(indices)) =
-                (matches.get_many::<OsString>(id), matches.indices_of(id))
-            else {
-                continue;
+    impl Request {
+        fn from_matches(matches: &ArgMatches) -> Self {
+            // -c and -n may be repeated, and the last one wins.
+            let last = |option: &str| {
+                matches
+                    .get_many::<i32>(option)
+                    .and_then(Iterator::last)
+                    .copied()
             };
+            let id = [
+                (options::PID, IdKind::Pid),
+                (options::PGID, IdKind::Pgid),
+                (options::UID, IdKind::Uid),
+            ]
+            .into_iter()
+            .find_map(|(option, kind)| matches.get_one::<i32>(option).map(|&id| (kind, id)));
 
-            events.extend(
-                indices
-                    .zip(values)
-                    .map(|(index, value)| (index, slot, value.to_string_lossy().into_owned())),
-            );
-        }
-
-        events.sort_by_key(|(index, _, _)| *index);
-        events
-    }
-
-    /// Apply the options in argv order, stopping at the first bad one.
-    fn resolve_options(matches: &ArgMatches) -> Result<Request, IoniceError> {
-        let mut request = Request {
-            ignore: matches.get_count(options::IGNORE) > 0,
-            ..Request::default()
-        };
-
-        for (_, slot, value) in ordered_options(matches) {
-            match slot {
-                Slot::Class => {
-                    let class = parse::class(&value).map_err(|error| match error {
-                        ClassError::UnknownName => IoniceError::UnknownClass(value.clone()),
-                        ClassError::Number(detail) => {
-                            IoniceError::invalid_number(NumericArg::Class, &value, detail)
-                        }
-                    })?;
-                    request.class = Some(class);
-                }
-                Slot::ClassData => {
-                    let data = parse::level(&value).map_err(|detail| {
-                        IoniceError::invalid_number(NumericArg::ClassData, &value, detail)
-                    })?;
-                    request.data = Some(data);
-                }
-                Slot::Id(kind) => {
-                    // A second id option is rejected before its value is even
-                    // looked at, so `-P 1 -p bogus` reports the conflict.
-                    if request.id_kind.is_some() {
-                        return Err(IoniceError::ConflictingIdKinds);
-                    }
-                    request.id_kind = Some(kind);
-                    request.first_id = parse_id(kind, &value)?;
-                }
+            Self {
+                class: last(options::CLASS),
+                data: last(options::CLASSDATA),
+                id_kind: id.map(|(kind, _)| kind),
+                first_id: id.map_or(0, |(_, id)| id),
+                ignore: matches.get_count(options::IGNORE) > 0,
             }
         }
-
-        Ok(request)
     }
 
     fn parse_id(kind: IdKind, value: &str) -> Result<i32, IoniceError> {
@@ -168,7 +112,7 @@ mod linux {
     /// What a set uses when -c or -n is absent. These are ionice's defaults,
     /// not the kernel's; the kernel's own fallback is derived from CPU nice,
     /// not from these numbers.
-    const DEFAULT_CLASS: i32 = ioprio::IOPRIO_CLASS_BE;
+    const DEFAULT_CLASS: i32 = parse::IOPRIO_CLASS_BE;
     const DEFAULT_DATA: i32 = 4;
 
     /// The priority level a class carries when it has no level of its own;
@@ -181,8 +125,8 @@ mod linux {
     /// forces that choice.
     fn fixed_data(class: i32) -> Option<i32> {
         match class {
-            ioprio::IOPRIO_CLASS_NONE => Some(0),
-            ioprio::IOPRIO_CLASS_IDLE => Some(7),
+            parse::IOPRIO_CLASS_NONE => Some(0),
+            parse::IOPRIO_CLASS_IDLE => Some(7),
             _ => None,
         }
     }
@@ -208,7 +152,7 @@ mod linux {
     }
 
     pub(crate) fn run(matches: &ArgMatches) -> UResult<()> {
-        let request = resolve_options(matches)?;
+        let request = Request::from_matches(matches);
 
         let arguments: Vec<OsString> = matches
             .get_many::<OsString>(options::ARGS)
@@ -348,10 +292,16 @@ fn value_option(
         .short(short)
         .long(long)
         .value_name(value_name)
-        .action(ArgAction::Append)
         .num_args(1)
         .allow_hyphen_values(true)
-        .value_parser(ValueParser::os_string())
+}
+
+/// Set rather than Append, so that repeating an id option is refused just as
+/// combining two is.
+fn id_option(id: &'static str, short: char, long: &'static str, value_name: &'static str) -> Arg {
+    value_option(id, short, long, value_name)
+        .action(ArgAction::Set)
+        .value_parser(parse::blank_tolerant_i32)
 }
 
 pub fn uu_app() -> Command {
@@ -360,22 +310,30 @@ pub fn uu_app() -> Command {
         .about(ABOUT)
         .override_usage(format_usage(USAGE))
         .infer_long_args(true)
-        .arg(value_option(options::CLASS, 'c', "class", "class").help(
-            "name or number of the scheduling class: \
-                 none (0), realtime (1), best-effort (2) or idle (3)",
-        ))
         .arg(
-            value_option(options::CLASSDATA, 'n', "classdata", "num").help(
-                "priority (0..7) in the specified scheduling class, \
-                 only for the realtime and best-effort classes",
-            ),
+            value_option(options::CLASS, 'c', "class", "class")
+                .action(ArgAction::Append)
+                .value_parser(parse::class)
+                .help(
+                    "name or number of the scheduling class: \
+                     none (0), realtime (1), best-effort (2) or idle (3)",
+                ),
         )
         .arg(
-            value_option(options::PID, 'p', "pid", "pid")
+            value_option(options::CLASSDATA, 'n', "classdata", "num")
+                .action(ArgAction::Append)
+                .value_parser(parse::level)
+                .help(
+                    "priority (0..7) in the specified scheduling class, \
+                     only for the realtime and best-effort classes",
+                ),
+        )
+        .arg(
+            id_option(options::PID, 'p', "pid", "pid")
                 .help("act on these already running processes"),
         )
         .arg(
-            value_option(options::PGID, 'P', "pgid", "pgrp")
+            id_option(options::PGID, 'P', "pgid", "pgrp")
                 .help("act on already running processes in these groups"),
         )
         // Declared between -P and -u so that --help lists the options in the
@@ -390,9 +348,10 @@ pub fn uu_app() -> Command {
                 .help("ignore failures"),
         )
         .arg(
-            value_option(options::UID, 'u', "uid", "uid")
+            id_option(options::UID, 'u', "uid", "uid")
                 .help("act on already running processes owned by these users"),
         )
+        .group(ArgGroup::new("id").args([options::PID, options::PGID, options::UID]))
         .arg(
             Arg::new(options::ARGS)
                 .value_name("command")

@@ -2,7 +2,7 @@
 //
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
-// spell-checker:ignore (words) EACCES classdata ioprio pgid strace
+// spell-checker:ignore (words) EACCES classdata ioprio pgid pgrp strace
 
 use uutests::new_ucmd;
 
@@ -161,7 +161,7 @@ mod linux {
             .fails()
             .code_is(1)
             .stdout_matches(&class_line())
-            .stderr_is("ionice: invalid PID argument: 'bogus'\n");
+            .stderr_is("ionice: invalid PID argument: 'bogus': not a number\n");
     }
 
     #[test]
@@ -220,7 +220,9 @@ mod linux {
             .args(&["-c", "be"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: unknown scheduling class: 'be'\n");
+            .stderr_contains(
+                "error: invalid value 'be' for '--class <class>': unknown scheduling class\n",
+            );
     }
 
     #[test]
@@ -294,8 +296,8 @@ mod linux {
                 .fails()
                 .code_is(1)
                 .no_stdout()
-                .stderr_is(format!(
-                    "ionice: invalid class data argument: '{level}': must be 0-7\n"
+                .stderr_contains(format!(
+                    "error: invalid value '{level}' for '--classdata <num>': must be 0-7\n"
                 ));
         }
     }
@@ -310,7 +312,8 @@ mod linux {
             .fails()
             .code_is(1)
             .no_stdout()
-            .stderr_is("ionice: invalid class data argument: '9': must be 0-7\n");
+            .stderr_contains("error: invalid value '9' for '--classdata <num>': must be 0-7\n")
+            .stderr_does_not_contain("ignoring");
     }
 
     /// ionice(1) documents -c as 0 to 3. The reference warns `unknown prio
@@ -327,8 +330,8 @@ mod linux {
                 .fails()
                 .code_is(1)
                 .no_stdout()
-                .stderr_is(format!(
-                    "ionice: invalid class argument: '{class}': must be 0-3\n"
+                .stderr_contains(format!(
+                    "error: invalid value '{class}' for '--class <class>': must be 0-3\n"
                 ));
         }
     }
@@ -340,11 +343,11 @@ mod linux {
         for (arguments, message) in [
             (
                 ["-t", "-c", "99", "true"],
-                "invalid class argument: '99': must be 0-3",
+                "invalid value '99' for '--class <class>': must be 0-3",
             ),
             (
                 ["-t", "-n", "99", "true"],
-                "invalid class data argument: '99': must be 0-7",
+                "invalid value '99' for '--classdata <num>': must be 0-7",
             ),
         ] {
             new_ucmd!()
@@ -352,7 +355,7 @@ mod linux {
                 .fails()
                 .code_is(1)
                 .no_stdout()
-                .stderr_is(format!("ionice: {message}\n"));
+                .stderr_contains(format!("error: {message}\n"));
         }
     }
 
@@ -451,7 +454,10 @@ mod linux {
                 .args(&["-c", value])
                 .fails()
                 .code_is(1)
-                .stderr_is(format!("ionice: unknown scheduling class: '{value}'\n"));
+                .stderr_contains(format!(
+                    "error: invalid value '{value}' for '--class <class>': \
+                     unknown scheduling class\n"
+                ));
         }
     }
 
@@ -464,7 +470,9 @@ mod linux {
                 .args(&["-c", value])
                 .fails()
                 .code_is(1)
-                .stderr_is(format!("ionice: invalid class argument: '{value}'\n"));
+                .stderr_contains(format!(
+                    "error: invalid value '{value}' for '--class <class>': not a number\n"
+                ));
         }
     }
 
@@ -475,7 +483,9 @@ mod linux {
             .args(&["-c", "+3"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: unknown scheduling class: '+3'\n");
+            .stderr_contains(
+                "error: invalid value '+3' for '--class <class>': unknown scheduling class\n",
+            );
     }
 
     /// A value too wide for an i32 is reported as such, ahead of the
@@ -486,7 +496,7 @@ mod linux {
             .args(&["-c", "4294967296"])
             .fails()
             .code_is(1)
-            .stderr_contains("ionice: invalid class argument: '4294967296': ")
+            .stderr_contains("error: invalid value '4294967296' for '--class <class>': ")
             .stderr_does_not_contain("must be ");
     }
 
@@ -495,16 +505,16 @@ mod linux {
     #[test]
     fn an_oversized_number_carries_a_detail_on_every_option() {
         for (option, name) in [
-            ("-n", "class data"),
-            ("-p", "PID"),
-            ("-P", "PGID"),
-            ("-u", "UID"),
+            ("-n", "--classdata <num>"),
+            ("-p", "--pid <pid>"),
+            ("-P", "--pgid <pgrp>"),
+            ("-u", "--uid <uid>"),
         ] {
             new_ucmd!()
                 .args(&[option, "4294967296"])
                 .fails()
                 .code_is(1)
-                .stderr_contains(format!("ionice: invalid {name} argument: '4294967296': "))
+                .stderr_contains(format!("error: invalid value '4294967296' for '{name}': "))
                 .stderr_does_not_contain("must be ");
         }
     }
@@ -516,7 +526,9 @@ mod linux {
                 .args(&["-n", value])
                 .fails()
                 .code_is(1)
-                .stderr_is(format!("ionice: invalid class data argument: '{value}'\n"));
+                .stderr_contains(format!(
+                    "error: invalid value '{value}' for '--classdata <num>': not a number\n"
+                ));
         }
     }
 
@@ -541,12 +553,18 @@ mod linux {
 
     #[test]
     fn rejects_a_malformed_id() {
-        for (option, name) in [("-p", "PID"), ("-P", "PGID"), ("-u", "UID")] {
+        for (option, name) in [
+            ("-p", "--pid <pid>"),
+            ("-P", "--pgid <pgrp>"),
+            ("-u", "--uid <uid>"),
+        ] {
             new_ucmd!()
                 .args(&[option, "bogus"])
                 .fails()
                 .code_is(1)
-                .stderr_is(format!("ionice: invalid {name} argument: 'bogus'\n"));
+                .stderr_contains(format!(
+                    "error: invalid value 'bogus' for '{name}': not a number\n"
+                ));
         }
     }
 
@@ -556,7 +574,7 @@ mod linux {
             .args(&["-u", "root"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: invalid UID argument: 'root'\n");
+            .stderr_contains("error: invalid value 'root' for '--uid <uid>': not a number\n");
     }
 
     /// The value after an id option is taken verbatim, even when it looks like
@@ -567,51 +585,66 @@ mod linux {
             .args(&["-p", "-c", "3"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: invalid PID argument: '-c'\n");
+            .stderr_contains("error: invalid value '-c' for '--pid <pid>': not a number\n");
     }
 
     #[test]
     fn only_one_kind_of_id_at_a_time() {
-        for arguments in [
-            ["-p", "1", "-P", "1"],
-            ["-p", "1", "-u", "0"],
-            ["-p", "1", "-p", "2"],
+        for (arguments, message) in [
+            (
+                ["-p", "1", "-P", "1"],
+                "the argument '--pid <pid>' cannot be used with '--pgid <pgrp>'",
+            ),
+            (
+                ["-p", "1", "-u", "0"],
+                "the argument '--pid <pid>' cannot be used with '--uid <uid>'",
+            ),
+            (
+                ["-p", "1", "-p", "2"],
+                "the argument '--pid <pid>' cannot be used multiple times",
+            ),
         ] {
             new_ucmd!()
                 .args(&arguments)
                 .fails()
                 .code_is(1)
-                .stderr_is("ionice: can handle only one of pid, pgid or uid at once\n");
+                .stderr_contains(format!("error: {message}\n"));
         }
     }
 
-    /// The options are judged in the order they were written, so it is always
-    /// the leftmost bad one that is reported.
+    /// The option values are judged in the order they were written, so it is
+    /// always the leftmost bad value that is reported.
     #[test]
     fn the_first_bad_option_is_the_one_reported() {
         new_ucmd!()
             .args(&["-P", "1", "-p", "bogus"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: can handle only one of pid, pgid or uid at once\n");
+            .stderr_contains("error: invalid value 'bogus' for '--pid <pid>': not a number\n")
+            .stderr_does_not_contain("cannot be used");
 
         new_ucmd!()
             .args(&["-p", "bogus", "-P", "1"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: invalid PID argument: 'bogus'\n");
+            .stderr_contains("error: invalid value 'bogus' for '--pid <pid>': not a number\n")
+            .stderr_does_not_contain("cannot be used");
 
         new_ucmd!()
             .args(&["-n", "8", "-p", "bogus"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: invalid class data argument: '8': must be 0-7\n");
+            .stderr_contains("error: invalid value '8' for '--classdata <num>': must be 0-7\n")
+            .stderr_does_not_contain("--pid");
 
         new_ucmd!()
             .args(&["-c", "bogus", "-p", "bogus"])
             .fails()
             .code_is(1)
-            .stderr_is("ionice: unknown scheduling class: 'bogus'\n");
+            .stderr_contains(
+                "error: invalid value 'bogus' for '--class <class>': unknown scheduling class\n",
+            )
+            .stderr_does_not_contain("--pid");
     }
 
     #[test]
@@ -635,7 +668,8 @@ mod linux {
             .fails()
             .code_is(1)
             .no_stdout()
-            .stderr_is("ionice: invalid class argument: '4': must be 0-3\n");
+            .stderr_contains("error: invalid value '4' for '--class <class>': must be 0-3\n")
+            .stderr_does_not_contain("bad usage");
     }
 
     /// A warning keeps that ordering too: the priority is settled, and says
@@ -653,18 +687,14 @@ mod linux {
             );
     }
 
-    /// Argument bytes that are not valid Unicode must reach the utility, so
-    /// that a bad value is diagnosed here rather than refused by the parser
-    /// before ionice sees it at all. Only the diagnosis is asserted; the value
-    /// echoed back is rendered lossily, which is a divergence of its own.
     #[test]
-    fn an_option_value_that_is_not_valid_unicode_is_diagnosed_here() {
+    fn an_option_value_that_is_not_valid_unicode_is_refused() {
         new_ucmd!()
             .arg("-p")
             .arg(OsStr::from_bytes(b"1\xff"))
             .fails()
             .code_is(1)
-            .stderr_contains("invalid PID argument: ");
+            .stderr_contains("error: invalid UTF-8 was detected in one or more arguments\n");
     }
 
     // -- running a command ---------------------------------------------------
