@@ -46,8 +46,7 @@ mod linux {
     struct Request {
         class: Option<i32>,
         data: Option<i32>,
-        id_kind: Option<Who>,
-        first_id: i32,
+        id: Option<(Who, i32)>,
         ignore: bool,
     }
 
@@ -71,8 +70,7 @@ mod linux {
             Self {
                 class: last(options::CLASS),
                 data: last(options::CLASSDATA),
-                id_kind: id.map(|(who, _)| who),
-                first_id: id.map_or(0, |(_, id)| id),
+                id,
                 ignore: matches.get_count(options::IGNORE) > 0,
             }
         }
@@ -135,7 +133,7 @@ mod linux {
 
         // Trailing arguments are further ids whenever an id option was given,
         // and the command to run otherwise.
-        let command = if request.id_kind.is_none() && !arguments.is_empty() {
+        let command = if request.id.is_none() && !arguments.is_empty() {
             Some(arguments.as_slice())
         } else {
             None
@@ -148,14 +146,12 @@ mod linux {
         let priority = (request.class.is_some() || request.data.is_some() || command.is_some())
             .then(|| resolve_priority(&request));
 
-        match (request.id_kind, command, priority) {
+        match (request.id, command, priority) {
             // A get whose only id is 0 reports the calling process rather than
             // the process group or user numbered 0. Setting has no such
             // fallback: `-c 3 -u 0` really does target uid 0.
-            (Some(_), _, None) if request.first_id == 0 && arguments.is_empty() => {
-                report(Who::Process, 0)
-            }
-            (Some(who), _, _) => act_on_ids(&request, who, priority, &arguments),
+            (Some((_, 0)), _, None) if arguments.is_empty() => report(Who::Process, 0),
+            (Some((who, id)), _, _) => act_on_ids(&request, who, id, priority, &arguments),
             (None, Some(command), Some(priority)) => {
                 apply(&request, Who::Process, 0, priority)?;
                 run_command(command)
@@ -171,10 +167,11 @@ mod linux {
     fn act_on_ids(
         request: &Request,
         who: Who,
+        id: i32,
         priority: Option<IoPrio>,
         arguments: &[OsString],
     ) -> UResult<()> {
-        act_on_id(request, who, request.first_id, priority)?;
+        act_on_id(request, who, id, priority)?;
 
         for argument in arguments {
             let id = parse_id(who, &argument.to_string_lossy())?;
