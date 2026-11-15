@@ -1,0 +1,17 @@
+[package]
+name = "uu_flock"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+uucore = { workspace = true }
+thiserror = { workspace = true }
+libc = { workspace = true }
+clap = { workspace = true }
+
+[lib]
+path = "src/flock.rs"
+
+[[bin]]
+name = "flock"
+path = "src/main.rs"

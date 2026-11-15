@@ -82,7 +82,7 @@ First, reimplement the most important tools from util-linux:
 ## Utility Tools
 - [ ] `lsblk`: Lists block devices.
 - [ ] `fallocate`: Preallocates file space.
-- [ ] `flock`: Manages file locks.
+- [ ] `flock`: Manages file locks. (started)
 - [ ] `getopt`: Parses command options.
 - [ ] `hardlink`: Creates hard links.
 - [x] `mcookie`: Generates random numbers.
