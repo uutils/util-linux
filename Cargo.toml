@@ -11,7 +11,6 @@ license = "MIT"
 description = "util-linux ~ GNU util-linux (updated); implemented as universal (cross-platform) utils, written in Rust"
 default-run = "util-linux"
 
-homepage = "https://github.com/uutils/util-linux"
 repository = "https://github.com/uutils/util-linux"
 readme = "README.md"
 keywords = ["util-linux", "uutils", "cross-platform", "cli", "utility"]
@@ -63,7 +62,7 @@ libc = "0.2.171"
 libmount-sys = "0.1.1"
 linux-raw-sys = { version = "0.12.0", features = ["ioctl"] }
 md-5 = "0.11.0"
-nix = { version = "0.31", default-features = false }
+nix = { version = "0.32", default-features = false }
 parse_datetime = "0.11.0"
 phf = "0.14.0"
 phf_codegen = "0.14.0"
@@ -73,8 +72,6 @@ regex = "1.10.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.122", features = ["preserve_order"] }
 smartcols-sys = "0.1"
-syscall-numbers = "4.0.2"
-sysinfo = "0.38"
 tempfile = "3.9.0"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0"

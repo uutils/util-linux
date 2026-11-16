@@ -12,7 +12,7 @@ use uutests::util::TestScenario;
 #[cfg(unix)]
 use uutests::util_name;
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 use regex::Regex;
 
 #[test]
@@ -27,6 +27,8 @@ fn test_last() {
     let regex = Regex::new("still running|still logged in").unwrap();
     TestScenario::new(util_name!())
         .ucmd()
+        .arg("--file")
+        .arg("last.input.1")
         .succeeds()
         .stdout_matches(&regex);
 }
@@ -36,6 +38,8 @@ fn test_last() {
 fn test_limit_arg() {
     let line_check = |input: &str| input.lines().count() == 3;
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--limit=1")
         .succeeds()
         .stdout_str_check(line_check);
@@ -53,12 +57,15 @@ fn test_system_arg() {
 }
 
 #[test]
-#[cfg(unix)]
+#[cfg(all(unix, not(target_os = "macos")))]
 fn test_timestamp_format_no_time() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=notime")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_does_not_match(&regex);
 }
 
@@ -67,6 +74,8 @@ fn test_timestamp_format_no_time() {
 fn test_timestamp_format_short() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=short")
         .succeeds()
         .stdout_matches(&regex);
@@ -77,8 +86,11 @@ fn test_timestamp_format_short() {
 fn test_timestamp_format_full() {
     let regex = Regex::new(" [0-9][0-9]:[0-9][0-9]:[0-9][0-9] ").unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=full")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_matches(&regex);
 }
 
@@ -90,8 +102,11 @@ fn test_timestamp_format_iso() {
         Regex::new(" [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]")
             .unwrap();
     new_ucmd!()
+        .arg("--file")
+        .arg("last.input.1")
         .arg("--time-format=iso")
         .succeeds()
+        .stdout_contains("ferris")
         .stdout_matches(&regex);
 }
 
@@ -184,5 +199,39 @@ fn test_begins_is_the_first_record_when_records_are_skipped() {
             .args(args)
             .succeeds()
             .stdout_contains("last.input.1 begins Sat Mar  8 16:24:36 2025");
+    }
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
+fn test_time_zone_behind_utc() {
+    // A POSIX TZ string: UTC-6, with no daylight saving time
+    new_ucmd!()
+        .env("TZ", "CST6")
+        .arg("--file")
+        .arg("last.input.1")
+        .succeeds()
+        .stdout_contains("reboot   system boot  6.8.0-55-generic Sat Mar  8 10:24   still running")
+        .stdout_contains("last.input.1 begins Sat Mar  8 10:24:36 2025");
+}
+
+#[test]
+#[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
+fn test_timestamp_format_iso_offset_sign() {
+    for (tz, time) in [
+        ("CST6", "2025-03-08T10:24:36-06:00"),
+        ("UTC", "2025-03-08T16:24:36+00:00"),
+        ("JST-9", "2025-03-09T01:24:36+09:00"),
+    ] {
+        new_ucmd!()
+            .env("TZ", tz)
+            .arg("--file")
+            .arg("last.input.1")
+            .arg("--time-format=iso")
+            .succeeds()
+            .stdout_contains(format!(
+                "reboot   system boot  6.8.0-55-generic {time}   still running"
+            ))
+            .stdout_contains(format!("last.input.1 begins {time}"));
     }
 }
