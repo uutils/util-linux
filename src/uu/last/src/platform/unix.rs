@@ -209,7 +209,7 @@ impl Last {
     const START_TIME_SHORT_FMT: &'static str =
         "[weekday repr:short] [month repr:short] [day padding:space] [hour]:[minute]";
     const TIME_ISO_FMT: &'static str =
-        "[year]-[month]-[day]T[hour]:[minute]:[second]+[offset_hour]:[offset_minute]";
+        "[year]-[month]-[day]T[hour]:[minute]:[second][offset_hour sign:mandatory]:[offset_minute]";
 
     #[allow(clippy::cognitive_complexity)]
     fn exec(&mut self) -> UResult<()> {
@@ -318,12 +318,10 @@ impl Last {
             + Duration::from_nanos(nsecs);
 
         let offset = time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC);
-        let offset_secs: u64 = offset.whole_seconds() as u64;
 
-        // Adding back the time to the offset so that offset_time is correct.
-        let offset_time = time.replace_offset(offset) + Duration::from_secs(offset_secs);
-
-        offset_time.format(&time_format).unwrap_or_default()
+        time.to_offset(offset)
+            .format(&time_format)
+            .unwrap_or_default()
     }
 
     #[inline]

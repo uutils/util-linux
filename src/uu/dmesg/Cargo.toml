@@ -17,7 +17,7 @@ parse_datetime = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-uucore = { workspace = true }
+uucore = { workspace = true, features = ["libc"] }
 
 [features]
 fixed-boot-time = []
