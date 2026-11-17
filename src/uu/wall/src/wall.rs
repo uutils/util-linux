@@ -13,11 +13,15 @@ use clap::{Arg, ArgAction, Command};
 use nix::{
     errno::Errno,
     poll::{poll, PollFd, PollFlags, PollTimeout},
-    unistd,
+    unistd::{
+        access, getegid, geteuid, getgid, gethostname, getuid, isatty, ttyname, write, AccessFlags,
+        User,
+    },
 };
-use std::env;
 #[cfg(all(unix, not(target_os = "openbsd")))]
 use std::ffi::OsString;
+#[cfg(all(unix, not(target_os = "openbsd")))]
+use std::fmt::Write;
 #[cfg(all(unix, not(target_os = "openbsd")))]
 use std::io;
 #[cfg(all(unix, not(target_os = "openbsd")))]
@@ -38,8 +42,6 @@ use uucore::error::{UError, USimpleError};
 use uucore::utmpx::Utmpx;
 
 const STRING: &str = "string";
-// TODO(FEAT): Option for wall
-// const OPT_GROUP: &str = "group";
 #[cfg(target_os = "linux")]
 const OPT_NOBANNER: &str = "nobanner";
 #[cfg(target_os = "linux")]
@@ -54,8 +56,8 @@ enum WallError {
     VecToString(#[from] FromUtf8Error),
     #[error("osstring conversion failed")]
     ToStringError,
-    #[error("terminal write timed out")]
-    TimeoutError,
+    #[error("No read with setgid/setuid")]
+    PrivilegeError,
 }
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
@@ -105,25 +107,19 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     ))
 }
 
-#[cfg(target_os = "linux")]
 pub fn uu_app() -> Command {
-    Command::new(uucore::util_name())
+    let cmd = Command::new(uucore::util_name())
         .version(uucore::crate_version!())
         .about(uucore::help_about!("wall.md"))
         .infer_long_args(true)
         .override_usage(uucore::format_usage(uucore::help_usage!("wall.md")))
-        // .arg(
-        //     Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
-        //         // users inside a group
-        //         .short('g')
-        //         .long(OPT_GROUP)
-        //         .value_name("GROUP")
-        //         .help("Send restrict to only users in the group(s)")
-        //         .num_args(1)
-        //         .required(false)
-        //         .action(ArgAction::Append) // User can target more than one group
-        //         .value_parser(clap::value_parser!(String)),
-        // )
+        .arg(
+            Arg::new(STRING)
+                .action(ArgAction::Append)
+                .value_parser(ValueParser::os_string()),
+        );
+    #[cfg(target_os = "linux")]
+    let cmd = cmd
         .arg(
             Arg::new(OPT_NOBANNER)
                 .short('n')
@@ -133,49 +129,17 @@ pub fn uu_app() -> Command {
                 .help("Suppress the intro banner of the broadcast"),
         )
         .arg(
-            Arg::new(OPT_TIMEOUT) // TODO(FEAT): Implement -t --timeout to stop trying to print
-                // after passed a delay
+            Arg::new(OPT_TIMEOUT)
                 .short('t')
                 .long(OPT_TIMEOUT)
                 .required(false)
                 .value_name("SECONDS")
                 .value_parser(clap::value_parser!(u16).range(1..))
-                .default_value("30")
+                .default_value("300")
                 .help("Abandon after t seconds the write attempt to the terminals")
                 .num_args(1),
-        )
-        .arg(
-            Arg::new(STRING)
-                .action(ArgAction::Append)
-                .value_parser(ValueParser::os_string()),
-        )
-}
-
-// #[cfg(all(unix, not(target_os = "linux"), not(target_os = "openbsd")))]
-#[cfg(not(target_os = "linux"))]
-pub fn uu_app() -> Command {
-    Command::new(uucore::util_name())
-        .version(uucore::crate_version!())
-        .about(uucore::help_about!("wall.md"))
-        .infer_long_args(true)
-        .override_usage(uucore::format_usage(uucore::help_usage!("wall.md")))
-        // .arg(
-        //     Arg::new(OPT_GROUP) // TODO(FEAT): Implement -g/--groups to target specific
-        //         // users inside a group
-        //         .short('g')
-        //         .long(OPT_GROUP)
-        //         .value_name("GROUP")
-        //         .help("Send restrict to only users in the group(s)")
-        //         .num_args(1)
-        //         .required(false)
-        //         .action(ArgAction::Append) // User can target more than one group
-        //         .value_parser(clap::value_parser!(String)),
-        // )
-        .arg(
-            Arg::new(STRING)
-                .action(ArgAction::Append)
-                .value_parser(ValueParser::os_string()),
-        )
+        );
+    cmd
 }
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
@@ -208,11 +172,26 @@ fn read_from_stdin() -> Result<String, WallError> {
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
 fn read_from_file(file: &std::ffi::OsStr) -> Result<String, WallError> {
+    if is_privileged() {
+        if access(file, AccessFlags::F_OK).is_ok() {
+            return Err(WallError::PrivilegeError);
+        } else {
+            return Err(WallError::IOerr(io::Error::new(
+                io::ErrorKind::NotFound,
+                "File not found",
+            )));
+        }
+    }
     let mut buffer = Vec::new();
     let mut file = std::fs::File::open(std::path::Path::new(file))?;
     file.read_to_end(&mut buffer)?;
     let res = String::from_utf8(buffer)?;
     Ok(res)
+}
+
+#[cfg(all(unix, not(target_os = "openbsd")))]
+fn is_privileged() -> bool {
+    getuid() != geteuid() || getgid() != getegid()
 }
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
@@ -241,59 +220,68 @@ fn find_logged_users() -> Vec<OsString> {
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
 fn wall_intro_message() -> String {
-    let user = "USER";
-    let binding = unistd::gethostname().unwrap_or_else(|_| "".into());
+    let binding = gethostname().unwrap_or_else(|_| "".into());
     let hostname = binding.to_string_lossy();
 
-    let user: String = env::var_os(user)
-        .unwrap_or_default()
-        .to_string_lossy()
-        .chars()
-        .filter(|c| !c.is_control())
-        .collect();
-    // Control characters (such as clearing the terminal) could be hidden into user.
+    let user: String = get_user();
 
     // Fetch the TTY of the process calling wall (requires OS-specific calls or a wrapper function)
     let tty = get_sender();
 
     let datetime = get_hour_and_date();
-    #[cfg(target_os = "macos")]
-    return format!(
-        "\r\nBroadcast message from {}@{} ({tty}) at ({datetime}) \r\n\r\n",
+    format!(
+        "\nBroadcast message from {}@{} ({tty}) ({datetime})\n\n",
         user, hostname
-    );
-    #[cfg(not(target_os = "macos"))]
-    return format!(
-        "\r\nBroadcast message from {}@{} ({tty}) ({datetime}) \r\n\r\n",
-        user, hostname
-    );
+    )
 }
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
 fn formatted_message(message: String, banner: bool) -> String {
-    let formatted_message: String = message
+    let sanitized_message: String = message
         .chars()
         .filter(|c| !c.is_control() || *c == '\n')
         .collect();
     // Same here, control characters could also be hidden in the message provided. We still want newline char of course...
-    #[cfg(not(target_os = "macos"))]
-    let formatted_message = formatted_message.replace('\n', "\r\n\n");
-    #[cfg(not(target_os = "macos"))]
-    let formatted_message = format!("{formatted_message}\r\n\n");
-
-    #[cfg(target_os = "macos")]
-    let formatted_message = formatted_message.replace('\n', "\r\n");
-
     let transmission = if banner {
-        format!("{}{}", wall_intro_message(), formatted_message)
+        format!("{}{}", wall_intro_message(), sanitized_message)
     } else {
-        formatted_message
+        sanitized_message
     };
-    transmission
+    wrap_message(&transmission)
+}
+
+#[cfg(all(unix, not(target_os = "openbsd")))]
+const LINE_WIDTH: usize = 79; // This is line wrap asked by Linux man
+#[cfg(all(unix, not(target_os = "openbsd")))]
+fn wrap_message(message: &str) -> String {
+    let mut out = String::with_capacity(message.len() + LINE_WIDTH * 2);
+    for line in message.lines() {
+        push_wrapped_line(&mut out, line);
+    }
+    out
+}
+
+#[cfg(all(unix, not(target_os = "openbsd")))]
+fn push_wrapped_line(out: &mut String, line: &str) {
+    let mut rest = line;
+    loop {
+        // we look at characters, not bytes. Can be UTF-8 chars
+        let cut = rest
+            .char_indices()
+            .nth(LINE_WIDTH)
+            .map_or(rest.len(), |(i, _)| i);
+        let (chunk, tail) = rest.split_at(cut);
+        let _ = write!(out, "{chunk:<LINE_WIDTH$}\r\n");
+        rest = tail;
+        if rest.is_empty() {
+            break;
+        }
+    }
 }
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
 struct Terminal {
+    path: OsString,
     file: std::fs::File,
     written: usize,
     failed: bool,
@@ -301,12 +289,17 @@ struct Terminal {
 
 #[cfg(all(unix, not(target_os = "openbsd")))]
 impl Terminal {
-    fn new(file: std::fs::File) -> Self {
+    fn new(path: OsString, file: std::fs::File) -> Self {
         Terminal {
+            path,
             file,
             written: 0,
             failed: false,
         }
+    }
+
+    fn get_path(&self) -> OsString {
+        self.path.clone()
     }
 }
 
@@ -320,13 +313,17 @@ fn write_to_terminals(users: Vec<OsString>, message: &str, timeout: u16) -> URes
     while !ttys.is_empty() {
         let remaining = deadline.saturating_duration_since(std::time::Instant::now());
         if remaining.is_zero() {
-            return Err(WallError::TimeoutError.into());
+            for tty in ttys {
+                uucore::show_warning!("{}: write timed out", tty.get_path().to_string_lossy());
+                // Original wall doesn't print a message but if a terminal blocked and failed, it seemed best to let the user know
+            }
+            return Ok(());
         }
         let events = poll_terminals(&ttys, remaining)?;
         for (tty, event) in ttys.iter_mut().zip(events) {
             if event.contains(PollFlags::POLLOUT) {
                 let remaining = &message.as_bytes()[tty.written..];
-                match unistd::write(tty.file.as_fd(), remaining) {
+                match write(tty.file.as_fd(), remaining) {
                     Ok(n) => tty.written += n,
                     Err(Errno::EAGAIN | Errno::EINTR) => continue,
                     Err(_) => tty.failed = true,
@@ -353,10 +350,10 @@ fn poll_terminals(
         .map_err(|e| USimpleError::new(1, format!("invalid poll timeout: {e}")))?;
 
     match poll(&mut fds, wait) {
-        Ok(0) => return Err(WallError::TimeoutError.into()),
+        Ok(0) => return Ok(Vec::new()),
         Ok(_) => {}
         Err(Errno::EINTR) => return Ok(Vec::new()),
-        Err(e) => return Err(e.into()),
+        Err(e) => return Err(WallError::IOerr(io::Error::from(e)).into()),
     }
     Ok(fds
         .iter()
@@ -376,14 +373,22 @@ fn add_users_terminal(users: &Vec<OsString>) -> Vec<Terminal> {
             Ok(f) => f,
             Err(_) => continue,
         };
-        if !unistd::isatty(&file).unwrap_or(false) {
+        if !isatty(&file).unwrap_or(false) {
             continue;
         }
-        ttys.push(Terminal::new(file));
+        ttys.push(Terminal::new(user.clone(), file));
     }
     ttys
 }
 
+#[cfg(all(unix, not(target_os = "openbsd")))]
+fn get_user() -> String {
+    User::from_uid(getuid())
+        .ok()
+        .flatten()
+        .map_or_else(|| getuid().to_string(), |u| u.name)
+    // return an ID is more useful than returning nothing inside the banner.
+}
 #[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn get_hour_and_date() -> String {
     chrono::Local::now().format("%a %b %e %H:%M %Y").to_string()
@@ -396,7 +401,7 @@ fn get_hour_and_date() -> String {
 
 #[cfg(target_os = "macos")]
 fn get_sender() -> String {
-    unistd::ttyname(std::io::stderr().as_fd())
+    ttyname(std::io::stderr().as_fd())
         .unwrap_or_else(|_| "".into())
         .to_string_lossy()
         .to_string()
@@ -404,7 +409,7 @@ fn get_sender() -> String {
 
 #[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn get_sender() -> String {
-    unistd::ttyname(std::io::stderr().as_fd())
+    ttyname(std::io::stderr().as_fd())
         .unwrap_or_else(|_| "".into())
         .to_string_lossy()
         .strip_prefix("/dev/") // Wall doesn't print /dev/ after tty name, but might not be the way it does it

@@ -19,5 +19,5 @@ libc.workspace = true
 uucore = { workspace = true, features = ["utmpx"] }
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.30", default-features = false, features = ["fs", "hostname", "poll", "term"] }
+nix = { workspace = true, default-features = false, features = ["fs", "hostname", "poll", "term", "user"] }
 thiserror.workspace = true
