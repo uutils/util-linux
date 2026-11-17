@@ -56,7 +56,7 @@ enum WallError {
     VecToString(#[from] FromUtf8Error),
     #[error("osstring conversion failed")]
     ToStringError,
-    #[error("No read with setgid/setuid")]
+    #[error("Will not read when running with setgid")]
     PrivilegeError,
 }
 
@@ -386,9 +386,10 @@ fn get_user() -> String {
     User::from_uid(getuid())
         .ok()
         .flatten()
+        // return an ID is more useful than returning nothing inside the banner.
         .map_or_else(|| getuid().to_string(), |u| u.name)
-    // return an ID is more useful than returning nothing inside the banner.
 }
+
 #[cfg(all(unix, not(target_os = "macos"), not(target_os = "openbsd")))]
 fn get_hour_and_date() -> String {
     chrono::Local::now().format("%a %b %e %H:%M %Y").to_string()
