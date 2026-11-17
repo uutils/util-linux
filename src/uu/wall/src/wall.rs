@@ -6,7 +6,6 @@
 use clap::builder::ValueParser;
 #[cfg(all(unix, not(target_os = "openbsd")))]
 use clap::parser::ValuesRef;
-#[cfg(any(target_os = "windows", target_os = "openbsd"))]
 use clap::ArgMatches;
 use clap::{Arg, ArgAction, Command};
 #[cfg(all(unix, not(target_os = "openbsd")))]
