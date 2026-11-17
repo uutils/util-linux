@@ -28,19 +28,19 @@ fn test_help_arg() {
 #[cfg(target_family = "unix")]
 #[test]
 fn test_null_timeout() {
-    new_ucmd!().arg("-t 0").fails().code_is(1);
+    new_ucmd!().arg("-t").arg("0").fails().code_is(1);
 }
 
 #[cfg(target_family = "unix")]
 #[test]
 fn test_invalid_timeout() {
-    new_ucmd!().arg("-t notanumber").fails().code_is(1);
+    new_ucmd!().arg("-t").arg("notanumber").fails().code_is(1);
 }
 
 #[cfg(target_family = "unix")]
 #[test]
 fn test_no_timeout() {
-    new_ucmd!().arg("-t --help").fails().code_is(1);
+    new_ucmd!().arg("-t").arg("--help").fails().code_is(1);
 }
 
 #[cfg(target_family = "unix")]
