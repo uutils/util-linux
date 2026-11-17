@@ -48,12 +48,7 @@ fn test_no_timeout() {
 fn test_non_utf8_arg() {
     use std::{ffi::OsString, os::unix::ffi::OsStringExt};
 
-    let mut non_utf: Vec<u8> = Vec::new();
-    non_utf.push(2);
-    non_utf.push(213);
-    non_utf.push(255);
-    non_utf.push(13);
-    non_utf.push(12);
+    let non_utf = vec![2, 213, 255, 13, 12];
     new_ucmd!()
         .arg(OsString::from_vec(non_utf))
         .fails()
