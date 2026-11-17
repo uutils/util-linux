@@ -55,7 +55,7 @@ enum WallError {
     VecToString(#[from] FromUtf8Error),
     #[error("osstring conversion failed")]
     ToStringError,
-    #[error("Will not read when running with setgid")]
+    #[error("Will not read when running with setuid or setgid")]
     PrivilegeError,
 }
 
