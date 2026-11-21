@@ -55,7 +55,7 @@ First, reimplement the most important tools from util-linux:
 - [ ] `ionice`: Sets process I/O scheduling class/priority.
 - [ ] `renice`: Alters process priority. (started)
 - [ ] `prlimit`: Sets/gets process resource limits.
-- [ ] `taskset`: Sets/gets process CPU affinity.
+- [x] `taskset`: Sets/gets process CPU affinity.
 - [ ] `uclampset`: Manages process utilization clamping.
 - [x] `setpgid`: Runs a program in a new process group.
 

@@ -1,0 +1,22 @@
+[package]
+name    = "uu_taskset"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+path = "src/taskset.rs"
+
+[[bin]]
+name = "taskset"
+path = "src/main.rs"
+
+[dependencies]
+clap      = { workspace = true }
+thiserror = { workspace = true }
+uucore    = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = { workspace = true, features = ["sched"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
