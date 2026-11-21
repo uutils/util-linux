@@ -35,6 +35,7 @@ jobs:
       - run: cargo test
       # The workspace tests build dmesg with fixed-boot-time, so its real boot time is tested alone
       - run: cargo test -p uu_dmesg
+      - run: cargo test -p uu_chrt
 
   fmt:
     name: cargo fmt --all -- --check
