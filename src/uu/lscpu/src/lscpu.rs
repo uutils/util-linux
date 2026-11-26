@@ -6,7 +6,7 @@
 use clap::{crate_version, Arg, ArgAction, Command};
 use regex::RegexBuilder;
 use serde::Serialize;
-use std::{cmp, collections::HashMap, fs};
+use std::{cmp, collections::HashMap, fs, path::PathBuf};
 use sysfs::CacheSize;
 use uucore::{error::UResult, format_usage, help_about, help_usage};
 
@@ -14,6 +14,7 @@ mod options {
     pub const BYTES: &str = "bytes";
     pub const HEX: &str = "hex";
     pub const JSON: &str = "json";
+    pub const SYSROOT: &str = "sysroot";
 }
 
 mod sysfs;
@@ -80,30 +81,35 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         json: matches.get_flag(options::JSON),
     };
 
+    let sysroot = matches
+        .get_one::<String>(options::SYSROOT)
+        .map_or_else(|| PathBuf::from("/"), PathBuf::from);
+
     let mut cpu_infos = CpuInfos::new();
 
     let mut arch_info = CpuInfo::new("Architecture", &get_architecture());
 
     // TODO: We just silently ignore failures to read `/proc/cpuinfo` currently and treat it as empty
     // Perhaps a better solution should be put in place, but what?
-    let contents = fs::read_to_string("/proc/cpuinfo").unwrap_or_default();
+    let contents =
+        fs::read_to_string(sysfs::system_path(&sysroot, "/proc/cpuinfo")).unwrap_or_default();
 
     if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
         arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes))
     }
 
-    if let Some(byte_order) = sysfs::read_cpu_byte_order() {
+    if let Some(byte_order) = sysfs::read_cpu_byte_order(&sysroot) {
         arch_info.add_child(CpuInfo::new("Byte Order", byte_order));
     }
 
     cpu_infos.push(arch_info);
 
-    let cpu_topology = sysfs::CpuTopology::new();
+    let cpu_topology = sysfs::CpuTopology::new(&sysroot);
     let mut cores_info = CpuInfo::new("CPU(s)", &format!("{}", cpu_topology.cpus.len()));
 
     cores_info.add_child(CpuInfo::new(
         "On-line CPU(s) list",
-        &sysfs::read_online_cpus(),
+        &sysfs::read_online_cpus(&sysroot),
     ));
 
     cpu_infos.push(cores_info);
@@ -139,7 +145,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             ));
             model_name_info.add_child(CpuInfo::new("Socket(s)", &socket_count.to_string()));
 
-            if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state() {
+            if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state(&sysroot) {
                 let s = if freq_boost_enabled {
                     "enabled"
                 } else {
@@ -158,7 +164,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         cpu_infos.push(cache_info);
     }
 
-    let vulns = sysfs::read_cpu_vulnerabilities();
+    let vulns = sysfs::read_cpu_vulnerabilities(&sysroot);
     if !vulns.is_empty() {
         let mut vuln_info = CpuInfo::new("Vulnerabilities", "");
         for vuln in vulns {
@@ -349,5 +355,13 @@ pub fn uu_app() -> Command {
                     The default is to print sizes in human-readable format (for example '512 KiB'). \
                     Setting this flag instead prints the decimal amount of bytes with no suffix.",
                 ),
+        )
+        .arg(
+            Arg::new(options::SYSROOT)
+                .short('s')
+                .long("sysroot")
+                .value_name("directory")
+                .help("Use the specified directory as system root")
+                .required(false),
         )
 }
