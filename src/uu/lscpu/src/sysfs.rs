@@ -8,13 +8,13 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use uucore::parser::parse_size;
+use uucore::{
+    error::{UResult, USimpleError},
+    parser::parse_size,
+};
 
-/// Build a path below the system root.
-///
 /// `Path::join` discards the root when the joined path is absolute, so strip
-/// the leading separator before joining. This is used by `--sysroot` and by
-/// tests that build a fake `/sys` and `/proc` tree.
+/// the leading separator before joining.
 pub fn system_path(root: &Path, path: &str) -> PathBuf {
     root.join(path.trim_start_matches('/'))
 }
@@ -57,10 +57,10 @@ pub enum CacheType {
 }
 
 impl CpuTopology {
-    pub fn new(root: &Path) -> Self {
+    pub fn new(root: &Path) -> UResult<Self> {
         let mut out: Vec<Cpu> = vec![];
 
-        let online_cpus = parse_cpu_list(&read_online_cpus(root));
+        let online_cpus = parse_cpu_list(&read_online_cpus(root)?);
 
         for cpu_index in online_cpus {
             let cpu_dir = system_path(root, &format!("/sys/devices/system/cpu/cpu{cpu_index}/"));
@@ -86,7 +86,7 @@ impl CpuTopology {
                 caches,
             })
         }
-        Self { cpus: out }
+        Ok(Self { cpus: out })
     }
 
     pub fn socket_count(&self) -> usize {
@@ -135,11 +135,12 @@ impl CacheSize {
 }
 
 // TODO: respect `--hex` option and output the bitmask instead of human-readable range
-pub fn read_online_cpus(root: &Path) -> String {
-    fs::read_to_string(system_path(root, "/sys/devices/system/cpu/online"))
-        .expect("Could not read sysfs")
-        .trim()
-        .to_string()
+pub fn read_online_cpus(root: &Path) -> UResult<String> {
+    let path = system_path(root, "/sys/devices/system/cpu/online");
+
+    fs::read_to_string(&path)
+        .map(|contents| contents.trim().to_string())
+        .map_err(|err| USimpleError::new(1, format!("Could not read {}: {err}", path.display())))
 }
 
 fn read_cpu_caches(root: &Path, cpu_index: usize) -> Vec<CpuCache> {

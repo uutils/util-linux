@@ -82,8 +82,8 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     };
 
     let sysroot = matches
-        .get_one::<String>(options::SYSROOT)
-        .map_or_else(|| PathBuf::from("/"), PathBuf::from);
+        .get_one::<PathBuf>(options::SYSROOT)
+        .expect("sysroot has a default value");
 
     let mut cpu_infos = CpuInfos::new();
 
@@ -92,24 +92,24 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
     // TODO: We just silently ignore failures to read `/proc/cpuinfo` currently and treat it as empty
     // Perhaps a better solution should be put in place, but what?
     let contents =
-        fs::read_to_string(sysfs::system_path(&sysroot, "/proc/cpuinfo")).unwrap_or_default();
+        fs::read_to_string(sysfs::system_path(sysroot, "/proc/cpuinfo")).unwrap_or_default();
 
     if let Some(addr_sizes) = find_cpuinfo_value(&contents, "address sizes") {
         arch_info.add_child(CpuInfo::new("Address sizes", &addr_sizes))
     }
 
-    if let Some(byte_order) = sysfs::read_cpu_byte_order(&sysroot) {
+    if let Some(byte_order) = sysfs::read_cpu_byte_order(sysroot) {
         arch_info.add_child(CpuInfo::new("Byte Order", byte_order));
     }
 
     cpu_infos.push(arch_info);
 
-    let cpu_topology = sysfs::CpuTopology::new(&sysroot);
+    let cpu_topology = sysfs::CpuTopology::new(sysroot)?;
     let mut cores_info = CpuInfo::new("CPU(s)", &format!("{}", cpu_topology.cpus.len()));
 
     cores_info.add_child(CpuInfo::new(
         "On-line CPU(s) list",
-        &sysfs::read_online_cpus(&sysroot),
+        &sysfs::read_online_cpus(sysroot)?,
     ));
 
     cpu_infos.push(cores_info);
@@ -145,7 +145,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
             ));
             model_name_info.add_child(CpuInfo::new("Socket(s)", &socket_count.to_string()));
 
-            if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state(&sysroot) {
+            if let Some(freq_boost_enabled) = sysfs::read_freq_boost_state(sysroot) {
                 let s = if freq_boost_enabled {
                     "enabled"
                 } else {
@@ -164,7 +164,7 @@ pub fn uumain(args: impl uucore::Args) -> UResult<()> {
         cpu_infos.push(cache_info);
     }
 
-    let vulns = sysfs::read_cpu_vulnerabilities(&sysroot);
+    let vulns = sysfs::read_cpu_vulnerabilities(sysroot);
     if !vulns.is_empty() {
         let mut vuln_info = CpuInfo::new("Vulnerabilities", "");
         for vuln in vulns {
@@ -361,7 +361,8 @@ pub fn uu_app() -> Command {
                 .short('s')
                 .long("sysroot")
                 .value_name("directory")
-                .help("Use the specified directory as system root")
-                .required(false),
+                .value_parser(clap::value_parser!(PathBuf))
+                .default_value("/")
+                .help("Use the specified directory as system root"),
         )
 }
