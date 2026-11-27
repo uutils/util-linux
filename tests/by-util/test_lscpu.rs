@@ -3,6 +3,7 @@
 // For the full copyright and license information, please view the LICENSE
 // file that was distributed with this source code.
 
+use serde_json::Value;
 use std::path::Path;
 use uutests::new_ucmd;
 
@@ -138,8 +139,14 @@ fn test_sysroot_output() {
     let stdout = res.no_stderr().stdout_str();
 
     fn assert_field(stdout: &str, field: &str, value: &str) {
-        assert!(stdout.contains(&format!("{field}:")), "missing {field}");
-        assert!(stdout.contains(value), "missing value {value:?}");
+        let prefix = format!("{field}:");
+        let line = stdout
+            .lines()
+            .find(|line| line.trim_start().starts_with(&prefix))
+            .unwrap_or_else(|| panic!("missing {field}"));
+
+        let actual = line.trim_start()[prefix.len()..].trim();
+        assert_eq!(actual, value, "unexpected value for {field}");
     }
 
     assert_field(stdout, "Address sizes", "39 bits physical, 48 bits virtual");
@@ -174,10 +181,45 @@ fn test_sysroot_json() {
         .arg("--json")
         .succeeds();
 
-    res.stdout_contains("\"field\": \"CPU(s)\"")
-        .stdout_contains("\"data\": \"2\"")
-        .stdout_contains("\"field\": \"Vendor ID\"")
-        .stdout_contains("\"data\": \"TestVendor\"")
-        .stdout_contains("\"field\": \"L1d\"")
-        .stdout_contains("\"data\": \"64 KiB (2 instances)\"");
+    fn find_entry<'a>(entries: &'a [Value], field: &str) -> Option<&'a Value> {
+        for entry in entries {
+            if entry["field"] == field {
+                return Some(entry);
+            }
+
+            if let Some(children) = entry["children"].as_array() {
+                if let Some(found) = find_entry(children, field) {
+                    return Some(found);
+                }
+            }
+        }
+
+        None
+    }
+
+    let json: Value = serde_json::from_str(res.no_stderr().stdout_str()).unwrap();
+    let entries = json["lscpu"].as_array().unwrap();
+
+    for (field, value) in [
+        ("CPU(s)", "2"),
+        ("Vendor ID", "TestVendor"),
+        ("L1d", "64 KiB (2 instances)"),
+    ] {
+        let entry = find_entry(entries, field).unwrap_or_else(|| panic!("missing field {field}"));
+        assert_eq!(entry["data"], value, "unexpected value for {field}");
+    }
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_invalid() {
+    let sysroot = tempfile::tempdir().unwrap();
+    let missing = sysroot.path().join("missing");
+
+    new_ucmd!()
+        .arg("--sysroot")
+        .arg(missing)
+        .fails()
+        .code_is(1)
+        .stderr_contains("Could not read");
 }
