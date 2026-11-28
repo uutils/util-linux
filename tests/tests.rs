@@ -63,6 +63,10 @@ mod test_renice;
 #[path = "by-util/test_rev.rs"]
 mod test_rev;
 
+#[cfg(feature = "runuser")]
+#[path = "by-util/test_runuser.rs"]
+mod test_runuser;
+
 #[cfg(feature = "setpgid")]
 #[path = "by-util/test_setpgid.rs"]
 mod test_setpgid;
