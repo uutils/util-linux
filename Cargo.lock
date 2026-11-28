@@ -1599,6 +1599,7 @@ dependencies = [
  "uu_setpgid",
  "uu_setsid",
  "uu_uuidgen",
+ "uu_wall",
  "uucore 0.2.2",
  "uuhelp_parser",
  "uuid",
@@ -1827,6 +1828,18 @@ dependencies = [
  "uucore 0.2.2",
  "uuid",
  "windows",
+]
+
+[[package]]
+name = "uu_wall"
+version = "0.0.1"
+dependencies = [
+ "chrono",
+ "clap",
+ "libc",
+ "nix 0.32.0",
+ "thiserror",
+ "uucore 0.2.2",
 ]
 
 [[package]]
