@@ -21,6 +21,17 @@ fn write_file(dir: &Path, name: &str, contents: &str) {
     std::fs::write(dir.join(name), contents).unwrap();
 }
 
+fn assert_field(stdout: &str, field: &str, value: &str) {
+    let prefix = format!("{field}:");
+    let line = stdout
+        .lines()
+        .find(|line| line.trim_start().starts_with(&prefix))
+        .unwrap_or_else(|| panic!("missing {field}"));
+
+    let actual = line.trim_start()[prefix.len()..].trim();
+    assert_eq!(actual, value, "unexpected value for {field}");
+}
+
 /// Builds a minimal fake `/sys/devices/system/cpu` and `/proc/cpuinfo`.
 ///
 /// Values are deliberately different from typical host values so tests fail if
@@ -83,6 +94,20 @@ impl TestSysCpu {
     fn path(&self) -> &Path {
         self.sysroot.path()
     }
+
+    fn write_relative(&self, relative: &str, contents: &str) {
+        let path = self.path().join(relative);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, contents).unwrap();
+    }
+
+    fn remove_file(&self, relative: &str) {
+        std::fs::remove_file(self.path().join(relative)).unwrap();
+    }
+
+    fn remove_dir(&self, relative: &str) {
+        std::fs::remove_dir_all(self.path().join(relative)).unwrap();
+    }
 }
 
 #[test]
@@ -137,17 +162,6 @@ fn test_sysroot_output() {
         .arg(test_root.path())
         .succeeds();
     let stdout = res.no_stderr().stdout_str();
-
-    fn assert_field(stdout: &str, field: &str, value: &str) {
-        let prefix = format!("{field}:");
-        let line = stdout
-            .lines()
-            .find(|line| line.trim_start().starts_with(&prefix))
-            .unwrap_or_else(|| panic!("missing {field}"));
-
-        let actual = line.trim_start()[prefix.len()..].trim();
-        assert_eq!(actual, value, "unexpected value for {field}");
-    }
 
     assert_field(stdout, "Address sizes", "39 bits physical, 48 bits virtual");
     assert_field(stdout, "Byte Order", "Big Endian");
@@ -222,4 +236,123 @@ fn test_sysroot_invalid() {
         .fails()
         .code_is(1)
         .stderr_contains("Could not read");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_missing_cache_dir() {
+    let test_root = TestSysCpu::new();
+    test_root.remove_dir("sys/devices/system/cpu/cpu0/cache");
+    test_root.remove_dir("sys/devices/system/cpu/cpu1/cache");
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert_field(stdout, "CPU(s)", "2");
+    assert!(!stdout.contains("Caches (sum of all)"));
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_missing_cache_size() {
+    let test_root = TestSysCpu::new();
+    for cpu in 0..2 {
+        test_root.remove_file(&format!(
+            "sys/devices/system/cpu/cpu{cpu}/cache/index0/size"
+        ));
+    }
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert!(!stdout.contains("L1d:"));
+    assert_field(stdout, "L1i", "128 KiB (2 instances)");
+    assert_field(stdout, "L2", "512 KiB (2 instances)");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_missing_cache_shared_cpu_map() {
+    let test_root = TestSysCpu::new();
+    for cpu in 0..2 {
+        test_root.remove_file(&format!(
+            "sys/devices/system/cpu/cpu{cpu}/cache/index1/shared_cpu_map"
+        ));
+    }
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert!(!stdout.contains("L1i:"));
+    assert_field(stdout, "L1d", "64 KiB (2 instances)");
+    assert_field(stdout, "L2", "512 KiB (2 instances)");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_missing_cache_level() {
+    let test_root = TestSysCpu::new();
+    for cpu in 0..2 {
+        test_root.remove_file(&format!(
+            "sys/devices/system/cpu/cpu{cpu}/cache/index2/level"
+        ));
+    }
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert!(!stdout.contains("L2:"));
+    assert_field(stdout, "L1d", "64 KiB (2 instances)");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_unknown_cache_type() {
+    let test_root = TestSysCpu::new();
+    for cpu in 0..2 {
+        test_root.write_relative(
+            &format!("sys/devices/system/cpu/cpu{cpu}/cache/index2/type"),
+            "Mystery\n",
+        );
+    }
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert!(!stdout.contains("L2:"));
+    assert_field(stdout, "L3", "8 MiB (1 instances)");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_missing_topology() {
+    let test_root = TestSysCpu::new();
+    for cpu in 0..2 {
+        test_root.remove_file(&format!(
+            "sys/devices/system/cpu/cpu{cpu}/topology/physical_package_id"
+        ));
+        test_root.remove_file(&format!("sys/devices/system/cpu/cpu{cpu}/topology/core_id"));
+    }
+
+    let res = new_ucmd!().arg("-s").arg(test_root.path()).succeeds();
+    let stdout = res.no_stderr().stdout_str();
+
+    assert_field(stdout, "CPU(s)", "2");
+    assert_field(stdout, "Thread(s) per core", "1");
+    assert_field(stdout, "Core(s) per socket", "2");
+    assert_field(stdout, "Socket(s)", "1");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn test_sysroot_invalid_cpu_list() {
+    let test_root = TestSysCpu::new();
+    test_root.write_relative("sys/devices/system/cpu/online", "0-abc\n");
+
+    new_ucmd!()
+        .arg("-s")
+        .arg(test_root.path())
+        .fails()
+        .code_is(1)
+        .stderr_contains("Invalid CPU index value: abc");
 }
