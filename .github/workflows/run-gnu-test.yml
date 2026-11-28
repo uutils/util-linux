@@ -7,6 +7,10 @@ on:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   native:
     name: Run GNU tests (native)
@@ -39,13 +43,29 @@ jobs:
           ./configure
           make libsmartcols/src/filter-parser.c libsmartcols/src/filter-scanner.c
           make -j$(nproc) check-programs
-      - name: Download test baseline if exists
-        id: download-test-baseline
-        continue-on-error: true
-        uses: actions/download-artifact@v8
-        with:
-          name: gnu-test-failures
-          path: uutils-util-linux/.reference/
+      - name: Download baseline from latest successful main run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow run-gnu-test.yml \
+            --branch main \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+
+          if [[ -z "$run_id" ]]; then
+            echo "ERROR: no successful run-gnu-test.yml run found on main" >&2
+            exit 1
+          fi
+
+          gh run download "$run_id" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name gnu-test-failures \
+            --dir uutils-util-linux/.reference
 
       - name: Run GNU tests
         env:
@@ -61,7 +81,7 @@ jobs:
           ./scripts/check-new-gnu-failures.sh --update-baseline
 
       - name: Upload test baseline artifact
-        if: github.ref == 'refs/heads/main' || steps.download-test-baseline.outcome == 'failure'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: gnu-test-failures
