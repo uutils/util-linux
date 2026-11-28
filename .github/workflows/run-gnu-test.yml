@@ -1,4 +1,3 @@
-
 name: Run GNU Test
 
 on:
@@ -6,6 +5,12 @@ on:
   push:
     branches:
       - 'main'
+
+permissions:
+  contents: read
+
+env:
+  REFERENCE_BRANCH: gnu-reference
 
 jobs:
   native:
@@ -22,6 +27,57 @@ jobs:
           repository: util-linux/util-linux
           path: gnu-util-linux
           ref: v2.41.4
+      - name: Fetch GNU test reference
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          baseline_dir="uutils-util-linux/.reference"
+          baseline_file="$baseline_dir/gnu-test-failures.txt"
+          mkdir -p "$baseline_dir"
+
+          reference_sha=""
+          ref_err="${RUNNER_TEMP:-/tmp}/gnu-reference-ref.err"
+          for attempt in 1 2 3; do
+            if reference_sha=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/git/refs/heads/${REFERENCE_BRANCH}" \
+              --jq '.object.sha' 2>"$ref_err"); then
+              break
+            fi
+
+            reference_sha=""
+            if grep -q 'HTTP 404' "$ref_err"; then
+              break
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              cat "$ref_err" >&2
+              echo "::error::Could not resolve ${REFERENCE_BRANCH}; refusing to treat an API failure as a missing baseline."
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          if [[ -n "$reference_sha" ]]; then
+            if ! gh api \
+              "repos/${GITHUB_REPOSITORY}/contents/gnu-test-failures.txt?ref=${reference_sha}" \
+              -H 'Accept: application/vnd.github.raw' > "$baseline_file"; then
+              rm -f "$baseline_file"
+              echo "::error::Could not download ${REFERENCE_BRANCH}/gnu-test-failures.txt"
+              exit 1
+            fi
+
+            if [[ ! -s "$baseline_file" ]]; then
+              echo "::error::${REFERENCE_BRANCH}/gnu-test-failures.txt is empty"
+              exit 1
+            fi
+
+            echo "ALLOW_MISSING_BASELINE=false" >> "$GITHUB_ENV"
+            echo "Using GNU test reference ${REFERENCE_BRANCH}@${reference_sha}"
+          else
+            echo "ALLOW_MISSING_BASELINE=true" >> "$GITHUB_ENV"
+            echo "::warning::No ${REFERENCE_BRANCH} branch yet; skipping GNU baseline comparison"
+          fi
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./uutils-util-linux -> target"
@@ -39,30 +95,106 @@ jobs:
           ./configure
           make libsmartcols/src/filter-parser.c libsmartcols/src/filter-scanner.c
           make -j$(nproc) check-programs
-      - name: Download test baseline if exists
-        id: download-test-baseline
-        continue-on-error: true
-        uses: actions/download-artifact@v8
-        with:
-          name: gnu-test-failures
-          path: uutils-util-linux/.reference/
-
       - name: Run GNU tests
         env:
           GNU_PROJECT_DIR: ${{ github.workspace }}/gnu-util-linux
         run: |
           cd uutils-util-linux
           ./scripts/run-tests.sh
-
       - name: Update test baseline
         if: github.ref == 'refs/heads/main'
         run: |
           cd uutils-util-linux
           ./scripts/check-new-gnu-failures.sh --update-baseline
-
-      - name: Upload test baseline artifact
-        if: github.ref == 'refs/heads/main' || steps.download-test-baseline.outcome == 'failure'
+      - name: Upload test baseline
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
-          name: gnu-test-failures
+          name: gnu-test-baseline
           path: uutils-util-linux/.reference/gnu-test-failures.txt
+          # This artifact is only used to hand the baseline to the publish job
+          # in the same workflow run. The durable reference lives on the
+          # gnu-reference branch.
+          retention-days: 1
+
+  publish-reference:
+    name: Publish GNU test reference
+    needs: native
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    concurrency:
+      group: publish-gnu-reference
+      cancel-in-progress: false
+    steps:
+      - name: Download test baseline
+        uses: actions/download-artifact@v8
+        with:
+          name: gnu-test-baseline
+          path: publish
+      - name: Publish to reference branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! -s publish/gnu-test-failures.txt ]]; then
+            echo "::error::No GNU test baseline was produced; leaving ${REFERENCE_BRANCH} untouched."
+            exit 1
+          fi
+
+          published_run=0
+          meta_err="${RUNNER_TEMP:-/tmp}/published-meta.err"
+          for attempt in 1 2 3; do
+            if published_meta=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/contents/meta.json?ref=${REFERENCE_BRANCH}" \
+              -H 'Accept: application/vnd.github.raw' 2>"$meta_err"); then
+              published_run=$(jq -r '.run_id // 0' <<< "$published_meta" 2>/dev/null || echo 0)
+              break
+            fi
+
+            if grep -q 'HTTP 404' "$meta_err"; then
+              break
+            fi
+
+            if [[ "$attempt" -eq 3 ]]; then
+              cat "$meta_err" >&2
+              echo "::error::Could not read the published reference; refusing to overwrite a possibly newer one."
+              exit 1
+            fi
+
+            sleep $((attempt * 5))
+          done
+
+          if [[ "$published_run" =~ ^[0-9]+$ ]] && (( published_run > GITHUB_RUN_ID )); then
+            echo "::notice::Run ${published_run} already published a newer reference; nothing to do."
+            exit 0
+          fi
+
+          jq -n \
+            --arg sha "${GITHUB_SHA}" \
+            --arg run_id "${GITHUB_RUN_ID}" \
+            --arg published_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{sha: $sha, run_id: $run_id, published_at: $published_at}' > publish/meta.json
+
+          cat > publish/README.md <<'EOF'
+          # GNU test reference results
+
+          Machine-maintained branch: the GNU test baseline from the latest
+          successful `Run GNU Test` workflow run on `main`.
+
+          Every pull request reads `gnu-test-failures.txt` here at a fixed
+          commit SHA. Do not commit here by hand; the branch is force-pushed
+          by the `publish-reference` job.
+          EOF
+
+          cd publish
+          git init -q -b "${REFERENCE_BRANCH}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "GNU test results for ${GITHUB_SHA}"
+          git push -q --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/${REFERENCE_BRANCH}"
+          echo "::notice::Published GNU test reference for ${GITHUB_SHA}."

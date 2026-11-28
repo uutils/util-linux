@@ -6,7 +6,6 @@ PROJECT_DIR="$(pwd)"
 DIFF_DIR="$PROJECT_DIR/.test-helpers/tests/diff"
 BASELINE="$PROJECT_DIR/.reference/gnu-test-failures.txt"
 UPDATE_BASELINE=false
-EMPTY_BASELINE=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -28,6 +27,7 @@ fi
 
 # --update-baseline mode
 if [[ "$UPDATE_BASELINE" == true ]]; then
+    mkdir -p "$(dirname "$BASELINE")"
     {
         echo "# Known GNU test failures - format: util/testname"
         echo "# Update with: ./scripts/check-new-gnu-failures.sh --update-baseline"
@@ -41,14 +41,19 @@ fi
 # Load baseline (strip comments and blank lines)
 baseline_tmp=$(mktemp)
 trap 'rm -f "$current_tmp" "$baseline_tmp"' EXIT
-if [[ -f "$BASELINE" ]]; then
-    grep -v '^\s*#' "$BASELINE" | grep -v '^\s*$' | sort > "$baseline_tmp"
-else
-    echo "WARNING: Baseline not found: $BASELINE" >&2
-    echo "  Run with --update-baseline to create it." >&2
-    touch "$baseline_tmp"
-    EMPTY_BASELINE=true
+if [[ ! -f "$BASELINE" ]]; then
+    if [[ "${ALLOW_MISSING_BASELINE:-false}" == "true" ]]; then
+        echo "WARNING: No GNU test baseline is available; skipping comparison." >&2
+        exit 0
+    fi
+
+    echo "ERROR: GNU test baseline not found: $BASELINE" >&2
+    echo "  Publish the gnu-reference branch from main, or run with" >&2
+    echo "  --update-baseline on main to create a baseline locally." >&2
+    exit 1
 fi
+
+sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' "$BASELINE" | sort > "$baseline_tmp"
 
 # comm: -13 = lines only in current (new failures), -23 = lines only in baseline (fixed)
 new_failures=$(comm -13 "$baseline_tmp" "$current_tmp")
@@ -59,18 +64,6 @@ echo "--- GNU test failure summary ---"
 echo "Baseline failures: $(wc -l < "$baseline_tmp")"
 echo "Current failures:  $(wc -l < "$current_tmp")"
 echo ""
-
-if [[ "$EMPTY_BASELINE" == true ]]; then
-    mkdir -p "$(dirname "$BASELINE")"
-    {
-        echo "# Known GNU test failures - format: util/testname"
-        echo "# Update with: ./scripts/check-new-gnu-failures.sh --update-baseline"
-        cat "$current_tmp"
-    } > "$BASELINE"
-    count=$(wc -l < "$current_tmp")
-    echo "Initial baseline created: $BASELINE ($count failures recorded)"
-    exit 0
-fi
 
 if [[ -n "$fixed_tests" ]]; then
     echo "Tests newly FIXED:"
