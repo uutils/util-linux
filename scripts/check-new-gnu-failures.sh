@@ -42,9 +42,14 @@ fi
 baseline_tmp=$(mktemp)
 trap 'rm -f "$current_tmp" "$baseline_tmp"' EXIT
 if [[ ! -f "$BASELINE" ]]; then
+    if [[ "${ALLOW_MISSING_BASELINE:-false}" == "true" ]]; then
+        echo "WARNING: No GNU test baseline is available; skipping comparison." >&2
+        exit 0
+    fi
+
     echo "ERROR: GNU test baseline not found: $BASELINE" >&2
-    echo "  Download the baseline from the latest successful main run," >&2
-    echo "  or run with --update-baseline on main to create it." >&2
+    echo "  Publish the gnu-reference branch from main, or run with" >&2
+    echo "  --update-baseline on main to create a baseline locally." >&2
     exit 1
 fi
 
