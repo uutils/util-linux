@@ -103,6 +103,10 @@ mod test_chcpu;
 #[path = "by-util/test_rename.rs"]
 mod test_rename;
 
+#[cfg(feature = "chrt")]
+#[path = "by-util/test_chrt.rs"]
+mod test_chrt;
+
 #[test]
 fn test_list() {
     let out = std::process::Command::new(TESTS_BINARY)
