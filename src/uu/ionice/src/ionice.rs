@@ -1,0 +1,335 @@
+// This file is part of the uutils util-linux package.
+//
+// For the full copyright and license information, please view the LICENSE
+// file that was distributed with this source code.
+// spell-checker:ignore (words) classdata ioprio pgid pgrp
+
+use clap::builder::ValueParser;
+use clap::{crate_version, Arg, ArgAction, ArgGroup, Command};
+use uucore::{error::UResult, format_usage, help_about, help_usage};
+
+#[cfg(target_os = "linux")]
+mod errors;
+#[cfg(target_os = "linux")]
+mod ioprio;
+mod parse;
+
+const ABOUT: &str = help_about!("ionice.md");
+const USAGE: &str = help_usage!("ionice.md");
+
+mod options {
+    pub const CLASS: &str = "class";
+    pub const CLASSDATA: &str = "classdata";
+    pub const PID: &str = "pid";
+    pub const PGID: &str = "pgid";
+    pub const UID: &str = "uid";
+    pub const IGNORE: &str = "ignore";
+    pub const ARGS: &str = "args";
+}
+
+#[cfg(target_os = "linux")]
+mod linux {
+    use std::ffi::OsString;
+    use std::io;
+    use std::os::unix::process::CommandExt;
+    use std::process;
+
+    use clap::ArgMatches;
+    use uucore::error::UResult;
+
+    use crate::errors::IoniceError;
+    use crate::ioprio::{self, IoPrio, Who};
+    use crate::options;
+    use crate::parse;
+
+    #[derive(Debug)]
+    struct Request {
+        class: Option<i32>,
+        data: Option<i32>,
+        id: Option<(Who, i32)>,
+        ignore: bool,
+    }
+
+    impl Request {
+        fn from_matches(matches: &ArgMatches) -> Self {
+            // -c and -n may be repeated, and the last one wins.
+            let last = |option: &str| {
+                matches
+                    .get_many::<i32>(option)
+                    .and_then(Iterator::last)
+                    .copied()
+            };
+            let id = [
+                (options::PID, Who::Process),
+                (options::PGID, Who::Pgrp),
+                (options::UID, Who::User),
+            ]
+            .into_iter()
+            .find_map(|(option, who)| matches.get_one::<i32>(option).map(|&id| (who, id)));
+
+            Self {
+                class: last(options::CLASS),
+                data: last(options::CLASSDATA),
+                id,
+                ignore: matches.get_count(options::IGNORE) > 0,
+            }
+        }
+    }
+
+    fn parse_id(who: Who, value: &str) -> Result<i32, IoniceError> {
+        parse::blank_tolerant_i32(value)
+            .map_err(|detail| IoniceError::invalid_number(who, value, detail))
+    }
+
+    /// What a set uses when -c or -n is absent. These are ionice's defaults,
+    /// not the kernel's; the kernel's own fallback is derived from CPU nice,
+    /// not from these numbers.
+    const DEFAULT_CLASS: i32 = parse::IOPRIO_CLASS_BE;
+    const DEFAULT_DATA: i32 = 4;
+
+    /// The priority level a class carries when it has no level of its own;
+    /// a level given with -n is discarded.
+    ///
+    /// The two arms have different authorities behind them. None must carry
+    /// zero because that is the only value the kernel accepts for it. Idle
+    /// carrying 7 is the reference implementation's convention: the kernel
+    /// takes any level with idle and hands it back unchanged, so nothing
+    /// forces that choice.
+    fn fixed_data(class: i32) -> Option<i32> {
+        match class {
+            parse::IOPRIO_CLASS_NONE => Some(0),
+            parse::IOPRIO_CLASS_IDLE => Some(7),
+            _ => None,
+        }
+    }
+
+    /// Settle the class and priority level a set will use. The warning is
+    /// silenced by -t, but the clearing of a meaningless priority level is not.
+    fn resolve_priority(request: &Request) -> IoPrio {
+        let class = request.class.unwrap_or(DEFAULT_CLASS);
+
+        if let Some(data) = fixed_data(class) {
+            // The level is replaced whether or not -n asked for one; only
+            // saying so is conditional.
+            if request.data.is_some() && !request.ignore {
+                uucore::show_error!(
+                    "ignoring given class data for {} class",
+                    ioprio::class_name(class)
+                );
+            }
+            return IoPrio::encode(class, data);
+        }
+
+        IoPrio::encode(class, request.data.unwrap_or(DEFAULT_DATA))
+    }
+
+    pub(crate) fn run(matches: &ArgMatches) -> UResult<()> {
+        let request = Request::from_matches(matches);
+
+        let arguments: Vec<OsString> = matches
+            .get_many::<OsString>(options::ARGS)
+            .map(|values| values.cloned().collect())
+            .unwrap_or_default();
+
+        // Trailing arguments are further ids whenever an id option was given,
+        // and the command to run otherwise.
+        let command = if request.id.is_none() && !arguments.is_empty() {
+            Some(arguments.as_slice())
+        } else {
+            None
+        };
+
+        // Running a command always sets a priority, defaulting to best-effort
+        // level 4. The warning belongs here rather than in the dispatch below,
+        // because `ionice -c 3 -n 5` reports the discarded level before the
+        // bad usage.
+        let priority = (request.class.is_some() || request.data.is_some() || command.is_some())
+            .then(|| resolve_priority(&request));
+
+        match (request.id, command, priority) {
+            // A get whose only id is 0 reports the calling process rather than
+            // the process group or user numbered 0. Setting has no such
+            // fallback: `-c 3 -u 0` really does target uid 0.
+            (Some((_, 0)), _, None) if arguments.is_empty() => report(Who::Process, 0),
+            (Some((who, id)), _, _) => act_on_ids(&request, who, id, priority, &arguments),
+            (None, Some(command), Some(priority)) => {
+                apply(&request, Who::Process, 0, priority)?;
+                run_command(command)
+            }
+            (None, None, Some(_)) => Err(IoniceError::BadUsage.into()),
+            (None, _, None) => report(Who::Process, 0),
+        }
+    }
+
+    /// Act on the id given to the option, then on every trailing argument,
+    /// parsing each one only when its turn comes so that a bad id later in the
+    /// list does not hide the results of the ids before it.
+    fn act_on_ids(
+        request: &Request,
+        who: Who,
+        id: i32,
+        priority: Option<IoPrio>,
+        arguments: &[OsString],
+    ) -> UResult<()> {
+        act_on_id(request, who, id, priority)?;
+
+        for argument in arguments {
+            let id = parse_id(who, &argument.to_string_lossy())?;
+            act_on_id(request, who, id, priority)?;
+        }
+
+        Ok(())
+    }
+
+    fn act_on_id(request: &Request, who: Who, id: i32, priority: Option<IoPrio>) -> UResult<()> {
+        match priority {
+            Some(priority) => apply(request, who, id, priority),
+            None => report(who, id),
+        }
+    }
+
+    fn report(who: Who, id: i32) -> UResult<()> {
+        let priority = ioprio::get(who, id).map_err(IoniceError::GetFailed)?;
+        println!("{priority}");
+        Ok(())
+    }
+
+    /// Set a priority, honoring -t: a failure to set is then silent and leaves
+    /// the exit status alone.
+    fn apply(request: &Request, who: Who, id: i32, priority: IoPrio) -> UResult<()> {
+        match ioprio::set(who, id, priority) {
+            Ok(()) => Ok(()),
+            Err(_) if request.ignore => Ok(()),
+            Err(error) => Err(IoniceError::SetFailed(error).into()),
+        }
+    }
+
+    /// Replace this process with the command. ionice does not fork, so the
+    /// command inherits the priority just set and its exit status is naturally
+    /// this process's own.
+    fn run_command(command: &[OsString]) -> UResult<()> {
+        let Some((program, arguments)) = command.split_first() else {
+            return Ok(());
+        };
+
+        // exec() returns only when it failed.
+        let error = process::Command::new(program).args(arguments).exec();
+
+        uucore::show_error!(
+            "failed to execute {}: {}",
+            program.to_string_lossy(),
+            uucore::error::strip_errno(&error)
+        );
+        uucore::error::set_exit_code(if error.kind() == io::ErrorKind::NotFound {
+            127
+        } else {
+            126
+        });
+
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    linux::run(&matches)
+}
+
+#[cfg(not(target_os = "linux"))]
+#[uucore::main]
+pub fn uumain(args: impl uucore::Args) -> UResult<()> {
+    let _matches: clap::ArgMatches = uu_app().try_get_matches_from(args)?;
+
+    Err(uucore::error::USimpleError::new(
+        1,
+        "`ionice` is available only on Linux.",
+    ))
+}
+
+/// A value-taking option. Hyphen-leading values are accepted so that the
+/// argument following the flag is taken verbatim, which is what makes
+/// `ionice -p -c 3` report an invalid PID of "-c" instead of parsing -c.
+fn value_option(
+    id: &'static str,
+    short: char,
+    long: &'static str,
+    value_name: &'static str,
+) -> Arg {
+    Arg::new(id)
+        .short(short)
+        .long(long)
+        .value_name(value_name)
+        .num_args(1)
+        .allow_hyphen_values(true)
+}
+
+/// Set rather than Append, so that repeating an id option is refused just as
+/// combining two is.
+fn id_option(id: &'static str, short: char, long: &'static str, value_name: &'static str) -> Arg {
+    value_option(id, short, long, value_name)
+        .action(ArgAction::Set)
+        .value_parser(parse::blank_tolerant_i32)
+}
+
+pub fn uu_app() -> Command {
+    Command::new(uucore::util_name())
+        .version(crate_version!())
+        .about(ABOUT)
+        .override_usage(format_usage(USAGE))
+        .infer_long_args(true)
+        .arg(
+            value_option(options::CLASS, 'c', "class", "class")
+                .action(ArgAction::Append)
+                .value_parser(parse::class)
+                .help(
+                    "name or number of the scheduling class: \
+                     none (0), realtime (1), best-effort (2) or idle (3)",
+                ),
+        )
+        .arg(
+            value_option(options::CLASSDATA, 'n', "classdata", "num")
+                .action(ArgAction::Append)
+                .value_parser(parse::level)
+                .help(
+                    "priority (0..7) in the specified scheduling class, \
+                     only for the realtime and best-effort classes",
+                ),
+        )
+        .arg(
+            id_option(options::PID, 'p', "pid", "pid")
+                .help("act on these already running processes"),
+        )
+        .arg(
+            id_option(options::PGID, 'P', "pgid", "pgrp")
+                .help("act on already running processes in these groups"),
+        )
+        // Declared between -P and -u so that --help lists the options in the
+        // same order the reference does; clap orders by declaration.
+        .arg(
+            Arg::new(options::IGNORE)
+                .short('t')
+                .long("ignore")
+                // Count rather than SetTrue: clap rejects a repeated SetTrue
+                // flag, and `ionice -t -t` is accepted.
+                .action(ArgAction::Count)
+                .help("ignore failures"),
+        )
+        .arg(
+            id_option(options::UID, 'u', "uid", "uid")
+                .help("act on already running processes owned by these users"),
+        )
+        .group(ArgGroup::new("id").args([options::PID, options::PGID, options::UID]))
+        .arg(
+            Arg::new(options::ARGS)
+                .value_name("command")
+                .help("further pid, pgrp or uid arguments, or the command to run")
+                .index(1)
+                .action(ArgAction::Set)
+                .trailing_var_arg(true)
+                .value_parser(ValueParser::os_string())
+                .num_args(1..),
+        )
+}
